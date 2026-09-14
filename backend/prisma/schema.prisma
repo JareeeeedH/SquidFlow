@@ -6,3 +6,169 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Partial unique indexes are created in SQL migration:
+// idx_one_active_order_per_driver
+// idx_one_active_session_per_user
+
+enum UserRole {
+  ADMIN
+  DRIVER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum DriverOnlineStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum OrderStatus {
+  DRAFT
+  OPEN
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DispatchMode {
+  OPEN
+  DIRECT
+  PRIORITY
+  AUTO
+}
+
+enum OrderEventType {
+  ORDER_CREATED
+  ORDER_PUBLISHED
+  ORDER_VIEWED
+  ORDER_ACCEPTED
+  ORDER_ACCEPT_FAILED
+  ORDER_STARTED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id                String             @id @default(uuid()) @db.Uuid
+  username          String             @unique @db.VarChar
+  passwordHash      String             @map("password_hash") @db.VarChar
+  role              UserRole
+  status            UserStatus
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  driver            Driver?
+  createdOrders     Order[]            @relation("OrderCreatedBy")
+  orderEvents       OrderEvent[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+model Driver {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @unique @map("user_id") @db.Uuid
+  vehicleType  String             @map("vehicle_type") @db.VarChar
+  licensePlate String             @unique @map("license_plate") @db.VarChar
+  vehicleBrand String             @map("vehicle_brand") @db.VarChar
+  vehicleModel String             @map("vehicle_model") @db.VarChar
+  vehicleColor String             @map("vehicle_color") @db.VarChar
+  vehicleYear  Int                @map("vehicle_year") @db.SmallInt
+  onlineStatus DriverOnlineStatus @map("online_status")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user         User               @relation(fields: [userId], references: [id])
+  orders       Order[]
+
+  @@map("drivers")
+}
+
+model Order {
+  id             String         @id @default(uuid()) @db.Uuid
+  orderNo        String         @unique @map("order_no") @db.VarChar
+  customerName   String         @map("customer_name") @db.VarChar
+  pickupLocation String         @map("pickup_location") @db.Text
+  destination    String         @db.Text
+  scheduledAt    DateTime       @map("scheduled_at") @db.Timestamptz(6)
+  vehicleType    String         @map("vehicle_type") @db.VarChar
+  price          Decimal        @db.Decimal(10, 2)
+  note           String?        @db.Text
+  status         OrderStatus
+  dispatchMode   DispatchMode   @map("dispatch_mode")
+  driverId       String?        @map("driver_id") @db.Uuid
+  createdBy      String         @map("created_by") @db.Uuid
+  acceptedAt     DateTime?      @map("accepted_at") @db.Timestamptz(6)
+  startedAt      DateTime?      @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime?      @map("completed_at") @db.Timestamptz(6)
+  cancelledAt    DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  driver         Driver?        @relation(fields: [driverId], references: [id])
+  creator        User           @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  events         OrderEvent[]
+  notifications  Notification[]
+
+  @@map("orders")
+}
+
+model OrderEvent {
+  id          String         @id @default(uuid()) @db.Uuid
+  orderId     String         @map("order_id") @db.Uuid
+  eventType   OrderEventType @map("event_type")
+  actorUserId String?        @map("actor_user_id") @db.Uuid
+  metadata    Json?          @db.JsonB
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  order       Order          @relation(fields: [orderId], references: [id])
+  actor       User?          @relation(fields: [actorUserId], references: [id])
+
+  @@map("order_events")
+}
+
+model Notification {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @map("user_id") @db.Uuid
+  orderId   String             @map("order_id") @db.Uuid
+  status    NotificationStatus
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt    DateTime?          @map("sent_at") @db.Timestamptz(6)
+  user      User               @relation(fields: [userId], references: [id])
+  order     Order              @relation(fields: [orderId], references: [id])
+
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("push_subscriptions")
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}

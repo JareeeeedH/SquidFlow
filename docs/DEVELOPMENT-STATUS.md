@@ -26,6 +26,21 @@
 
 本機驗證時，host `5432` 與 `3000` 已被占用，因此 Docker PostgreSQL 對應 `localhost:5433`，Backend 使用 `PORT=3001`。
 
+---
+
+## TASK-002 — Database Schema / Prisma
+
+**Status:** completed
+
+### 已完成
+
+- Prisma schema 依 DATABASE-SPEC 建立 7 張表：`users`、`drivers`、`orders`、`order_events`、`notifications`、`push_subscriptions`、`sessions`
+- 第一個 migration：`20260914202731_init`
+- Partial unique index：
+  - `idx_one_active_order_per_driver`
+  - `idx_one_active_session_per_user`
+- 尚未實作 Auth / Order / Driver API
+
 ### Next
 
 下一個 Task 等待中。
