@@ -33,4 +33,10 @@ export const AppErrors = {
       '車牌已存在',
       HttpStatus.CONFLICT,
     ),
+  invalidOrderStatus: () =>
+    new AppError(
+      'INVALID_ORDER_STATUS',
+      '訂單狀態不允許此操作',
+      HttpStatus.CONFLICT,
+    ),
 };

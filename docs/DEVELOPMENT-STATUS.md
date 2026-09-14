@@ -94,6 +94,28 @@
 - 不修改 Order、不發送 Notification
 - 未實作 Accept Order、搶單、Web Push、Frontend Online/Offline UI
 
+---
+
+## TASK-006 — Admin Order CRUD / DRAFT
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/orders`
+- `POST /api/v1/orders`
+- `GET /api/v1/orders/:id`
+- `PUT /api/v1/orders/:id`
+- `DELETE /api/v1/orders/:id`
+- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
+- 建立時固定 `status=DRAFT`、`dispatch_mode=OPEN`、`driver_id=null`、`created_by=current admin`
+- `order_no`：`ORD-YYYYMMDD-NNN`（Asia/Taipei 日期），transaction + PostgreSQL advisory lock
+- Create 與 `ORDER_CREATED` 同一 transaction
+- PUT / DELETE 僅允許 DRAFT；非 DRAFT 回 `INVALID_ORDER_STATUS`
+- DRAFT hard delete：先刪 OrderEvent / Notification，再刪 Order（不改 Schema CASCADE）
+- `GET /orders` query：`status`、`date`（Taipei `scheduled_at` 日曆日）、`search`（`order_no` / `customer_name`）
+- 未實作 Publish、Cancel、搶單、Notification、Frontend Order UI
+
 ### Next
 
 下一個 Task 等待中。
