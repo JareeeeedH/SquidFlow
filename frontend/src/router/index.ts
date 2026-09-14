@@ -6,6 +6,9 @@ import {
 import { setUnauthorizedHandler } from '../api/client'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
+import DriverCreateView from '../views/DriverCreateView.vue'
+import DriverDetailView from '../views/DriverDetailView.vue'
+import DriversView from '../views/DriversView.vue'
 import LoginView from '../views/LoginView.vue'
 import OrderCreateView from '../views/OrderCreateView.vue'
 import OrderDetailView from '../views/OrderDetailView.vue'
@@ -43,6 +46,21 @@ const router = createRouter({
           path: 'orders/:id',
           name: 'order-detail',
           component: OrderDetailView,
+        },
+        {
+          path: 'drivers',
+          name: 'drivers',
+          component: DriversView,
+        },
+        {
+          path: 'drivers/new',
+          name: 'driver-create',
+          component: DriverCreateView,
+        },
+        {
+          path: 'drivers/:id',
+          name: 'driver-detail',
+          component: DriverDetailView,
         },
       ],
     },

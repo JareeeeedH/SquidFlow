@@ -211,6 +211,23 @@
 - 非 DRAFT 不提供以上操作
 - 未實作 Cancel / Accept / Drivers / Web Push
 
+---
+
+## Frontend Phase A-5 — Admin Driver Management
+
+**Status:** completed
+
+### 已完成
+
+- Admin 導覽：司機 → `/drivers`
+- `GET /api/v1/drivers` 司機列表
+- `GET /api/v1/drivers/:id` 司機詳情
+- `POST /api/v1/drivers` 新增司機
+- `PUT /api/v1/drivers/:id` 編輯（空白密碼不送出）
+- `PATCH /api/v1/drivers/:id/status` 啟用 / 停用
+- 帳號狀態 `ACTIVE` / `SUSPENDED` 與上線狀態 `ONLINE` / `OFFLINE` 分開顯示
+- 未實作 Delete Driver、Force Logout、Driver UI、Accept、Web Push
+
 ### Next
 
 下一個 Task 等待中。

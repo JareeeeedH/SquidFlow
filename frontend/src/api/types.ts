@@ -109,3 +109,46 @@ export type PublishOrderResult = {
   id: string
   status: OrderStatus
 }
+
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED'
+export type OnlineStatus = 'ONLINE' | 'OFFLINE'
+
+export type DriverItem = {
+  id: string
+  username: string
+  vehicle_type: string
+  license_plate: string
+  vehicle_brand: string
+  vehicle_model: string
+  vehicle_color: string
+  vehicle_year: number
+  online_status: OnlineStatus
+  status: AccountStatus
+}
+
+export type CreateDriverInput = {
+  username: string
+  password: string
+  vehicle_type: string
+  license_plate: string
+  vehicle_brand: string
+  vehicle_model: string
+  vehicle_color: string
+  vehicle_year: number
+}
+
+export type UpdateDriverInput = {
+  username: string
+  password?: string
+  vehicle_type: string
+  license_plate: string
+  vehicle_brand: string
+  vehicle_model: string
+  vehicle_color: string
+  vehicle_year: number
+}
+
+export type DriverStatusResult = {
+  id: string
+  status: AccountStatus
+}

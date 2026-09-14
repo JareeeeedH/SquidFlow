@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ClipboardList, LogOut } from 'lucide-vue-next'
+import { Car, ClipboardList, LogOut } from 'lucide-vue-next'
 import { NButton } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
@@ -27,6 +27,14 @@ async function onLogout() {
         >
           <ClipboardList :size="16" />
           訂單
+        </RouterLink>
+        <RouterLink
+          class="nav-item"
+          :to="{ name: 'drivers' }"
+          active-class="nav-item-active"
+        >
+          <Car :size="16" />
+          司機
         </RouterLink>
       </nav>
       <div class="account">
