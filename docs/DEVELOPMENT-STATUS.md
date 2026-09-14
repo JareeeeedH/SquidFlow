@@ -78,6 +78,22 @@
 - username / license_plate unique 轉為統一 API error
 - 未實作 Driver Management UI、Order API、Driver online/offline、Web Push
 
+---
+
+## TASK-005 — Driver Online / Offline
+
+**Status:** completed
+
+### 已完成
+
+- `PATCH /api/v1/driver/status`
+- Driver-only：AuthGuard + RolesGuard（`User.role = DRIVER`）
+- 以 current user 對應的 Driver 更新 `online_status`，不接受 client 指定 `driver_id` / `user_id`
+- 只接受 `ONLINE` / `OFFLINE`；`ACTIVE` / `SUSPENDED` 為 VALIDATION_ERROR
+- `SUSPENDED` Driver 不可切換 Online Status，回傳 `ACCOUNT_SUSPENDED`，不改 `online_status`
+- 不修改 Order、不發送 Notification
+- 未實作 Accept Order、搶單、Web Push、Frontend Online/Offline UI
+
 ### Next
 
 下一個 Task 等待中。

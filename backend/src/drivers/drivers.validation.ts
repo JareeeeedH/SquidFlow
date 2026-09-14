@@ -1,4 +1,4 @@
-import { UserStatus } from '@prisma/client';
+import { DriverOnlineStatus, UserStatus } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
 
 export type CreateDriverInput = {
@@ -99,4 +99,15 @@ export function parseUpdateDriverStatusBody(body: unknown): UserStatus {
     return data.status;
   }
   throw AppErrors.validation('status 必須為 ACTIVE 或 SUSPENDED');
+}
+
+export function parseUpdateOnlineStatusBody(body: unknown): DriverOnlineStatus {
+  const data = asRecord(body);
+  if (
+    data.status === DriverOnlineStatus.ONLINE ||
+    data.status === DriverOnlineStatus.OFFLINE
+  ) {
+    return data.status;
+  }
+  throw AppErrors.validation('status 必須為 ONLINE 或 OFFLINE');
 }

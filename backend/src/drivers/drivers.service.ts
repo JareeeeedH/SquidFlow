@@ -6,6 +6,7 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
+import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DriverWithUser, toDriverResponse } from './drivers.mapper';
@@ -134,6 +135,33 @@ export class DriversService {
 
     return {
       id: driver.id,
+      status,
+    };
+  }
+
+  async updateOnlineStatus(
+    user: AuthenticatedUser,
+    status: DriverOnlineStatus,
+  ) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId: user.id },
+    });
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+
+    if (driver.onlineStatus !== status) {
+      await this.prisma.driver.update({
+        where: { id: driver.id },
+        data: { onlineStatus: status },
+      });
+    }
+
+    return {
       status,
     };
   }
