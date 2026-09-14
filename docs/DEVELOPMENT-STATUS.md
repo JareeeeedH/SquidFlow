@@ -41,6 +41,23 @@
   - `idx_one_active_session_per_user`
 - 尚未實作 Auth / Order / Driver API
 
+---
+
+## TASK-003 — Authentication / Session
+
+**Status:** completed
+
+### 已完成
+
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+- Session + HttpOnly Cookie（`squidflow_session`）
+- PostgreSQL Session、Single Active Session transaction
+- bcrypt password hashing
+- AuthGuard / RolesGuard 基礎
+- 未實作 Frontend Login UI、Driver / Order / Notification API
+
 ### Next
 
 下一個 Task 等待中。
