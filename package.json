@@ -1,0 +1,13 @@
+{
+  "name": "squidflow",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "build": "npm run build --prefix frontend && npm run build --prefix backend",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+    "test": "npm run test --prefix frontend && npm run test --prefix backend && npm run test:e2e --prefix backend"
+  }
+}

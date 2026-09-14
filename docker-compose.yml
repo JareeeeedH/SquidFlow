@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: squidflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: squidflow
+      POSTGRES_PASSWORD: squidflow
+      POSTGRES_DB: squidflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - squidflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U squidflow -d squidflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  squidflow-postgres-data:

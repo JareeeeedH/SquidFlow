@@ -1,0 +1,31 @@
+# Development Status
+
+## TASK-001 — Project Bootstrap
+
+**Status:** completed
+
+### 已完成的基礎環境
+
+- Frontend：Vue 3 + Vite + TypeScript + Vue Router + Pinia
+- Backend：NestJS + TypeScript Modular Monolith 骨架
+- Prisma：已設定，尚未建立業務資料表
+- PostgreSQL：Docker Compose（`postgres:16`）
+- Health check：`GET /api/v1/health`
+- Root scripts：`dev:frontend`、`dev:backend`、`db:up`、`db:down`、`build`、`lint`、`test`
+
+### 啟動方式
+
+```text
+1. 複製 backend/.env.example 為 backend/.env
+2. npm run db:up
+3. cd backend && npm install && npm run prisma:generate
+4. cd frontend && npm install
+5. npm run dev:backend
+6. npm run dev:frontend
+```
+
+本機驗證時，host `5432` 與 `3000` 已被占用，因此 Docker PostgreSQL 對應 `localhost:5433`，Backend 使用 `PORT=3001`。
+
+### Next
+
+下一個 Task 等待中。
