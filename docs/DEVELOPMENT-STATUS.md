@@ -58,6 +58,26 @@
 - AuthGuard / RolesGuard 基礎
 - 未實作 Frontend Login UI、Driver / Order / Notification API
 
+---
+
+## TASK-004 — Admin Driver Management
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/drivers`
+- `POST /api/v1/drivers`
+- `GET /api/v1/drivers/:id`
+- `PUT /api/v1/drivers/:id`
+- `PATCH /api/v1/drivers/:id/status`
+- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
+- 建立 Driver 時同一 transaction 寫入 User + Driver
+- User.role = DRIVER、User.status = ACTIVE、Driver.online_status = OFFLINE 由 Backend 決定
+- password 使用既有 PasswordService / bcrypt；PUT 未提供則不改密碼
+- username / license_plate unique 轉為統一 API error
+- 未實作 Driver Management UI、Order API、Driver online/offline、Web Push
+
 ### Next
 
 下一個 Task 等待中。

@@ -21,4 +21,16 @@ export const AppErrors = {
   accountSuspended: () =>
     new AppError('ACCOUNT_SUSPENDED', '帳號已停用', HttpStatus.FORBIDDEN),
   forbidden: () => new AppError('FORBIDDEN', '沒有權限', HttpStatus.FORBIDDEN),
+  notFound: (message = '找不到資料') =>
+    new AppError('NOT_FOUND', message, HttpStatus.NOT_FOUND),
+  validation: (message = '請求資料不正確') =>
+    new AppError('VALIDATION_ERROR', message, HttpStatus.BAD_REQUEST),
+  usernameAlreadyExists: () =>
+    new AppError('USERNAME_ALREADY_EXISTS', '帳號已存在', HttpStatus.CONFLICT),
+  licensePlateAlreadyExists: () =>
+    new AppError(
+      'LICENSE_PLATE_ALREADY_EXISTS',
+      '車牌已存在',
+      HttpStatus.CONFLICT,
+    ),
 };
