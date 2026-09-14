@@ -184,6 +184,19 @@
 - 查看 → `/orders/:id` navigation placeholder（未實作 Detail UI）
 - 未實作 Create / Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
 
+---
+
+## Frontend Phase A-3 — Order Detail + Create Draft
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/orders/:id` Order Detail（唯讀）
+- `POST /api/v1/orders` 建立 Draft
+- `/orders/new` → 成功後進入 `/orders/:id`
+- 未實作 Edit / Delete / Publish / Cancel / Timeline / Drivers / Accept / Web Push
+
 ### Next
 
 下一個 Task 等待中。

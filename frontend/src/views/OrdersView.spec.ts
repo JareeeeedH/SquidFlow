@@ -33,7 +33,7 @@ function makeRouter() {
       { path: '/orders', name: 'orders', component: OrdersView },
       {
         path: '/orders/:id',
-        name: 'order-placeholder',
+        name: 'order-detail',
         component: { template: '<div />' },
       },
     ],

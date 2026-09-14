@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, RotateCcw } from 'lucide-vue-next'
+import { Plus, RotateCcw, Search } from 'lucide-vue-next'
 import {
   NButton,
   NDataTable,
@@ -122,7 +122,7 @@ const columns: DataTableColumns<OrderListItem> = [
           type: 'primary',
           size: 'small',
           onClick: () => {
-            void router.push({ name: 'order-placeholder', params: { id: row.id } })
+            void router.push({ name: 'order-detail', params: { id: row.id } })
           },
         },
         { default: () => '查看' },
@@ -186,7 +186,15 @@ watch(query, () => {
         <h1>Orders</h1>
         <p class="subtitle">訂單列表</p>
       </div>
-      <p v-if="!error && !loading" class="count">{{ orders.length }} 筆</p>
+      <div class="header-actions">
+        <p v-if="!error && !loading" class="count">{{ orders.length }} 筆</p>
+        <NButton type="primary" @click="router.push({ name: 'order-create' })">
+          <template #icon>
+            <Plus :size="16" />
+          </template>
+          建立訂單
+        </NButton>
+      </div>
     </header>
 
     <div class="toolbar">
@@ -304,6 +312,12 @@ h1 {
   margin: var(--space-4) 0 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
 }
 
 .count {

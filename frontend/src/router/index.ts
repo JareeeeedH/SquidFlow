@@ -7,7 +7,8 @@ import { setUnauthorizedHandler } from '../api/client'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
-import OrderPlaceholderView from '../views/OrderPlaceholderView.vue'
+import OrderCreateView from '../views/OrderCreateView.vue'
+import OrderDetailView from '../views/OrderDetailView.vue'
 import OrdersView from '../views/OrdersView.vue'
 
 const router = createRouter({
@@ -34,9 +35,14 @@ const router = createRouter({
           component: OrdersView,
         },
         {
+          path: 'orders/new',
+          name: 'order-create',
+          component: OrderCreateView,
+        },
+        {
           path: 'orders/:id',
-          name: 'order-placeholder',
-          component: OrderPlaceholderView,
+          name: 'order-detail',
+          component: OrderDetailView,
         },
       ],
     },

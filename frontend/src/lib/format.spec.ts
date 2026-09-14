@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatPrice, formatScheduledAt, formatTaipeiYmd } from './format'
+import {
+  formatDateTimeTaipei,
+  formatPrice,
+  formatScheduledAt,
+  formatTaipeiYmd,
+  toScheduledAtIso,
+} from './format'
 
 describe('formatTaipeiYmd', () => {
   it('formats a Taipei calendar date as YYYY-MM-DD', () => {
@@ -13,6 +19,22 @@ describe('formatScheduledAt', () => {
   it('shows Asia/Taipei time instead of raw ISO', () => {
     expect(formatScheduledAt('2026-09-15T02:30:00.000Z')).toBe('09/15 10:30')
     expect(formatScheduledAt('2026-09-15T15:30:00+08:00')).toBe('09/15 15:30')
+  })
+})
+
+describe('formatDateTimeTaipei', () => {
+  it('shows a Taipei datetime with year', () => {
+    expect(formatDateTimeTaipei('2026-09-15T07:00:00.000Z')).toBe(
+      '2026/09/15 15:00',
+    )
+  })
+})
+
+describe('toScheduledAtIso', () => {
+  it('sends a Taipei ISO-8601 instant with offset', () => {
+    expect(toScheduledAtIso(new Date('2026-09-15T15:30:00+08:00').getTime())).toBe(
+      '2026-09-15T15:30:00+08:00',
+    )
   })
 })
 

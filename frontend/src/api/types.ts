@@ -65,3 +65,42 @@ export type OrderListQuery = {
   status?: OrderStatus
   date?: string
 }
+
+export type OrderDetail = {
+  id: string
+  order_no: string
+  customer_name: string
+  pickup_location: string
+  destination: string
+  scheduled_at: string
+  vehicle_type: string
+  price: number
+  note: string | null
+  status: OrderStatus
+  dispatch_mode: 'OPEN' | 'DIRECT' | 'PRIORITY' | 'AUTO'
+  driver_id: string | null
+  created_by: string
+  accepted_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CreateOrderInput = {
+  customer_name: string
+  pickup_location: string
+  destination: string
+  scheduled_at: string
+  vehicle_type: string
+  price: number
+  note?: string | null
+}
+
+export type CreateOrderResult = {
+  id: string
+  order_no: string
+  status: OrderStatus
+  dispatch_mode: 'OPEN' | 'DIRECT' | 'PRIORITY' | 'AUTO'
+}

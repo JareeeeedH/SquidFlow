@@ -34,6 +34,57 @@ export function formatScheduledAt(iso: string): string {
   return `${get('month')}/${get('day')} ${get('hour')}:${get('minute')}`
 }
 
+export function formatDateTimeTaipei(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ''
+
+  let hour = get('hour')
+  if (hour === '24') {
+    hour = '00'
+  }
+
+  return `${get('year')}/${get('month')}/${get('day')} ${hour}:${get('minute')}`
+}
+
+export function toScheduledAtIso(value: number): string {
+  const date = new Date(value)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ''
+
+  let hour = get('hour')
+  if (hour === '24') {
+    hour = '00'
+  }
+
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}:${get('second')}+08:00`
+}
+
 export function formatPrice(price: number): string {
   const hasFraction = !Number.isInteger(price)
   return `NT$ ${price.toLocaleString('en-US', {

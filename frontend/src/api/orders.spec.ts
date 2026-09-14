@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { listOrders, ordersListPath } from './orders'
+import { createOrder, getOrder, listOrders, ordersListPath } from './orders'
 
 describe('ordersListPath', () => {
   it('omits empty filters', () => {
@@ -43,6 +43,79 @@ describe('listOrders', () => {
       expect.objectContaining({
         method: 'GET',
         credentials: 'include',
+      }),
+    )
+  })
+})
+
+describe('getOrder', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('requests GET /orders/:id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { id: 'order-1' },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getOrder('order-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/order-1',
+      expect.objectContaining({
+        method: 'GET',
+        credentials: 'include',
+      }),
+    )
+  })
+})
+
+describe('createOrder', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('posts only allowed create fields', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { id: 'order-1', order_no: 'ORD-20260915-001', status: 'DRAFT' },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await createOrder({
+      customer_name: '王先生',
+      pickup_location: '左營高鐵站',
+      destination: '高雄小港機場',
+      scheduled_at: '2026-09-15T15:30:00+08:00',
+      vehicle_type: '5人座',
+      price: 1200,
+      note: '2件行李',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          customer_name: '王先生',
+          pickup_location: '左營高鐵站',
+          destination: '高雄小港機場',
+          scheduled_at: '2026-09-15T15:30:00+08:00',
+          vehicle_type: '5人座',
+          price: 1200,
+          note: '2件行李',
+        }),
       }),
     )
   })
