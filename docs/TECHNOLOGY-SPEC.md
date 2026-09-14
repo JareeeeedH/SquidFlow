@@ -8,7 +8,44 @@
 ---
 
 ### Frontend
-Vue 3 / Vite / Vue Router / Pinia / TypeScript
+
+```text
+Vue 3
+Vite
+TypeScript
+Vue Router
+Pinia
+Naive UI
+Lucide Icons
+CSS Variables
+Scoped CSS
+```
+
+Naive UI 是主要 Vue UI Component Library。
+
+Lucide 是系統 Icon Library。
+
+樣式策略：
+
+```text
+CSS Variables + Scoped CSS
+```
+
+MVP 前端不使用：
+
+```text
+Tailwind CSS
+Vuetify
+Element Plus
+PrimeVue
+Quasar
+其他 UI Framework
+其他大型 CSS Framework
+```
+
+不因單一頁面需求引入另一套 UI Framework 或 Icon Library。
+
+Frontend 只負責 UI、互動與 API 呼叫。Business Rule 由 Backend 保證。
 
 ### Backend
 Node.js / NestJS / TypeScript

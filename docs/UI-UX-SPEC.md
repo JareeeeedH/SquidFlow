@@ -3,27 +3,97 @@
 
 **Version：** v0.1  
 **Status：** 第一版定案  
-**Frontend：** Vue 3 / Vite / Vue Router / Pinia
+**Frontend：** Vue 3 / Vite / Vue Router / Pinia / Naive UI / Lucide Icons / CSS Variables + Scoped CSS
 
 ---
 
 # 1. UI / UX Design Direction
 
+SquidFlow 採：
+
+**Modern SaaS Visual + Dispatch Console UX**
+
+核心原則：
+
+> 視覺上像現代 SaaS，操作上像 Dispatch / Operations Console。
+
+視覺方向：
+
+- Modern
+- Clean
+- Professional
+- Clear visual hierarchy
+- Appropriate whitespace
+- Consistent components
+- 不追求花俏動畫
+- 不呈現傳統 ERP 的老舊視覺感
+
+操作方向：
+
+- 高效率
+- Status 一眼可辨識
+- 快速搜尋 / Filter
+- 重要操作明確突出
+- 減少不必要頁面跳轉
+- 優先考慮 Dispatch / Operation 工作流程
+
 ### Admin
 
-- Desktop Web First
+**Desktop-first**
+
+Admin UI 主要用於：
+
+- Order Management
+- Driver Management
+- Order Monitoring
+- Dispatch Operation
+
+UX 原則：
+
+- 支援較高資訊密度
+- Table / List / Filter / Search 為重要操作模式
+- Status 必須清楚
+- 常用操作要容易找到
+- 可以使用 Sidebar / Drawer / Dialog
+- 不需要把所有內容塞在單一頁面
+- 保持專業 SaaS Dashboard 感
+
+畫面方向：
+
 - Dashboard + Status Board + Order List
-- 高資訊密度
 - 快速建單、派單、查看狀態
 - 操作集中於單一工作區
 
 ### Driver
 
+**Mobile-first**
+
+Driver UI 的核心不是「完整資料展示」，而是：
+
+> 快速看單 → 查看重要資訊 → 執行操作
+
+UX 原則：
+
+- 單手操作友善
+- 大型觸控區域
+- 重要操作清楚突出
+- 減少不必要資訊
+- 清楚呈現 Order Status
+- 避免密集桌面式 Table
+- 重要 CTA 應容易在手機上觸碰
+
+Driver UI 可以採用：
+
+- Cards
+- List
+- Large Buttons
+- Bottom / Drawer based interaction
+- 簡單清楚的狀態呈現
+
+畫面方向：
+
 - Mobile Web / PWA First
-- 簡化操作
-- 大型操作按鈕
-- 單手操作優先
-- 快速查看新單、搶單、更新訂單狀態
+- 登入後快速查看新單、搶單、更新訂單狀態
 
 ---
 
@@ -469,40 +539,59 @@ OFFLINE
 
 ---
 
-# 17. Order Status Display
+# 17. Status Visual Consistency
 
-全系統使用一致的狀態：
+全系統 Status 必須使用一致的：
 
-```text
-DRAFT
-OPEN
-ACCEPTED
-IN_PROGRESS
-COMPLETED
-CANCELLED
-```
+- 文字
+- 視覺語意
+- Color / Tag / Badge 規則
 
-UI 使用一致的視覺標示：
+不允許不同頁面自行發明新的 status visual language。
+
+## 17.1 Order Status
 
 ```text
-DRAFT
-草稿
-
-OPEN
-搶單中
-
-ACCEPTED
-已接單
-
-IN_PROGRESS
-行程中
-
-COMPLETED
-已完成
-
-CANCELLED
-已取消
+DRAFT        草稿
+OPEN         搶單中
+ACCEPTED     已接單
+IN_PROGRESS  行程中
+COMPLETED    已完成
+CANCELLED    已取消
 ```
+
+語意對應：
+
+```text
+DRAFT        Muted
+OPEN         Warning
+ACCEPTED     Info
+IN_PROGRESS  Primary
+COMPLETED    Success
+CANCELLED    Danger
+```
+
+## 17.2 Account / Driver Status
+
+```text
+ACTIVE       啟用
+SUSPENDED    停用
+ONLINE       上線
+OFFLINE      離線
+```
+
+語意對應：
+
+```text
+ACTIVE       Success
+SUSPENDED    Danger
+ONLINE       Success
+OFFLINE      Muted
+```
+
+`ACTIVE` / `SUSPENDED` 是帳號狀態。  
+`ONLINE` / `OFFLINE` 是上線狀態。  
+兩者分開顯示，不可混用同一組視覺規則造成語意混淆。
 
 ---
 
@@ -556,6 +645,7 @@ Driver UI 以 Mobile First 設計。
 
 # 20. MVP UI Scope
 
+
 ```text
 Authentication
 └── Login
@@ -572,3 +662,118 @@ Driver
 ├── Order Detail
 └── My Orders
 ```
+
+
+---
+
+# 21. UI Framework & Styling
+
+## Naive UI
+
+Naive UI 是 SquidFlow 的主要 Vue UI Component Library。
+
+主要用途包含但不限於：
+
+- Button
+- Input
+- Select
+- Form
+- Data Table
+- Dialog
+- Drawer
+- Dropdown
+- Tag / Badge
+- Notification / Message
+- Date Picker
+- Pagination
+- Loading
+- Empty State
+
+原則：
+
+> 優先使用 Naive UI 提供的既有元件，不重複自行建立已有的基礎 UI 元件。
+
+## Lucide Icons
+
+系統 Icon 優先使用 Lucide。
+
+- 不要在不同頁面自行混用多套 Icon Library
+- 不因單一頁面需求引入另一套 Icon Library
+
+## Styling
+
+目前採：
+
+```text
+CSS Variables + Scoped CSS
+```
+
+不使用 Tailwind CSS。  
+不建立新的 CSS Framework。  
+不因 UI Framework 使用需求而增加其他大型 styling framework。
+
+---
+
+# 22. Design Tokens
+
+目前只定義 Token 類型，不建立獨立 design-system package。
+
+實作時以 CSS Variables 表達，全系統共用。
+
+## Color
+
+```text
+Primary
+Success
+Warning
+Danger
+Info
+Background
+Surface
+Text
+Muted Text
+Border
+```
+
+## Typography
+
+```text
+Page Title
+Section Title
+Body
+Label
+Caption
+Important Number / Price
+```
+
+## Spacing
+
+採一致 spacing scale：
+
+```text
+4 / 8 / 12 / 16 / 24 / 32
+```
+
+不要每個頁面任意創造新的 spacing。
+
+## Radius
+
+保持簡單且一致，主要使用：
+
+```text
+4 / 8 / 12
+```
+
+不要每個 component 自行設定不同 radius。
+
+---
+
+# 23. Component Usage Rules
+
+1. 優先使用 Naive UI 現有元件。
+2. 不重複建立已有基礎元件。
+3. 不因單一頁面需求引入新的 UI Framework。
+4. 不因單一頁面需求引入新的 Icon Library。
+5. Product-specific component 可以建立，但應建立在 Naive UI 基礎元件之上。
+6. Business Logic 不應因 UI framework 而進入 Presentation Layer。
+7. Frontend 不得取代 Backend 的 Business Rule。
