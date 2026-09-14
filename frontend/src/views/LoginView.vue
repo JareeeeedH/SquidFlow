@@ -50,7 +50,7 @@ async function onSubmit() {
   submitting.value = true
   try {
     await auth.login(form.username.trim(), form.password)
-    await router.push({ name: 'home' })
+    await router.push({ name: 'orders' })
   } catch (error) {
     if (error instanceof ApiClientError) {
       errorMessage.value = error.message

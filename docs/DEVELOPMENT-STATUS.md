@@ -169,6 +169,21 @@
 - 最小 Authenticated Layout
 - 未實作 Orders / Drivers / Accept / Cancel / Web Push
 
+---
+
+## Frontend Phase A-2 — Admin Orders List
+
+**Status:** completed
+
+### 已完成
+
+- Admin 導覽：訂單 → `/orders`
+- `GET /api/v1/orders`：`search` / `status` / `date`
+- Orders table、Loading / Empty / Error / 403
+- Status visual、Taipei 時間、NT$ 價格
+- 查看 → `/orders/:id` navigation placeholder（未實作 Detail UI）
+- 未實作 Create / Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
+
 ### Next
 
 下一個 Task 等待中。

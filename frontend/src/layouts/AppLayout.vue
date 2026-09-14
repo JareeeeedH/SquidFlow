@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LogOut } from 'lucide-vue-next'
+import { ClipboardList, LogOut } from 'lucide-vue-next'
 import { NButton } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '../stores/app'
@@ -17,9 +17,19 @@ async function onLogout() {
 
 <template>
   <div class="shell">
-    <header class="topbar">
-      <div class="brand">{{ app.name }}</div>
-      <div class="actions">
+    <aside class="sidebar">
+      <RouterLink class="brand" :to="{ name: 'orders' }">{{ app.name }}</RouterLink>
+      <nav class="nav">
+        <RouterLink
+          class="nav-item"
+          :to="{ name: 'orders' }"
+          active-class="nav-item-active"
+        >
+          <ClipboardList :size="16" />
+          訂單
+        </RouterLink>
+      </nav>
+      <div class="account">
         <span class="username">{{ auth.currentUser?.username }}</span>
         <NButton quaternary size="small" @click="onLogout">
           <template #icon>
@@ -28,7 +38,7 @@ async function onLogout() {
           登出
         </NButton>
       </div>
-    </header>
+    </aside>
     <main class="content">
       <RouterView />
     </main>
@@ -39,30 +49,61 @@ async function onLogout() {
 .shell {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   background: var(--color-background);
 }
 
-.topbar {
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--space-16);
-  padding: var(--space-12) var(--space-24);
+  padding: var(--space-24) var(--space-16);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
 }
 
 .brand {
   font: var(--font-section-title);
   color: var(--color-text);
+  text-decoration: none;
+  padding: 0 var(--space-8);
 }
 
-.actions {
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.nav-item {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
-  min-width: 0;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-8);
+  color: var(--color-muted-text);
+  text-decoration: none;
+  font: var(--font-label);
+}
+
+.nav-item:hover {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.nav-item-active {
+  background: #eff6ff;
+  color: var(--color-primary);
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8);
 }
 
 .username {
@@ -71,23 +112,47 @@ async function onLogout() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 100%;
 }
 
 .content {
   flex: 1;
-  padding: var(--space-24);
+  min-width: 0;
+  padding: var(--space-32);
 }
 
-@media (max-width: 640px) {
-  .topbar,
-  .content {
-    padding-left: var(--space-16);
-    padding-right: var(--space-16);
+@media (max-width: 900px) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-12);
+    padding: var(--space-12) var(--space-16);
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav {
+    flex: 1;
+    flex-direction: row;
+  }
+
+  .account {
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
   }
 
   .username {
     max-width: 96px;
+  }
+
+  .content {
+    padding: var(--space-16);
   }
 }
 </style>

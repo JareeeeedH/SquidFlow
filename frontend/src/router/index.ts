@@ -6,8 +6,9 @@ import {
 import { setUnauthorizedHandler } from '../api/client'
 import AppLayout from '../layouts/AppLayout.vue'
 import { useAuthStore } from '../stores/auth'
-import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import OrderPlaceholderView from '../views/OrderPlaceholderView.vue'
+import OrdersView from '../views/OrdersView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,8 +26,17 @@ const router = createRouter({
       children: [
         {
           path: '',
-          name: 'home',
-          component: HomeView,
+          redirect: { name: 'orders' },
+        },
+        {
+          path: 'orders',
+          name: 'orders',
+          component: OrdersView,
+        },
+        {
+          path: 'orders/:id',
+          name: 'order-placeholder',
+          component: OrderPlaceholderView,
         },
       ],
     },
@@ -42,7 +52,7 @@ router.beforeEach(async (to: RouteLocationNormalized) => {
   }
 
   if (to.name === 'login' && auth.authenticated) {
-    return { name: 'home' }
+    return { name: 'orders' }
   }
 
   return true

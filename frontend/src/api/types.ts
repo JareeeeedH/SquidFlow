@@ -37,3 +37,31 @@ export type LoginUser = {
   username: string
   role: 'ADMIN' | 'DRIVER'
 }
+
+export type OrderStatus =
+  | 'DRAFT'
+  | 'OPEN'
+  | 'ACCEPTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED'
+
+export type OrderListItem = {
+  id: string
+  order_no: string
+  customer_name: string
+  pickup_location: string
+  destination: string
+  scheduled_at: string
+  vehicle_type: string
+  price: number
+  note: string | null
+  status: OrderStatus
+  driver_id: string | null
+}
+
+export type OrderListQuery = {
+  search?: string
+  status?: OrderStatus
+  date?: string
+}
