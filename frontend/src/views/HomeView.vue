@@ -1,12 +1,22 @@
-<script setup lang="ts">
-import { useAppStore } from '../stores/app'
-
-const app = useAppStore()
-</script>
-
 <template>
-  <main>
-    <h1>{{ app.name }}</h1>
-    <p>Frontend is running.</p>
-  </main>
+  <section class="placeholder">
+    <h1>SquidFlow</h1>
+    <p>Frontend Foundation Ready</p>
+  </section>
 </template>
+
+<style scoped>
+.placeholder {
+  max-width: 640px;
+}
+
+h1 {
+  margin: 0 0 var(--space-8);
+  font: var(--font-page-title);
+}
+
+p {
+  margin: 0;
+  color: var(--color-muted-text);
+}
+</style>

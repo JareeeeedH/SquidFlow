@@ -151,6 +151,24 @@
 - GET 唯讀：不改 Order / Driver，不建立 `ORDER_VIEWED`
 - 未實作 Accept / 搶單、Start / Complete、`GET /driver/orders`、Web Push、Frontend
 
+---
+
+## Frontend Phase A-1 — Foundation & Authentication
+
+**Status:** completed
+
+### 已完成
+
+- Naive UI + Lucide
+- CSS Variables + Scoped CSS
+- Vite proxy：`/api` → `http://localhost:3001`
+- 共用 API Client（`credentials: include`）
+- Pinia Auth Store、`GET /auth/me` 初始化
+- Router guard：`/login` 與受保護 `/`
+- Login / Logout
+- 最小 Authenticated Layout
+- 未實作 Orders / Drivers / Accept / Cancel / Web Push
+
 ### Next
 
 下一個 Task 等待中。
