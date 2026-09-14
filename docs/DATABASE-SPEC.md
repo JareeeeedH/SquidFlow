@@ -221,6 +221,8 @@ SENT
 FAILED
 ```
 
+Web Push 的 title / body 不存入 Notification。
+
 ---
 
 ## 7. PushSubscription
@@ -304,6 +306,17 @@ Order
 ```text
 users.username UNIQUE
 ```
+
+```text
+ACTIVE
+→ 正常使用
+
+SUSPENDED
+→ 不可登入
+→ 不可搶新單
+```
+
+既有訂單不因 `SUSPENDED` 自動取消。
 
 ### Driver
 
@@ -390,6 +403,7 @@ OPEN → ACCEPTED
 ```text
 Order.status = OPEN
 Driver.online_status = ONLINE
+Driver 對應 User.status = ACTIVE
 Driver 沒有 ACCEPTED Order
 Driver 沒有 IN_PROGRESS Order
 ```

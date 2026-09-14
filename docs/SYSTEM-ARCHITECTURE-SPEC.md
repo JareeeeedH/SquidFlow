@@ -324,6 +324,8 @@ Secure
 SameSite=Lax
 ```
 
+Driver 帳號狀態為 `SUSPENDED` 時，Login 失敗，回傳 `ACCOUNT_SUSPENDED`。
+
 ---
 
 ### 4.2 Password
@@ -470,7 +472,7 @@ Driver 呼叫 Admin-only API：
 
 ## 6. Resource Ownership
 
-Role 之外，Driver API 必須進行 Ownership Check。
+Role 之外，Driver API 必須進行資源權限檢查。
 
 例如：
 
@@ -478,13 +480,27 @@ Role 之外，Driver API 必須進行 Ownership Check。
 GET /api/v1/driver/orders/:id
 ```
 
-Backend 必須確認：
+允許：
+
+```text
+Order.status = OPEN
+或
+order.driver_id == current_driver.id
+```
+
+禁止：
+
+```text
+查看其他 Driver 的已接單
+```
+
+Driver 不可透過修改 Order ID 取得其他 Driver 的已接單資料。
+
+Start / Complete 必須確認：
 
 ```text
 order.driver_id == current_driver.id
 ```
-
-Driver 不可透過修改 Order ID 取得其他 Driver 的已接單資料。
 
 基本規則：
 
@@ -751,6 +767,21 @@ IN_PROGRESS
 
 ---
 
+### 8.4 Driver Account Status
+
+```text
+ACTIVE
+→ 正常使用
+
+SUSPENDED
+→ 不可登入
+→ 不可搶新單
+```
+
+既有訂單不因 `SUSPENDED` 自動取消。
+
+---
+
 ## 9. Concurrency Control
 
 Concurrency Control 的核心目標：
@@ -978,6 +1009,19 @@ PENDING
 SENT
 FAILED
 ```
+
+Notification 欄位：
+
+```text
+id
+user_id
+order_id
+status
+created_at
+sent_at
+```
+
+Web Push 的 title / body 不存入 Notification。
 
 Notification failure 不影響：
 

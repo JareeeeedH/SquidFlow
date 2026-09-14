@@ -96,6 +96,12 @@ ACTIVE
 SUSPENDED
 ```
 
+`ACTIVE`：正常使用。
+
+`SUSPENDED`：不可登入、不可搶新單。
+
+既有訂單不因 `SUSPENDED` 自動取消。
+
 ---
 
 # 4. Driver
@@ -354,8 +360,9 @@ IN_PROGRESS
 ```text
 1. Order.status = OPEN
 2. Driver.online_status = ONLINE
-3. Driver 沒有 ACCEPTED 訂單
-4. Driver 沒有 IN_PROGRESS 訂單
+3. Driver account status = ACTIVE
+4. Driver 沒有 ACCEPTED 訂單
+5. Driver 沒有 IN_PROGRESS 訂單
 ```
 
 若任一條件不符合，搶單失敗。
@@ -481,19 +488,31 @@ Notification
 ├─ id
 ├─ user_id
 ├─ order_id
-├─ type
-├─ title
-├─ body
-├─ read_at
-├─ sent_at
-└─ created_at
+├─ status
+├─ created_at
+└─ sent_at
 ```
+
+```text
+status:
+PENDING
+SENT
+FAILED
+```
+
+Web Push 的 title / body 不存入 Notification。
 
 Notification 的傳送狀態不影響 Order Status。
 
 ---
 
 # 13. 訂單資料可見性
+
+Driver 可以查看 OPEN Order 詳情。
+
+Driver 也可以查看自己的已接單。
+
+Driver 不可以查看其他 Driver 的已接單。
 
 ## Driver 查看 OPEN 訂單
 
@@ -510,8 +529,6 @@ Notification 的傳送狀態不影響 Order Status。
 ## Driver 成功接單後
 
 可取得執行訂單所需的完整資訊。
-
-Driver 僅能操作及查看自己的已接訂單。
 
 ---
 

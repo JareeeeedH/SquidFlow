@@ -30,7 +30,8 @@ POST /api/v1/auth/login
 
 ```json
 {
-  "user": {
+  "success": true,
+  "data": {
     "id": "uuid",
     "username": "driver001",
     "role": "DRIVER"
@@ -45,6 +46,8 @@ INVALID_CREDENTIALS
 ACCOUNT_SUSPENDED
 ```
 
+`SUSPENDED` 帳號不可登入。
+
 ---
 
 ## Get Current User
@@ -57,7 +60,8 @@ GET /api/v1/auth/me
 
 ```json
 {
-  "user": {
+  "success": true,
+  "data": {
     "id": "uuid",
     "username": "driver001",
     "role": "DRIVER",
@@ -78,7 +82,8 @@ POST /api/v1/auth/logout
 
 ```json
 {
-  "success": true
+  "success": true,
+  "data": null
 }
 ```
 
@@ -96,6 +101,7 @@ GET /api/v1/drivers
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -140,6 +146,7 @@ POST /api/v1/drivers
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "username": "driver001",
@@ -167,6 +174,7 @@ GET /api/v1/drivers/:id
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "username": "driver001",
@@ -217,6 +225,12 @@ PUT /api/v1/drivers/:id
 PATCH /api/v1/drivers/:id/status
 ```
 
+將 Driver 帳號狀態設為 `ACTIVE` 或 `SUSPENDED`。
+
+`SUSPENDED`：不可登入、不可搶新單。
+
+既有訂單不因 `SUSPENDED` 自動取消。
+
 ### Request
 
 ```json
@@ -229,6 +243,7 @@ PATCH /api/v1/drivers/:id/status
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "SUSPENDED"
@@ -251,12 +266,21 @@ GET /api/v1/orders
 ```text
 status
 date
+search
+```
+
+`search` 用於搜尋：
+
+```text
+order_no
+customer_name
 ```
 
 ### Response
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -301,6 +325,7 @@ POST /api/v1/orders
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "order_no": "ORD-20260915-001",
@@ -322,6 +347,7 @@ GET /api/v1/orders/:id
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "order_no": "ORD-20260915-001",
@@ -388,7 +414,8 @@ DELETE /api/v1/orders/:id
 
 ```json
 {
-  "success": true
+  "success": true,
+  "data": null
 }
 ```
 
@@ -404,6 +431,7 @@ POST /api/v1/orders/:id/publish
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "OPEN"
@@ -423,6 +451,7 @@ POST /api/v1/orders/:id/cancel
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "CANCELLED"
@@ -449,6 +478,7 @@ GET /api/v1/orders/:id/events
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -482,6 +512,7 @@ GET /api/v1/driver/orders
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -511,6 +542,7 @@ GET /api/v1/driver/orders/open
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -548,10 +580,24 @@ online_status = ONLINE
 GET /api/v1/driver/orders/:id
 ```
 
+允許：
+
+```text
+status = OPEN
+或目前登入 Driver 的已接單
+```
+
+禁止：
+
+```text
+其他 Driver 的已接單
+```
+
 ### Response
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "order_no": "ORD-20260915-001",
@@ -583,6 +629,7 @@ POST /api/v1/driver/orders/:id/accept
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "ACCEPTED",
@@ -617,6 +664,7 @@ POST /api/v1/driver/orders/:id/start
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "IN_PROGRESS",
@@ -643,6 +691,7 @@ POST /api/v1/driver/orders/:id/complete
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid",
     "status": "COMPLETED",
@@ -675,6 +724,7 @@ PATCH /api/v1/driver/status
 
 ```json
 {
+  "success": true,
   "data": {
     "status": "ONLINE"
   }
@@ -702,6 +752,7 @@ GET /api/v1/notifications
 
 ```json
 {
+  "success": true,
   "data": [
     {
       "id": "uuid",
@@ -736,6 +787,7 @@ POST /api/v1/notifications/subscription
 
 ```json
 {
+  "success": true,
   "data": {
     "id": "uuid"
   }
@@ -762,7 +814,8 @@ DELETE /api/v1/notifications/subscription
 
 ```json
 {
-  "success": true
+  "success": true,
+  "data": null
 }
 ```
 
@@ -809,9 +862,27 @@ Notifications
 
 ---
 
-# 9. Error Response
+# 9. Response Format
 
-統一格式：
+統一 Success Response：
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+無資料：
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+統一 Error Response：
 
 ```json
 {
@@ -844,6 +915,7 @@ INVALID_ORDER_STATUS
 - `/api/v1` 作為 API 版本
 - REST API
 - Session + HttpOnly Cookie
+- 統一 Success / Error Response
 - Business Logic 由 Backend 處理
 - Order Status 由 Backend 控制
 - 搶單唯一性由 Backend + PostgreSQL 保證
