@@ -93,7 +93,7 @@ describe('OrderCreateView', () => {
       scheduled_at: '2026-09-15T15:30:00+08:00',
       vehicle_type: '5人座',
       price: 1200,
-      note: undefined,
+      note: null,
     })
     expect(push).toHaveBeenCalledWith({
       name: 'order-detail',

@@ -197,6 +197,20 @@
 - `/orders/new` → 成功後進入 `/orders/:id`
 - 未實作 Edit / Delete / Publish / Cancel / Timeline / Drivers / Accept / Web Push
 
+---
+
+## Frontend Phase A-4 — Edit / Delete / Publish Draft
+
+**Status:** completed
+
+### 已完成
+
+- DRAFT：`PUT /orders/:id` 編輯
+- DRAFT：`DELETE /orders/:id` 刪除（確認後回 `/orders`）
+- DRAFT：`POST /orders/:id/publish` 發布（確認後重新載入 Detail）
+- 非 DRAFT 不提供以上操作
+- 未實作 Cancel / Accept / Drivers / Web Push
+
 ### Next
 
 下一個 Task 等待中。

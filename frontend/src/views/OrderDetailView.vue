@@ -3,16 +3,18 @@ import { ArrowLeft, RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getOrder } from '../api/orders'
+import { deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
 import { ApiClientError } from '../api/types'
-import type { OrderDetail, OrderStatus } from '../api/types'
+import type { CreateOrderInput, OrderDetail, OrderStatus } from '../api/types'
+import OrderForm from '../components/OrderForm.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatDateTimeTaipei, formatPrice, formatScheduledAt } from '../lib/format'
+import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form'
 
-const READONLY_HINT: Record<OrderStatus, string> = {
-  DRAFT: '草稿，目前僅供查看',
-  OPEN: '搶單中，目前僅供查看',
-  ACCEPTED: '已接單，目前僅供查看',
+const STATUS_HINT: Record<OrderStatus, string> = {
+  DRAFT: '草稿可編輯、刪除或發布',
+  OPEN: '搶單中，此訂單為唯讀',
+  ACCEPTED: '已接單，此訂單為唯讀',
   IN_PROGRESS: '行程進行中，此訂單為唯讀',
   COMPLETED: '已完成，此訂單為唯讀',
   CANCELLED: '已取消，此訂單為唯讀',
@@ -23,10 +25,21 @@ const router = useRouter()
 const order = ref<OrderDetail | null>(null)
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
+const actionError = ref<{ code: string; message: string } | null>(null)
 const notFound = ref(false)
 const forbidden = ref(false)
+const editing = ref(false)
+const editValues = ref<OrderFormValues | null>(null)
+const saving = ref(false)
+const deleting = ref(false)
+const publishing = ref(false)
+const confirmDelete = ref(false)
+const confirmPublish = ref(false)
 
 let requestSeq = 0
+
+const isDraft = computed(() => order.value?.status === 'DRAFT')
+const busy = computed(() => saving.value || deleting.value || publishing.value)
 
 const timestamps = computed(() => {
   if (!order.value) {
@@ -45,13 +58,22 @@ const timestamps = computed(() => {
   return rows.filter((row) => row.value)
 })
 
+function captureError(caught: unknown) {
+  if (caught instanceof ApiClientError) {
+    return { code: caught.code, message: caught.message }
+  }
+  return { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
+}
+
 async function loadOrder() {
   const id = String(route.params.id ?? '')
   const seq = ++requestSeq
   loading.value = true
   error.value = null
+  actionError.value = null
   notFound.value = false
   forbidden.value = false
+  editing.value = false
   order.value = null
 
   try {
@@ -78,6 +100,91 @@ async function loadOrder() {
     if (seq === requestSeq) {
       loading.value = false
     }
+  }
+}
+
+async function refreshOrder() {
+  const id = String(route.params.id ?? '')
+  const data = await getOrder(id)
+  order.value = data
+}
+
+function startEdit() {
+  if (!order.value || !isDraft.value || busy.value) {
+    return
+  }
+  actionError.value = null
+  editValues.value = orderDetailToFormValues(order.value)
+  editing.value = true
+}
+
+function cancelEdit() {
+  if (saving.value) {
+    return
+  }
+  editing.value = false
+  editValues.value = null
+  actionError.value = null
+}
+
+async function onSave(input: CreateOrderInput) {
+  if (!order.value || saving.value) {
+    return
+  }
+
+  saving.value = true
+  actionError.value = null
+
+  try {
+    order.value = await updateOrder(order.value.id, input)
+    editing.value = false
+    editValues.value = null
+  } catch (caught) {
+    actionError.value = captureError(caught)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function onDelete() {
+  if (!order.value || deleting.value) {
+    return false
+  }
+
+  deleting.value = true
+  actionError.value = null
+
+  try {
+    await deleteOrder(order.value.id)
+    confirmDelete.value = false
+    await router.push({ name: 'orders' })
+    return true
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    return false
+  } finally {
+    deleting.value = false
+  }
+}
+
+async function onPublish() {
+  if (!order.value || publishing.value) {
+    return false
+  }
+
+  publishing.value = true
+  actionError.value = null
+
+  try {
+    await publishOrder(order.value.id)
+    confirmPublish.value = false
+    await refreshOrder()
+    return true
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    return false
+  } finally {
+    publishing.value = false
   }
 }
 
@@ -146,15 +253,29 @@ watch(
           <div>
             <p class="kicker">訂單詳情</p>
             <h1>{{ order.order_no }}</h1>
-            <p class="readonly-hint">{{ READONLY_HINT[order.status] }}</p>
+            <p class="readonly-hint">{{ STATUS_HINT[order.status] }}</p>
           </div>
           <OrderStatusTag :status="order.status" />
         </header>
 
+        <p v-if="actionError && !editing" class="action-error">
+          {{ actionError.code }} · {{ actionError.message }}
+        </p>
+
         <div class="grid">
           <article class="panel">
-            <h2>訂單資訊</h2>
-            <dl class="fields">
+            <h2>{{ editing ? '編輯草稿' : '訂單資訊' }}</h2>
+            <OrderForm
+              v-if="editing && editValues"
+              submit-label="儲存變更"
+              :initial-values="editValues"
+              :submitting="saving"
+              :error="actionError"
+              show-cancel
+              @submit="onSave"
+              @cancel="cancelEdit"
+            />
+            <dl v-else class="fields">
               <div>
                 <dt>客戶</dt>
                 <dd>{{ order.customer_name }}</dd>
@@ -193,6 +314,60 @@ watch(
               <p class="driver-label">接單司機</p>
               <p class="driver-value">{{ order.driver_id ? '已指派' : '尚無' }}</p>
             </div>
+            <div v-if="isDraft && !editing" class="draft-actions">
+              <template v-if="confirmDelete">
+                <p class="confirm-copy">確定刪除此草稿？刪除後無法復原。</p>
+                <NButton block :disabled="deleting" @click="confirmDelete = false">
+                  取消
+                </NButton>
+                <NButton
+                  type="error"
+                  block
+                  :loading="deleting"
+                  :disabled="deleting"
+                  @click="onDelete"
+                >
+                  確認刪除
+                </NButton>
+              </template>
+              <template v-else-if="confirmPublish">
+                <p class="confirm-copy">確定發布這張草稿？發布後會進入搶單中，無法再編輯或刪除。</p>
+                <NButton block :disabled="publishing" @click="confirmPublish = false">
+                  取消
+                </NButton>
+                <NButton
+                  type="warning"
+                  block
+                  :loading="publishing"
+                  :disabled="publishing"
+                  @click="onPublish"
+                >
+                  確認發布
+                </NButton>
+              </template>
+              <template v-else>
+                <NButton type="primary" block :disabled="busy" @click="startEdit">
+                  編輯
+                </NButton>
+                <NButton
+                  type="warning"
+                  block
+                  :disabled="busy"
+                  @click="confirmPublish = true"
+                >
+                  發布
+                </NButton>
+                <NButton
+                  type="error"
+                  ghost
+                  block
+                  :disabled="busy"
+                  @click="confirmDelete = true"
+                >
+                  刪除
+                </NButton>
+              </template>
+            </div>
             <dl v-if="timestamps.length" class="meta">
               <div v-for="row in timestamps" :key="row.label">
                 <dt>{{ row.label }}</dt>
@@ -227,6 +402,12 @@ watch(
 .driver-label {
   margin: 0;
   color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
+.action-error {
+  margin: 0;
+  color: var(--color-danger);
   font: var(--font-caption);
 }
 
@@ -296,6 +477,18 @@ dd {
 
 .driver-value {
   margin: 0;
+}
+
+.draft-actions {
+  display: grid;
+  gap: var(--space-8);
+  margin-bottom: var(--space-24);
+}
+
+.confirm-copy {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text);
+  font: var(--font-caption);
 }
 
 .meta {

@@ -8,11 +8,14 @@ import OrderDetailView from './OrderDetailView.vue'
 
 vi.mock('../api/orders', () => ({
   getOrder: vi.fn(),
+  updateOrder: vi.fn(),
+  deleteOrder: vi.fn(),
+  publishOrder: vi.fn(),
 }))
 
-import { getOrder } from '../api/orders'
+import { deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
 
-const sample: OrderDetail = {
+const draft: OrderDetail = {
   id: 'order-1',
   order_no: 'ORD-20260915-001',
   customer_name: '王先生',
@@ -34,6 +37,11 @@ const sample: OrderDetail = {
   updated_at: '2026-09-15T07:00:00.000Z',
 }
 
+const openOrder: OrderDetail = {
+  ...draft,
+  status: 'OPEN',
+}
+
 async function mountDetail(id = 'order-1') {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -51,34 +59,155 @@ async function mountDetail(id = 'order-1') {
   return { wrapper, router }
 }
 
+function namedButtons(
+  wrapper: Awaited<ReturnType<typeof mountDetail>>['wrapper'],
+  name: string,
+) {
+  return wrapper.findAll('button').filter((item) => item.text().trim() === name)
+}
+
+function clickNamed(
+  wrapper: Awaited<ReturnType<typeof mountDetail>>['wrapper'],
+  name: string,
+  index = 0,
+) {
+  const button = namedButtons(wrapper, name)[index]
+  if (!button) {
+    throw new Error(`button ${name}[${index}] not found`)
+  }
+  return button.trigger('click')
+}
+
 describe('OrderDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.mocked(getOrder).mockResolvedValue(sample)
+    vi.mocked(getOrder).mockResolvedValue(draft)
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('loads and displays order detail as read-only', async () => {
+  it('shows draft actions only for DRAFT', async () => {
     const { wrapper } = await mountDetail()
 
-    expect(getOrder).toHaveBeenCalledWith('order-1')
-    expect(wrapper.text()).toContain('ORD-20260915-001')
-    expect(wrapper.text()).toContain('王先生')
-    expect(wrapper.text()).toContain('左營高鐵站')
-    expect(wrapper.text()).toContain('高雄小港機場')
-    expect(wrapper.text()).toContain('5人座')
-    expect(wrapper.text()).toContain('NT$ 1,200')
-    expect(wrapper.text()).toContain('2件行李')
-    expect(wrapper.text()).toContain('草稿')
-    expect(wrapper.text()).toContain('目前僅供查看')
-    expect(wrapper.text()).toContain('尚無')
+    expect(wrapper.text()).toContain('編輯')
+    expect(wrapper.text()).toContain('發布')
+    expect(wrapper.text()).toContain('刪除')
+    expect(wrapper.text()).toContain('草稿可編輯、刪除或發布')
+    expect(wrapper.text()).not.toContain('取消訂單')
+  })
+
+  it('hides draft actions after the order is OPEN', async () => {
+    vi.mocked(getOrder).mockResolvedValue(openOrder)
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain('搶單中')
     expect(wrapper.text()).not.toContain('編輯')
     expect(wrapper.text()).not.toContain('發布')
     expect(wrapper.text()).not.toContain('刪除')
-    expect(wrapper.text()).not.toContain('取消訂單')
+  })
+
+  it('edits a draft and reloads detail from the API response', async () => {
+    vi.mocked(updateOrder).mockResolvedValue({
+      ...draft,
+      customer_name: '林小姐',
+      price: 1600,
+    })
+    const { wrapper } = await mountDetail()
+
+    await clickNamed(wrapper, '編輯')
+    await flushPromises()
+    await wrapper.get('input[placeholder="例如 王先生"]').setValue('林小姐')
+    await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1600)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(updateOrder).toHaveBeenCalledWith(
+      'order-1',
+      expect.objectContaining({
+        customer_name: '林小姐',
+        price: 1600,
+        scheduled_at: '2026-09-15T15:30:00+08:00',
+      }),
+    )
+    expect(wrapper.text()).toContain('林小姐')
+    expect(wrapper.text()).toContain('NT$ 1,600')
+  })
+
+  it('shows edit validation and API errors', async () => {
+    vi.mocked(updateOrder).mockRejectedValue(
+      new ApiClientError('VALIDATION_ERROR', 'price 格式不正確', 400),
+    )
+    const { wrapper } = await mountDetail()
+
+    await clickNamed(wrapper, '編輯')
+    await flushPromises()
+    await wrapper.get('input[placeholder="例如 王先生"]').setValue('')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(updateOrder).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('請輸入客戶姓名')
+
+    await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('VALIDATION_ERROR')
+    expect(wrapper.text()).toContain('price 格式不正確')
+  })
+
+  it('deletes a draft after confirmation and returns to the list', async () => {
+    vi.mocked(deleteOrder).mockResolvedValue(null)
+    const { wrapper, router } = await mountDetail()
+    const push = vi.spyOn(router, 'push')
+
+    await clickNamed(wrapper, '刪除')
+    await flushPromises()
+    expect(wrapper.text()).toContain('確定刪除此草稿')
+    expect(deleteOrder).not.toHaveBeenCalled()
+
+    await clickNamed(wrapper, '確認刪除')
+    await flushPromises()
+
+    expect(deleteOrder).toHaveBeenCalledWith('order-1')
+    expect(push).toHaveBeenCalledWith({ name: 'orders' })
+  })
+
+  it('publishes a draft after confirmation and hides actions when OPEN', async () => {
+    vi.mocked(publishOrder).mockResolvedValue({ id: 'order-1', status: 'OPEN' })
+    vi.mocked(getOrder)
+      .mockResolvedValueOnce(draft)
+      .mockResolvedValueOnce(openOrder)
+
+    const { wrapper } = await mountDetail()
+    await clickNamed(wrapper, '發布')
+    await flushPromises()
+    expect(wrapper.text()).toContain('確定發布這張草稿')
+    expect(publishOrder).not.toHaveBeenCalled()
+
+    await clickNamed(wrapper, '確認發布')
+    await flushPromises()
+
+    expect(publishOrder).toHaveBeenCalledWith('order-1')
+    expect(getOrder).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('搶單中')
+    expect(wrapper.text()).not.toContain('編輯')
+    expect(wrapper.text()).not.toContain('刪除')
+  })
+
+  it('shows publish errors from the backend', async () => {
+    vi.mocked(publishOrder).mockRejectedValue(
+      new ApiClientError('INVALID_ORDER_STATUS', '訂單狀態不允許此操作', 409),
+    )
+    const { wrapper } = await mountDetail()
+
+    await clickNamed(wrapper, '發布')
+    await flushPromises()
+    await clickNamed(wrapper, '確認發布')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('INVALID_ORDER_STATUS')
+    expect(wrapper.text()).toContain('訂單狀態不允許此操作')
   })
 
   it('shows 404 when the order does not exist', async () => {
@@ -89,22 +218,5 @@ describe('OrderDetailView', () => {
 
     expect(wrapper.text()).toContain('找不到訂單')
     expect(wrapper.text()).toContain('NOT_FOUND')
-  })
-
-  it('shows error code and retry after failure', async () => {
-    vi.mocked(getOrder).mockRejectedValueOnce(
-      new ApiClientError('INTERNAL_ERROR', '系統發生錯誤', 500),
-    )
-    const { wrapper } = await mountDetail()
-
-    expect(wrapper.text()).toContain('INTERNAL_ERROR')
-    expect(wrapper.text()).toContain('重試')
-
-    vi.mocked(getOrder).mockResolvedValue(sample)
-    const retry = wrapper.findAll('button').find((button) => button.text().includes('重試'))
-    await retry!.trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('ORD-20260915-001')
   })
 })

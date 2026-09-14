@@ -5,7 +5,9 @@ import type {
   OrderDetail,
   OrderListItem,
   OrderListQuery,
+  PublishOrderResult,
 } from './types'
+import { toOrderWriteBody } from '../lib/order-form'
 
 export function ordersListPath(query: OrderListQuery = {}): string {
   const params = new URLSearchParams()
@@ -32,16 +34,17 @@ export function getOrder(id: string) {
 }
 
 export function createOrder(input: CreateOrderInput) {
-  const body: CreateOrderInput = {
-    customer_name: input.customer_name,
-    pickup_location: input.pickup_location,
-    destination: input.destination,
-    scheduled_at: input.scheduled_at,
-    vehicle_type: input.vehicle_type,
-    price: input.price,
-  }
-  if (input.note) {
-    body.note = input.note
-  }
-  return api.post<CreateOrderResult>('/orders', body)
+  return api.post<CreateOrderResult>('/orders', toOrderWriteBody(input))
+}
+
+export function updateOrder(id: string, input: CreateOrderInput) {
+  return api.put<OrderDetail>(`/orders/${id}`, toOrderWriteBody(input))
+}
+
+export function deleteOrder(id: string) {
+  return api.delete<null>(`/orders/${id}`)
+}
+
+export function publishOrder(id: string) {
+  return api.post<PublishOrderResult>(`/orders/${id}/publish`)
 }

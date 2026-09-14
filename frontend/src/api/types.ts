@@ -104,3 +104,8 @@ export type CreateOrderResult = {
   status: OrderStatus
   dispatch_mode: 'OPEN' | 'DIRECT' | 'PRIORITY' | 'AUTO'
 }
+
+export type PublishOrderResult = {
+  id: string
+  status: OrderStatus
+}

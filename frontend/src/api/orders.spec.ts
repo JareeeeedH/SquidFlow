@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createOrder, getOrder, listOrders, ordersListPath } from './orders'
+import {
+  createOrder,
+  deleteOrder,
+  getOrder,
+  listOrders,
+  ordersListPath,
+  publishOrder,
+  updateOrder,
+} from './orders'
 
 describe('ordersListPath', () => {
   it('omits empty filters', () => {
@@ -117,6 +125,68 @@ describe('createOrder', () => {
           note: '2件行李',
         }),
       }),
+    )
+  })
+})
+
+describe('draft lifecycle APIs', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('updates a draft with PUT /orders/:id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({ success: true, data: { id: 'order-1', status: 'DRAFT' } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await updateOrder('order-1', {
+      customer_name: '王先生',
+      pickup_location: '左營高鐵站',
+      destination: '高雄小港機場',
+      scheduled_at: '2026-09-15T15:30:00+08:00',
+      vehicle_type: '5人座',
+      price: 1300,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/order-1',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"price":1300'),
+      }),
+    )
+  })
+
+  it('deletes a draft with DELETE /orders/:id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({ success: true, data: null }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await deleteOrder('order-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/order-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('publishes a draft with POST /orders/:id/publish', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({ success: true, data: { id: 'order-1', status: 'OPEN' } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await publishOrder('order-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/order-1/publish',
+      expect.objectContaining({ method: 'POST' }),
     )
   })
 })
