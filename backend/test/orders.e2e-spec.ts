@@ -175,7 +175,9 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
     const orderIds = orders.map((order) => order.id);
 
     await prisma.notification.deleteMany({
-      where: { orderId: { in: orderIds } },
+      where: {
+        OR: [{ orderId: { in: orderIds } }, { userId: { in: userIds } }],
+      },
     });
     await prisma.orderEvent.deleteMany({
       where: { orderId: { in: orderIds } },

@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
   DispatchMode,
+  DriverOnlineStatus,
+  NotificationStatus,
   OrderEventType,
   OrderStatus,
   Prisma,
+  UserRole,
+  UserStatus,
 } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
@@ -114,6 +118,80 @@ export class OrdersService {
     }
 
     throw AppErrors.validation('訂單編號產生衝突，請重試');
+  }
+
+  async publish(id: string, user: AuthenticatedUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.order.updateMany({
+        where: {
+          id,
+          status: OrderStatus.DRAFT,
+        },
+        data: {
+          status: OrderStatus.OPEN,
+        },
+      });
+
+      if (updated.count !== 1) {
+        const existing = await tx.order.findUnique({ where: { id } });
+        if (!existing) {
+          throw AppErrors.notFound('找不到訂單');
+        }
+        throw AppErrors.invalidOrderStatus();
+      }
+
+      await tx.orderEvent.create({
+        data: {
+          orderId: id,
+          eventType: OrderEventType.ORDER_PUBLISHED,
+          actorUserId: user.id,
+        },
+      });
+
+      const recipients = await tx.driver.findMany({
+        where: {
+          onlineStatus: DriverOnlineStatus.ONLINE,
+          user: {
+            role: UserRole.DRIVER,
+            status: UserStatus.ACTIVE,
+          },
+          orders: {
+            none: {
+              status: {
+                in: [OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS],
+              },
+            },
+          },
+        },
+        select: {
+          userId: true,
+        },
+      });
+
+      if (recipients.length > 0) {
+        await tx.notification.createMany({
+          data: recipients.map((driver) => ({
+            userId: driver.userId,
+            orderId: id,
+            status: NotificationStatus.PENDING,
+            sentAt: null,
+          })),
+        });
+      }
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      return {
+        id: order.id,
+        status: order.status,
+      };
+    });
   }
 
   async update(id: string, input: OrderInput) {

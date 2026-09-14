@@ -116,6 +116,23 @@
 - `GET /orders` query：`status`、`date`（Taipei `scheduled_at` 日曆日）、`search`（`order_no` / `customer_name`）
 - 未實作 Publish、Cancel、搶單、Notification、Frontend Order UI
 
+---
+
+## TASK-007 — Order Publish / DRAFT → OPEN
+
+**Status:** completed
+
+### 已完成
+
+- `POST /api/v1/orders/:id/publish`
+- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
+- Atomic `UPDATE ... WHERE id AND status = DRAFT` → `OPEN`
+- 同一 transaction：Order OPEN + `ORDER_PUBLISHED` + `Notification(PENDING)`
+- 通知對象：`User.role=DRIVER` 且 `User.status=ACTIVE` 且 `Driver.online_status=ONLINE`，且沒有 `ACCEPTED` / `IN_PROGRESS` Order
+- 無符合資格 Driver 時仍 Publish 成功，Notification = 0
+- 非 DRAFT / 重複 Publish → `INVALID_ORDER_STATUS`
+- 未實作 Web Push、Accept / 搶單、Cancel、Frontend
+
 ### Next
 
 下一個 Task 等待中。

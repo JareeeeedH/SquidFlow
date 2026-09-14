@@ -51,6 +51,19 @@ export class OrdersController {
     };
   }
 
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  async publish(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.ordersService.publish(id, user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
   @Get(':id')
   async getById(@Param('id', parseOrderId) id: string) {
     const data = await this.ordersService.getById(id);

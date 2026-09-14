@@ -52,6 +52,14 @@ describe('Database schema constraints', () => {
   });
 
   afterAll(async () => {
+    await prisma.notification.deleteMany({
+      where: {
+        OR: [
+          { orderId: { in: [ids.orderAId, ids.orderBId] } },
+          { userId: { in: [ids.adminId, ids.driverUserId] } },
+        ],
+      },
+    });
     await prisma.order.deleteMany({
       where: { id: { in: [ids.orderAId, ids.orderBId] } },
     });

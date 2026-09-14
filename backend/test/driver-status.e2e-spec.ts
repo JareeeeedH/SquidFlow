@@ -147,6 +147,9 @@ describe('Driver Online / Offline (e2e)', () => {
     });
     const userIds = testUsers.map((user) => user.id);
 
+    await prisma.notification.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.order.deleteMany({
       where: { id: orderId },
     });

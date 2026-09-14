@@ -81,6 +81,13 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.notification.deleteMany({
+      where: {
+        userId: {
+          in: [users.active.id, users.suspended.id],
+        },
+      },
+    });
     await prisma.session.deleteMany({
       where: {
         userId: {

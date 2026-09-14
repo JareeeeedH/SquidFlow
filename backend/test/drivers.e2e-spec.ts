@@ -215,6 +215,9 @@ describe('Admin Driver Management (e2e)', () => {
     });
     const userIds = testUsers.map((user) => user.id);
 
+    await prisma.notification.deleteMany({
+      where: { userId: { in: userIds } },
+    });
     await prisma.session.deleteMany({
       where: { userId: { in: userIds } },
     });
