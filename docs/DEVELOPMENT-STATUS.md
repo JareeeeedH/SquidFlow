@@ -133,6 +133,24 @@
 - 非 DRAFT / 重複 Publish → `INVALID_ORDER_STATUS`
 - 未實作 Web Push、Accept / 搶單、Cancel、Frontend
 
+---
+
+## TASK-008 — Driver Open Orders / Order Detail
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/driver/orders/open`
+- `GET /api/v1/driver/orders/:id`
+- Driver-only：AuthGuard + RolesGuard（`User.role = DRIVER`）
+- Driver context 由 current user → `drivers.user_id` 取得，不接受 client `driver_id` / `user_id`
+- Open Orders 僅在可接單時回傳 `status=OPEN`：ACTIVE + ONLINE + 無 ACCEPTED / IN_PROGRESS；否則空陣列
+- Order Detail：OPEN 或 `order.driver_id = current driver`（含 ACCEPTED / IN_PROGRESS / COMPLETED / CANCELLED）
+- 其他 Driver 已接單與不存在訂單一律 `404 NOT_FOUND`
+- GET 唯讀：不改 Order / Driver，不建立 `ORDER_VIEWED`
+- 未實作 Accept / 搶單、Start / Complete、`GET /driver/orders`、Web Push、Frontend
+
 ### Next
 
 下一個 Task 等待中。

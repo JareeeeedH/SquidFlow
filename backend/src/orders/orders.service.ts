@@ -19,7 +19,13 @@ import {
   orderNoPrefix,
   taipeiDateStamp,
 } from './order-number';
-import { toCreateResponse, toDetail, toListItem } from './orders.mapper';
+import {
+  toCreateResponse,
+  toDetail,
+  toDriverOpenOrder,
+  toDriverOrderDetail,
+  toListItem,
+} from './orders.mapper';
 import { OrderInput, OrderListQuery } from './orders.validation';
 
 @Injectable()
@@ -118,6 +124,66 @@ export class OrdersService {
     }
 
     throw AppErrors.validation('訂單編號產生衝突，請重試');
+  }
+
+  async listOpenForDriver(user: AuthenticatedUser) {
+    const driver = await this.findCurrentDriverOrThrow(user.id);
+    if (!this.canAcceptOpenOrders(user, driver)) {
+      return [];
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        status: OrderStatus.OPEN,
+      },
+      orderBy: {
+        scheduledAt: 'asc',
+      },
+      select: {
+        id: true,
+        orderNo: true,
+        scheduledAt: true,
+        pickupLocation: true,
+        destination: true,
+        vehicleType: true,
+        price: true,
+        note: true,
+      },
+    });
+
+    return orders.map(toDriverOpenOrder);
+  }
+
+  async getForDriver(user: AuthenticatedUser, id: string) {
+    const driver = await this.findCurrentDriverOrThrow(user.id);
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        orderNo: true,
+        customerName: true,
+        pickupLocation: true,
+        destination: true,
+        scheduledAt: true,
+        vehicleType: true,
+        price: true,
+        note: true,
+        status: true,
+        driverId: true,
+      },
+    });
+
+    if (!order) {
+      throw AppErrors.notFound('找不到訂單');
+    }
+
+    const isOpen = order.status === OrderStatus.OPEN;
+    const isOwn = order.driverId === driver.id;
+    if (!isOpen && !isOwn) {
+      throw AppErrors.notFound('找不到訂單');
+    }
+
+    return toDriverOrderDetail(order);
   }
 
   async publish(id: string, user: AuthenticatedUser) {
@@ -235,6 +301,46 @@ export class OrdersService {
       throw AppErrors.notFound('找不到訂單');
     }
     return order;
+  }
+
+  private async findCurrentDriverOrThrow(userId: string) {
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        onlineStatus: true,
+        orders: {
+          where: {
+            status: {
+              in: [OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS],
+            },
+          },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+
+    return driver;
+  }
+
+  private canAcceptOpenOrders(
+    user: AuthenticatedUser,
+    driver: {
+      onlineStatus: DriverOnlineStatus;
+      orders: { id: string }[];
+    },
+  ): boolean {
+    return (
+      user.role === UserRole.DRIVER &&
+      user.status === UserStatus.ACTIVE &&
+      driver.onlineStatus === DriverOnlineStatus.ONLINE &&
+      driver.orders.length === 0
+    );
   }
 
   private async allocateOrderNo(tx: Prisma.TransactionClient): Promise<string> {
