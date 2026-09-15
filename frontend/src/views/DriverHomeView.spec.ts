@@ -13,6 +13,7 @@ vi.mock('../api/auth', () => ({
 }))
 
 vi.mock('../api/driver-status', () => ({
+  getDriverOnlineStatus: vi.fn(),
   updateDriverOnlineStatus: vi.fn(),
 }))
 
@@ -34,7 +35,10 @@ vi.mock('../lib/web-push', () => ({
 }))
 
 import { fetchCurrentUser } from '../api/auth'
-import { updateDriverOnlineStatus } from '../api/driver-status'
+import {
+  getDriverOnlineStatus,
+  updateDriverOnlineStatus,
+} from '../api/driver-status'
 import { createPushSubscription } from '../api/notifications'
 import {
   createBrowserSubscription,
@@ -90,6 +94,7 @@ describe('DriverHomeView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(fetchCurrentUser).mockResolvedValue(driver)
+    vi.mocked(getDriverOnlineStatus).mockResolvedValue({ status: 'OFFLINE' })
     vi.mocked(notificationPermission).mockReturnValue('default')
     vi.stubGlobal('Notification', {
       permission: 'default',
@@ -109,17 +114,28 @@ describe('DriverHomeView', () => {
     expect(wrapper.text()).toContain('帳號狀態')
     expect(wrapper.text()).toContain('啟用')
     expect(wrapper.text()).toContain('上線狀態')
-    expect(wrapper.text()).toContain('未同步')
-    expect(wrapper.text()).toContain('尚未向伺服器確認上線狀態')
+    expect(wrapper.text()).toContain('下線')
+    expect(wrapper.text()).toContain('目前無法搶新訂單')
     expect(wrapper.text()).toContain('通知')
     expect(wrapper.text()).toContain('通知未開啟')
     expect(wrapper.text()).not.toContain('查看可搶訂單')
     expect(wrapper.text()).not.toContain('我的訂單')
+    expect(getDriverOnlineStatus).toHaveBeenCalled()
+    expect(useDriverStatusStore().onlineStatus).toBe('OFFLINE')
     expect(switches(wrapper)).toHaveLength(2)
   })
 
+  it('hydrates ONLINE status from GET on load', async () => {
+    vi.mocked(getDriverOnlineStatus).mockResolvedValue({ status: 'ONLINE' })
+    const { wrapper } = await mountHome()
+
+    expect(useDriverStatusStore().onlineStatus).toBe('ONLINE')
+    expect(wrapper.text()).toContain('上線')
+    expect(wrapper.text()).toContain('目前可搶單')
+    expect(wrapper.text()).not.toContain('未同步')
+  })
+
   it('switches OFFLINE to ONLINE from the backend response', async () => {
-    useDriverStatusStore().onlineStatus = 'OFFLINE'
     vi.mocked(updateDriverOnlineStatus).mockResolvedValue({ status: 'ONLINE' })
     const { wrapper } = await mountHome()
 
@@ -132,7 +148,7 @@ describe('DriverHomeView', () => {
   })
 
   it('confirms before going offline', async () => {
-    useDriverStatusStore().onlineStatus = 'ONLINE'
+    vi.mocked(getDriverOnlineStatus).mockResolvedValue({ status: 'ONLINE' })
     vi.mocked(updateDriverOnlineStatus).mockResolvedValue({ status: 'OFFLINE' })
     const { wrapper } = await mountHome()
 
@@ -152,7 +168,6 @@ describe('DriverHomeView', () => {
   })
 
   it('shows backend ACCOUNT_SUSPENDED without changing local status', async () => {
-    useDriverStatusStore().onlineStatus = 'OFFLINE'
     vi.mocked(updateDriverOnlineStatus).mockRejectedValue(
       new ApiClientError('ACCOUNT_SUSPENDED', '帳號已停用', 403),
     )
@@ -174,6 +189,16 @@ describe('DriverHomeView', () => {
 
     expect(wrapper.text()).toContain('NETWORK_ERROR')
     expect(wrapper.text()).toContain('無法連線到伺服器')
+    expect(wrapper.text()).toContain('重試')
+  })
+
+  it('shows error when status sync fails', async () => {
+    vi.mocked(getDriverOnlineStatus).mockRejectedValue(
+      new ApiClientError('INTERNAL_ERROR', '系統發生錯誤', 500),
+    )
+    const { wrapper } = await mountHome()
+
+    expect(wrapper.text()).toContain('INTERNAL_ERROR')
     expect(wrapper.text()).toContain('重試')
   })
 

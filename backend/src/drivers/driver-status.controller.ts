@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -13,6 +13,15 @@ import { parseUpdateOnlineStatusBody } from './drivers.validation';
 @Roles(UserRole.DRIVER)
 export class DriverStatusController {
   constructor(private readonly driversService: DriversService) {}
+
+  @Get('status')
+  async getOnlineStatus(@CurrentUser() user: AuthenticatedUser) {
+    const data = await this.driversService.getOnlineStatus(user);
+    return {
+      success: true,
+      data,
+    };
+  }
 
   @Patch('status')
   async updateOnlineStatus(

@@ -207,6 +207,87 @@ describe('Driver Online / Offline (e2e)', () => {
     expect(driver?.onlineStatus).toBe('ONLINE');
   });
 
+  it('lets a DRIVER read current ONLINE status', async () => {
+    await prisma.driver.update({
+      where: { id: users.driver.driverId },
+      data: { onlineStatus: 'ONLINE' },
+    });
+    const cookie = await loginAs(users.driver.username);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/driver/status')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect(asBody<ApiSuccessBody<{ status: string }>>(response)).toEqual({
+      success: true,
+      data: {
+        status: 'ONLINE',
+      },
+    });
+  });
+
+  it('lets a DRIVER read current OFFLINE status', async () => {
+    await prisma.driver.update({
+      where: { id: users.driver.driverId },
+      data: { onlineStatus: 'OFFLINE' },
+    });
+    const cookie = await loginAs(users.driver.username);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/driver/status')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect(asBody<ApiSuccessBody<{ status: string }>>(response)).toEqual({
+      success: true,
+      data: {
+        status: 'OFFLINE',
+      },
+    });
+  });
+
+  it('does not let ADMIN read driver online status', async () => {
+    const cookie = await loginAs(users.admin.username);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/driver/status')
+      .set('Cookie', cookie)
+      .expect(403);
+
+    expect(asBody<ApiErrorBody>(response).error.code).toBe('FORBIDDEN');
+  });
+
+  it('does not let a SUSPENDED driver read online status', async () => {
+    await prisma.driver.update({
+      where: { id: users.suspended.driverId },
+      data: { onlineStatus: 'ONLINE' },
+    });
+    const cookie = await loginAs(users.suspended.username);
+    await prisma.user.update({
+      where: { id: users.suspended.id },
+      data: { status: 'SUSPENDED' },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/driver/status')
+      .set('Cookie', cookie)
+      .expect(403);
+
+    expect(asBody<ApiErrorBody>(response)).toEqual({
+      success: false,
+      error: {
+        code: 'ACCOUNT_SUSPENDED',
+        message: '帳號已停用',
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: users.suspended.id },
+      data: { status: 'ACTIVE' },
+    });
+  });
+
   it('lets a DRIVER switch ONLINE to OFFLINE', async () => {
     await prisma.driver.update({
       where: { id: users.driver.driverId },

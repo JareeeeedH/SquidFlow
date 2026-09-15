@@ -756,6 +756,34 @@ POST /api/v1/driver/orders/:id/complete
 
 # 5. Driver — Online Status
 
+## Get Status
+
+```http
+GET /api/v1/driver/status
+```
+
+讀取目前登入 Driver 的 `online_status`。僅 `DRIVER`。`SUSPENDED` 回 `ACCOUNT_SUSPENDED`。
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ONLINE"
+  }
+}
+```
+
+可用：
+
+```text
+ONLINE
+OFFLINE
+```
+
+---
+
 ## Update Status
 
 ```http

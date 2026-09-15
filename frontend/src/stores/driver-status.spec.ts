@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '../api/types'
 
 vi.mock('../api/driver-status', () => ({
+  getDriverOnlineStatus: vi.fn(),
   updateDriverOnlineStatus: vi.fn(),
 }))
 
-import { updateDriverOnlineStatus } from '../api/driver-status'
+import {
+  getDriverOnlineStatus,
+  updateDriverOnlineStatus,
+} from '../api/driver-status'
 import { useDriverStatusStore } from './driver-status'
 
 describe('driver status store', () => {
@@ -16,6 +20,16 @@ describe('driver status store', () => {
 
   afterEach(() => {
     vi.resetAllMocks()
+  })
+
+  it('hydrates online status from GET', async () => {
+    vi.mocked(getDriverOnlineStatus).mockResolvedValue({ status: 'ONLINE' })
+    const store = useDriverStatusStore()
+
+    await store.sync()
+
+    expect(getDriverOnlineStatus).toHaveBeenCalledOnce()
+    expect(store.onlineStatus).toBe('ONLINE')
   })
 
   it('keeps online status from the backend response', async () => {
@@ -38,5 +52,18 @@ describe('driver status store', () => {
       code: 'ACCOUNT_SUSPENDED',
     })
     expect(store.onlineStatus).toBeNull()
+  })
+
+  it('does not change local status when sync fails', async () => {
+    vi.mocked(getDriverOnlineStatus).mockRejectedValue(
+      new ApiClientError('NETWORK_ERROR', '無法連線到伺服器', 0),
+    )
+    const store = useDriverStatusStore()
+    store.onlineStatus = 'ONLINE'
+
+    await expect(store.sync()).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+    })
+    expect(store.onlineStatus).toBe('ONLINE')
   })
 })

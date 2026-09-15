@@ -641,3 +641,15 @@ Phase 3 — Advanced Dispatch & Communication
 - 未改 API / Backend / Schema / business rules / IA
 
 ---
+
+## TASK — Driver Home Final UI Cleanup + Status Hydration
+
+**Status:** completed
+
+### 已完成
+
+- 新增 `GET /api/v1/driver/status`；Home／Layout hydrate online status
+- Header 移除「派車」與頂欄 Online 文字；帳號狀態同行顯示
+- 未改 Schema、PATCH contract、Order／Push rules
+
+---

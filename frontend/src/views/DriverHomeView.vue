@@ -61,7 +61,7 @@ async function loadHome() {
 
   try {
     await auth.refresh()
-    await pushNotification.sync()
+    await Promise.all([driverStatus.sync(), pushNotification.sync()])
   } catch (caught) {
     error.value = captureError(caught)
   } finally {
@@ -134,7 +134,6 @@ void loadHome()
 
       <template v-else-if="auth.currentUser">
         <header class="identity">
-          <p class="kicker">司機</p>
           <div class="identity-row">
             <h1>{{ auth.currentUser.username }}</h1>
             <div class="account-status">
@@ -254,7 +253,6 @@ void loadHome()
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
-  margin-top: var(--space-4);
 }
 
 .identity h1 {
@@ -270,13 +268,12 @@ void loadHome()
 
 .account-status {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-4);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-8);
   flex-shrink: 0;
 }
 
-.kicker,
 .identity .row-label {
   margin: 0;
   color: rgb(248 250 252 / 72%);

@@ -2,9 +2,8 @@
 import { LogOut } from 'lucide-vue-next'
 import type { GlobalThemeOverrides } from 'naive-ui'
 import { NButton, NConfigProvider } from 'naive-ui'
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import OnlineStatusTag from '../components/OnlineStatusTag.vue'
 import { useAuthStore } from '../stores/auth'
 import { useDriverStatusStore } from '../stores/driver-status'
 import { usePushNotificationStore } from '../stores/push-notification'
@@ -13,8 +12,6 @@ const auth = useAuthStore()
 const driverStatus = useDriverStatusStore()
 const pushNotification = usePushNotificationStore()
 const router = useRouter()
-
-const knownOnlineStatus = computed(() => driverStatus.onlineStatus)
 
 const driverTheme: GlobalThemeOverrides = {
   common: {
@@ -31,24 +28,26 @@ async function onLogout() {
 
 onMounted(() => {
   void pushNotification.sync()
+  void driverStatus.sync().catch(() => {
+    // Home will surface status sync errors when opened.
+  })
 })
 </script>
 
 <template>
   <NConfigProvider :theme-overrides="driverTheme">
     <div class="shell">
-      <header
-        class="topbar"
-        :class="{
-          'is-online': knownOnlineStatus === 'ONLINE',
-          'is-offline': knownOnlineStatus === 'OFFLINE',
-        }"
-      >
-        <RouterLink class="brand" :to="{ name: 'driver-home' }">派車</RouterLink>
-        <div class="topbar-status">
-          <OnlineStatusTag v-if="knownOnlineStatus" :status="knownOnlineStatus" />
-          <span v-else class="status-pending">上線狀態未同步</span>
-        </div>
+      <header class="topbar">
+        <RouterLink
+          class="brand"
+          :to="{ name: 'driver-home' }"
+          aria-label="首頁"
+        >
+          <span class="brand-mark" aria-hidden="true" />
+        </RouterLink>
+        <p v-if="auth.currentUser" class="user">
+          {{ auth.currentUser.username }}
+        </p>
         <NButton class="logout" quaternary size="large" @click="onLogout">
           <template #icon>
             <LogOut :size="18" />
@@ -118,45 +117,36 @@ onMounted(() => {
   color: #f8fafc;
 }
 
-.topbar.is-online {
-  box-shadow: inset 0 -2px 0 #16a34a;
-}
-
-.topbar.is-offline {
-  box-shadow: inset 0 -2px 0 rgb(248 250 252 / 28%);
-}
-
 .brand {
-  font: var(--font-section-title);
-  color: #f8fafc;
-  text-decoration: none;
-  letter-spacing: 0.02em;
-}
-
-.topbar-status {
-  flex: 1;
   display: flex;
+  align-items: center;
   justify-content: center;
-}
-
-.topbar-status :deep(.n-tag) {
-  height: 28px;
-  font-size: 14px;
-  padding: 0 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-8);
   background: rgb(248 250 252 / 12%);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #f8fafc;
+  box-shadow: 6px 0 0 rgb(248 250 252 / 45%);
+}
+
+.user {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+  font: var(--font-label);
+  font-weight: 600;
   color: #f8fafc;
-  border-color: rgb(248 250 252 / 28%);
-}
-
-.topbar-status :deep(.n-tag.n-tag--success) {
-  background: color-mix(in srgb, var(--color-success) 22%, transparent);
-  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
-  color: #bbf7d0;
-}
-
-.status-pending {
-  color: rgb(248 250 252 / 72%);
-  font: var(--font-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .logout {

@@ -143,6 +143,24 @@ export class DriversService {
     };
   }
 
+  async getOnlineStatus(user: AuthenticatedUser) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId: user.id },
+      select: { onlineStatus: true },
+    });
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+
+    return {
+      status: driver.onlineStatus,
+    };
+  }
+
   async updateOnlineStatus(
     user: AuthenticatedUser,
     status: DriverOnlineStatus,

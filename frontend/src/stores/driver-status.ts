@@ -1,10 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { updateDriverOnlineStatus } from '../api/driver-status'
+import {
+  getDriverOnlineStatus,
+  updateDriverOnlineStatus,
+} from '../api/driver-status'
 import type { OnlineStatus } from '../api/types'
 
 export const useDriverStatusStore = defineStore('driverStatus', () => {
   const onlineStatus = ref<OnlineStatus | null>(null)
+
+  async function sync() {
+    const result = await getDriverOnlineStatus()
+    onlineStatus.value = result.status
+    return result
+  }
 
   async function setOnlineStatus(status: OnlineStatus) {
     const result = await updateDriverOnlineStatus(status)
@@ -18,6 +27,7 @@ export const useDriverStatusStore = defineStore('driverStatus', () => {
 
   return {
     onlineStatus,
+    sync,
     setOnlineStatus,
     reset,
   }

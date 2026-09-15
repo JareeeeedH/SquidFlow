@@ -382,13 +382,9 @@ Driver 採簡化導覽。
 狀態
 ```
 
-上方固定顯示：
+上方固定顯示品牌標記、使用者名稱與登出。Online / Offline **不**在頂欄重複顯示，只在狀態頁 Switch Bar。
 
-```text
-🟢 ONLINE
-```
-
-導覽保留「狀態 / 可搶訂單 / 我的訂單」。上線狀態於頂欄與狀態頁同步顯示。
+導覽保留「狀態 / 可搶訂單 / 我的訂單」。
 
 ---
 
@@ -398,8 +394,7 @@ Driver 採簡化導覽。
 
 ```text
 ┌─────────────────────┐
-│ 司機                 │  ← navy identity
-│ driver01      啟用   │
+│ driver01  帳號狀態 [啟用] │
 ├─────────────────────┤
 │ 上線狀態      [● 上線]│
 │ 通知          [● 開啟]│
@@ -407,7 +402,7 @@ Driver 採簡化導覽。
 └─────────────────────┘
 ```
 
-上線 / 通知採 compact switch。下線仍需確認。可搶訂單與我的訂單由上方導覽進入，Home 不重複列出入口。
+帳號狀態與 Tag 同一行。進入／重整狀態頁時以 `GET /driver/status` hydrate 上線狀態，Switch 與 Server 一致。上線 / 通知採 compact switch。下線仍需確認。可搶訂單與我的訂單由上方導覽進入，Home 不重複列出入口。
 
 ---
 
@@ -650,7 +645,7 @@ OFFLINE      Muted
 ### Driver
 
 - 登入後進入狀態頁；可搶訂單與我的訂單由導覽進入
-- Online Status 固定可見
+- Online Status 於狀態頁 Switch 顯示，並以 GET hydrate
 - 上線 / 通知使用 compact switch
 - Open / My Orders 使用 compact card；路線為主、單號為次
 - deep navy 僅用於 header、accent、active、primary action

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { updateDriverOnlineStatus } from './driver-status'
+import { getDriverOnlineStatus, updateDriverOnlineStatus } from './driver-status'
 
 function ok(data: unknown) {
   return {
@@ -12,6 +12,22 @@ describe('driver status API', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+  })
+
+  it('gets current ONLINE or OFFLINE status', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ status: 'ONLINE' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getDriverOnlineStatus()
+
+    expect(result).toEqual({ status: 'ONLINE' })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/driver/status',
+      expect.objectContaining({
+        method: 'GET',
+        credentials: 'include',
+      }),
+    )
   })
 
   it('patches only ONLINE or OFFLINE', async () => {
