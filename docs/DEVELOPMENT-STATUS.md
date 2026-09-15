@@ -521,3 +521,16 @@
 - 未改欄位、API、Schema、validation、routing 或 business rules
 
 ---
+
+## TASK — Polish Admin Create Driver UI
+
+**Status:** completed
+
+### 已完成
+
+- 新增司機頁改為置中、最大寬度 800px；Header 與 Form Card 同寬
+- 表單分成「帳號資訊」「車輛資訊」，必填欄位顯示 `*`
+- 「建立司機」維持 Primary CTA，「取消」維持 Secondary
+- 未改欄位、API、Schema、validation、routing 或 business rules
+
+---

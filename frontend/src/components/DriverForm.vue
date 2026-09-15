@@ -24,6 +24,7 @@ const props = defineProps<{
   error: { code: string; message: string } | null
   initialValues?: DriverFormValues | null
   showCancel?: boolean
+  grouped?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -85,6 +86,7 @@ async function onSubmit() {
   <NForm
     ref="formRef"
     class="driver-form"
+    :class="{ grouped }"
     :model="form"
     :rules="rules"
     label-placement="top"
@@ -97,52 +99,63 @@ async function onSubmit() {
       class="alert"
     />
 
-    <NFormItem path="username" label="帳號">
-      <NInput
-        v-model:value="form.username"
-        placeholder="例如 driver01"
-        autocomplete="username"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="password" label="密碼">
-      <NInput
-        v-model:value="form.password"
-        type="password"
-        show-password-on="click"
-        :placeholder="mode === 'edit' ? '空白則不修改密碼' : '請輸入密碼'"
-        autocomplete="new-password"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="license_plate" label="車牌">
-      <NInput
-        v-model:value="form.license_plate"
-        placeholder="例如 ABC-1234"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="vehicle_brand" label="品牌">
-      <NInput
-        v-model:value="form.vehicle_brand"
-        placeholder="例如 Toyota"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="vehicle_model" label="型號">
-      <NInput
-        v-model:value="form.vehicle_model"
-        placeholder="例如 Camry"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="vehicle_color" label="車色">
-      <NInput
-        v-model:value="form.vehicle_color"
-        placeholder="例如 黑色"
-        :disabled="submitting"
-      />
-    </NFormItem>
+    <section class="form-section">
+      <header v-if="grouped" class="section-header">
+        <h2>帳號資訊</h2>
+      </header>
+      <NFormItem path="username" label="帳號" :required="grouped">
+        <NInput
+          v-model:value="form.username"
+          placeholder="例如 driver01"
+          autocomplete="username"
+          :disabled="submitting"
+        />
+      </NFormItem>
+      <NFormItem path="password" label="密碼" :required="grouped">
+        <NInput
+          v-model:value="form.password"
+          type="password"
+          show-password-on="click"
+          :placeholder="mode === 'edit' ? '空白則不修改密碼' : '請輸入密碼'"
+          autocomplete="new-password"
+          :disabled="submitting"
+        />
+      </NFormItem>
+    </section>
+
+    <section class="form-section">
+      <header v-if="grouped" class="section-header">
+        <h2>車輛資訊</h2>
+      </header>
+      <NFormItem path="license_plate" label="車牌" :required="grouped">
+        <NInput
+          v-model:value="form.license_plate"
+          placeholder="例如 ABC-1234"
+          :disabled="submitting"
+        />
+      </NFormItem>
+      <NFormItem path="vehicle_brand" label="品牌" :required="grouped">
+        <NInput
+          v-model:value="form.vehicle_brand"
+          placeholder="例如 Toyota"
+          :disabled="submitting"
+        />
+      </NFormItem>
+      <NFormItem path="vehicle_model" label="型號" :required="grouped">
+        <NInput
+          v-model:value="form.vehicle_model"
+          placeholder="例如 Camry"
+          :disabled="submitting"
+        />
+      </NFormItem>
+      <NFormItem path="vehicle_color" label="車色" :required="grouped">
+        <NInput
+          v-model:value="form.vehicle_color"
+          placeholder="例如 黑色"
+          :disabled="submitting"
+        />
+      </NFormItem>
+    </section>
 
     <div class="actions">
       <NButton
@@ -170,9 +183,51 @@ async function onSubmit() {
   margin-bottom: var(--space-16);
 }
 
+.form-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.section-header {
+  margin-bottom: var(--space-16);
+}
+
+.section-header h2 {
+  margin: 0;
+  font: var(--font-section-title);
+}
+
+.grouped .form-section + .form-section {
+  margin-top: var(--space-8);
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--color-border);
+}
+
+.grouped :deep(.n-form-item) {
+  margin-bottom: var(--space-16);
+}
+
+.grouped .form-section :deep(.n-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.grouped :deep(.n-input),
+.grouped :deep(.n-form-item-blank) {
+  min-width: 0;
+  width: 100%;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-8);
+}
+
+.grouped .actions {
+  margin-top: var(--space-24);
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--color-border);
 }
 </style>
