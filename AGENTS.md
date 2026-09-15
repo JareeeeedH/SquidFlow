@@ -4,7 +4,7 @@
 
 白牌司機群派車系統。
 
-所有產品、技術、Database、API、UI/UX 與 Architecture 規則，以 `docs/` 為準。
+所有產品、技術、Database、API、UI/UX、Architecture 與 Security 規則，以 `docs/` 為準。
 
 ## Rules
 
@@ -44,5 +44,6 @@ docs/
 ├── DATABASE-SPEC.md
 ├── API-SPEC.md
 ├── UI-UX-SPEC.md
-└── SYSTEM-ARCHITECTURE-SPEC.md
+├── SYSTEM-ARCHITECTURE-SPEC.md
+└── SECURITY-SPEC.md
 ```
