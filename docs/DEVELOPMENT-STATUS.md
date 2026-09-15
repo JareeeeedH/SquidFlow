@@ -1,5 +1,37 @@
 # Development Status
 
+## Product Phase Roadmap
+
+與正式 Spec 一致的產品階段邊界：
+
+```text
+Phase 1 — 核心派車 MVP（目前實作範圍）
+Phase 2 — Driver Location & Trip Information
+Phase 3 — Advanced Dispatch & Communication
+```
+
+### Phase 1
+
+核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線 / 離線、Web Push、Admin / Driver UI。詳見下方已完成 TASK。
+
+### Phase 2（尚未開始）
+
+只包含：
+
+- Driver Location（GPS、定期更新、Backend 儲存；Online / Offline 影響更新）
+- Distance / ETA（`Driver → Pickup`）
+- Map（Driver 位置 + Pickup；基本視覺化）
+- Pickup Geocoding
+
+不要求完整導航，不建立複雜 Dispatch Engine。
+
+### Phase 3（後續規劃，僅簡述）
+
+- Advanced Dispatch：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤
+- Communication：第三方通訊整合（不指定服務或技術方案）
+
+---
+
 ## TASK-001 — Project Bootstrap
 
 **Status:** completed
@@ -570,5 +602,17 @@
 - 司機詳情改為置中約 960px、7:3 雙欄；左側帳號 / 車輛，右側狀態 / 操作
 - 提高帳號與車牌層級；上線提示降為次要文字，不提供 Admin 控制 Online / Offline
 - 未改 API / Schema / business rules
+
+---
+
+## TASK — Update Phase 2 / Phase 3 Specification
+
+**Status:** completed
+
+### 已完成
+
+- 統一 Phase 1 / 2 / 3 邊界於 MVP / Architecture / API / Database / UI-UX / DEVELOPMENT-STATUS
+- Phase 2 限定 Location / Distance / ETA / Map；第三方通訊與進階派車移至 Phase 3
+- 未改 Backend / Frontend / Schema / Migration / API 實作
 
 ---

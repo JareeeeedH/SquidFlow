@@ -524,3 +524,17 @@ created_by
 created_at
 updated_at
 ```
+
+---
+
+# 12. Product Phase Data Boundary
+
+```text
+Phase 1 — 目前 DATABASE-SPEC 已定義的 Schema（核心派車 MVP）
+Phase 2 — Driver Location & Trip Information
+Phase 3 — Advanced Dispatch & Communication
+```
+
+**Phase 2** 可能需要儲存 Driver 目前位置，以及 Pickup Geocoding 座標，以支援距離 / ETA / 地圖。詳細 Schema 於進入 Phase 2 時再定義，目前不新增欄位或 Migration。
+
+**Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。

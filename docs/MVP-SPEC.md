@@ -217,12 +217,14 @@ PRIORITY
 AUTO
 ```
 
-未來可支援：
+未來可支援（屬 Phase 3 Advanced Dispatch，詳細需求待定）：
 
 - 開放搶單
 - 指定司機
 - 指定司機優先，逾時後開放搶單
 - 自動派單
+
+Phase 2 不擴充 `dispatch_mode`，不實作指定司機或自動派單。
 
 ---
 
@@ -668,9 +670,17 @@ COMPLETED
 
 ---
 
-# 18. 第一版功能範圍
+# 18. 產品階段範圍
 
-## 18.1 已包含
+## Phase Boundary
+
+```text
+Phase 1 — 核心派車 MVP
+Phase 2 — Driver Location & Trip Information
+Phase 3 — Advanced Dispatch & Communication
+```
+
+## 18.1 Phase 1 — 核心派車 MVP（已包含）
 
 - Admin 登入
 - Driver 登入
@@ -691,17 +701,57 @@ COMPLETED
 - Web Push / Browser Notification
 - OrderEvent 紀錄
 
-## 18.2 第二階段
+## 18.2 Phase 2 — Driver Location & Trip Information
 
-- 地圖 / GPS
-- 上車 / 下車
-- 司機即時位置
-- 指定司機
-- 優先派單
-- 司機條件篩選
-- 自動派單
+Phase 2 只包含：
+
+### Driver Location
+
+- Driver 可啟用 GPS
+- 取得目前經緯度
+- 定期更新位置
+- Backend 儲存 Driver 目前位置
+- Online / Offline 影響定位更新
+
+### Distance / ETA
+
+- 使用 Driver 當前位置
+- 對應 Order Pickup Location
+- 計算距離
+- 計算 / 顯示預估到達時間（ETA）
+
+### Map
+
+- 顯示 Driver 自己的位置
+- 顯示 Order Pickup 位置
+- 提供基本地圖視覺化
+
+### Phase 2 基本原則
+
+- Order Pickup 文字地址需要 Geocoding 成座標
+- Distance / ETA 以 `Driver → Pickup` 為核心
+- 第一版不要求完整導航
+- 不建立複雜 Dispatch Engine
+- Phase 2 先聚焦「司機在哪裡」與「距離訂單上車地點多遠」
+
+## 18.3 Phase 3 — Advanced Dispatch & Communication
+
+Phase 3 為後續開發規劃，目前只做簡述，不定義詳細需求。
+
+### Advanced Dispatch
+
+- 自動派車
+- AI Dispatch
+- Priority / 自動重派
+- 進階車隊追蹤
+
+### Communication
+
 - 第三方通訊整合
-- AI Dispatch / Agent
+
+例如未來可評估電話、LINE、簡訊或其他第三方服務。
+
+目前不指定第三方服務、API 或技術方案。
 
 ---
 

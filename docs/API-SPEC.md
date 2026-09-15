@@ -971,3 +971,21 @@ INVALID_ORDER_STATUS
 - Order Status 由 Backend 控制
 - 搶單唯一性由 Backend + PostgreSQL 保證
 - Web 與未來 Mobile App 共用 API
+
+---
+
+# 11. Product Phase API Boundary
+
+```text
+Phase 1 — 目前 API-SPEC 已定義的端點（核心派車 MVP）
+Phase 2 — Driver Location & Trip Information
+Phase 3 — Advanced Dispatch & Communication
+```
+
+**Phase 2**（進入該階段時再定義詳細 contract）：
+
+- Driver 位置上報 / 儲存
+- Distance / ETA（以 `Driver → Pickup` 為核心）
+- 支援地圖顯示所需的位置資料
+
+**Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。

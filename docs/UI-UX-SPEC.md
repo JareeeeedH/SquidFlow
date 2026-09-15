@@ -663,7 +663,6 @@ Driver UI 以 Mobile First 設計。
 
 # 21. MVP UI Scope
 
-
 ```text
 Authentication
 └── Login
@@ -682,6 +681,15 @@ Driver
 └── My Orders
 ```
 
+## Product Phase UI Boundary
+
+```text
+Phase 1 — 目前 MVP UI Scope（上表）
+Phase 2 — Driver Location & Trip Information（地圖 / 距離 / ETA 相關 UI）
+Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI）
+```
+
+Phase 2 / Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 2 地圖頁或 Phase 3 通訊介面。
 
 ---
 

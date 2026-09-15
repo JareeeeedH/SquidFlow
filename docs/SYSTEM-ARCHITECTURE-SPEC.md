@@ -1382,9 +1382,37 @@ Reliable
 Redis
 Realtime Connection
 Message Queue
-Advanced Dispatch
+Advanced Dispatch（Phase 3）
 Microservices
 ```
+
+---
+
+### 16.5 Product Phase Roadmap
+
+產品階段與架構擴充對齊：
+
+```text
+Phase 1 — 核心派車 MVP（目前）
+Phase 2 — Driver Location & Trip Information
+Phase 3 — Advanced Dispatch & Communication
+```
+
+**Phase 2** 聚焦：
+
+- Driver GPS 位置更新與儲存
+- `Driver → Pickup` 距離 / ETA
+- 基本地圖視覺化（Driver 位置 + Pickup）
+- Pickup 地址 Geocoding
+
+不要求完整導航，不建立複雜 Dispatch Engine。
+
+**Phase 3** 為後續規劃（僅簡述）：
+
+- Advanced Dispatch：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤
+- Communication：第三方通訊整合（不指定服務或技術方案）
+
+詳細需求於進入該 Phase 時再定義。
 
 ---
 
