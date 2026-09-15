@@ -1,8 +1,11 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -27,6 +30,19 @@ export class DriverOrdersController {
   @Get('open')
   async listOpen(@CurrentUser() user: AuthenticatedUser) {
     const data = await this.ordersService.listOpenForDriver(user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Post(':id/accept')
+  @HttpCode(HttpStatus.OK)
+  async accept(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.ordersService.accept(id, user);
     return {
       success: true,
       data,

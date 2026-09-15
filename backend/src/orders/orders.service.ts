@@ -186,6 +186,102 @@ export class OrdersService {
     return toDriverOrderDetail(order);
   }
 
+  async accept(id: string, user: AuthenticatedUser) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const driver = await tx.driver.findUnique({
+          where: { userId: user.id },
+          select: {
+            id: true,
+            onlineStatus: true,
+            orders: {
+              where: {
+                status: {
+                  in: [OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS],
+                },
+              },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        });
+
+        if (!driver) {
+          throw AppErrors.notFound('找不到司機');
+        }
+        if (driver.onlineStatus !== DriverOnlineStatus.ONLINE) {
+          throw AppErrors.driverOffline();
+        }
+        if (driver.orders.length > 0) {
+          throw AppErrors.driverHasActiveOrder();
+        }
+
+        const acceptedAt = new Date();
+        const claimed = await tx.order.updateMany({
+          where: {
+            id,
+            status: OrderStatus.OPEN,
+          },
+          data: {
+            status: OrderStatus.ACCEPTED,
+            driverId: driver.id,
+            acceptedAt,
+          },
+        });
+
+        if (claimed.count !== 1) {
+          const existing = await tx.order.findUnique({ where: { id } });
+          if (!existing) {
+            throw AppErrors.notFound('找不到訂單');
+          }
+          if (existing.status === OrderStatus.ACCEPTED) {
+            throw AppErrors.orderAlreadyAccepted();
+          }
+          throw AppErrors.invalidOrderStatus();
+        }
+
+        await tx.orderEvent.create({
+          data: {
+            orderId: id,
+            eventType: OrderEventType.ORDER_ACCEPTED,
+            actorUserId: user.id,
+          },
+        });
+
+        const order = await tx.order.findUniqueOrThrow({
+          where: { id },
+          select: {
+            id: true,
+            status: true,
+            driverId: true,
+            acceptedAt: true,
+          },
+        });
+
+        return {
+          id: order.id,
+          status: order.status,
+          driver_id: order.driverId,
+          accepted_at: order.acceptedAt
+            ? order.acceptedAt.toISOString()
+            : acceptedAt.toISOString(),
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw AppErrors.driverHasActiveOrder();
+      }
+      throw error;
+    }
+  }
+
   async publish(id: string, user: AuthenticatedUser) {
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({

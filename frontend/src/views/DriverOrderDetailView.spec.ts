@@ -8,9 +8,10 @@ import DriverOrderDetailView from './DriverOrderDetailView.vue'
 
 vi.mock('../api/driver-orders', () => ({
   getDriverOrder: vi.fn(),
+  acceptDriverOrder: vi.fn(),
 }))
 
-import { getDriverOrder } from '../api/driver-orders'
+import { acceptDriverOrder, getDriverOrder } from '../api/driver-orders'
 
 const openOrder: DriverOrderDetail = {
   id: 'order-1',
@@ -59,13 +60,19 @@ describe('DriverOrderDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(getDriverOrder).mockResolvedValue(openOrder)
+    vi.mocked(acceptDriverOrder).mockResolvedValue({
+      id: 'order-1',
+      status: 'ACCEPTED',
+      driver_id: 'driver-1',
+      accepted_at: '2026-09-15T07:05:00.000Z',
+    })
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('shows an OPEN order without accept actions', async () => {
+  it('shows an OPEN order with an accept action', async () => {
     const { wrapper } = await mountDetail()
 
     expect(wrapper.text()).toContain('ORD-20260915-002')
@@ -76,17 +83,61 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).toContain('5人座')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).toContain('2件行李')
-    expect(wrapper.text()).not.toContain('我要接單')
+    expect(wrapper.text()).toContain('我要接單')
     expect(wrapper.text()).not.toContain('開始行程')
     expect(wrapper.text()).not.toContain('完成')
   })
 
-  it('shows the current driver\'s accepted order', async () => {
+  it('accepts an OPEN order from the backend response then reloads detail', async () => {
+    vi.mocked(getDriverOrder)
+      .mockResolvedValueOnce(openOrder)
+      .mockResolvedValueOnce(ownAccepted)
+    const { wrapper } = await mountDetail()
+
+    const accept = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('我要接單'))
+    await accept!.trigger('click')
+    await flushPromises()
+
+    expect(acceptDriverOrder).toHaveBeenCalledWith('order-1')
+    expect(wrapper.text()).toContain('接單成功')
+    expect(wrapper.text()).toContain('已接單')
+    expect(wrapper.text()).not.toContain('我要接單')
+  })
+
+  it('shows the backend error when another driver already accepted', async () => {
+    vi.mocked(acceptDriverOrder).mockRejectedValue(
+      new ApiClientError(
+        'ORDER_ALREADY_ACCEPTED',
+        '此訂單已被其他司機接單',
+        409,
+      ),
+    )
+    vi.mocked(getDriverOrder)
+      .mockResolvedValueOnce(openOrder)
+      .mockRejectedValueOnce(
+        new ApiClientError('NOT_FOUND', '找不到訂單', 404),
+      )
+    const { wrapper } = await mountDetail()
+
+    const accept = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('我要接單'))
+    await accept!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('ORDER_ALREADY_ACCEPTED')
+    expect(wrapper.text()).toContain('此訂單已被其他司機接單')
+  })
+
+  it("shows the current driver's accepted order", async () => {
     vi.mocked(getDriverOrder).mockResolvedValue(ownAccepted)
     const { wrapper } = await mountDetail()
 
     expect(wrapper.text()).toContain('已接單')
     expect(wrapper.text()).toContain('李小姐')
+    expect(wrapper.text()).not.toContain('我要接單')
   })
 
   it('shows 404 when the order is missing or belongs to another driver', async () => {

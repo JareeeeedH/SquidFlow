@@ -242,8 +242,20 @@
 - `GET /api/v1/driver/orders/open` 可搶訂單
 - `GET /api/v1/driver/orders/:id` 司機訂單詳情
 - Mobile-first Card / 大觸控區
-- 未實作 Accept、My Orders、Start / Complete / Cancel、Web Push
+- 未實作 My Orders、Start / Complete / Cancel、Web Push
 
-### Next
+---
 
-下一個 Task 等待中。
+## TASK-009 — Driver Accept Order
+
+**Status:** completed
+
+### 已完成
+
+- `POST /api/v1/driver/orders/:id/accept`
+- Atomic claim：`UPDATE ... WHERE id = :id AND status = 'OPEN'`
+- 成功：`OPEN → ACCEPTED`、寫入 `driver_id` / `accepted_at`、建立 `ORDER_ACCEPTED`
+- 失敗：`ORDER_ALREADY_ACCEPTED` / `DRIVER_OFFLINE` / `DRIVER_HAS_ACTIVE_ORDER` / `INVALID_ORDER_STATUS` / `NOT_FOUND`
+- 同一 Driver 未完成訂單由 Business Rule + `idx_one_active_order_per_driver` 雙重保護
+- Driver UI「我要接單」以 Backend 回傳為準
+- 未實作 Start / Complete / Cancel、My Orders、Web Push

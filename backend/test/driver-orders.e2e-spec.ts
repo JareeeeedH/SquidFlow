@@ -122,6 +122,36 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       driverId: randomUUID(),
       licensePlate: `D8F-${suffix}`,
     },
+    claimer: {
+      id: randomUUID(),
+      username: `d8-claimer-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D8G-${suffix}`,
+    },
+    racerB: {
+      id: randomUUID(),
+      username: `d8-racerb-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D8H-${suffix}`,
+    },
+    racerC: {
+      id: randomUUID(),
+      username: `d8-racerc-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D8I-${suffix}`,
+    },
+    suspendTarget: {
+      id: randomUUID(),
+      username: `d8-suspend-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D8J-${suffix}`,
+    },
+    dual: {
+      id: randomUUID(),
+      username: `d8-dual-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D8K-${suffix}`,
+    },
   };
   const orders = {
     draft: randomUUID(),
@@ -222,6 +252,11 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
     await createDriverUser(users.acceptedBusy, { onlineStatus: 'ONLINE' });
     await createDriverUser(users.inProgressBusy, { onlineStatus: 'ONLINE' });
     await createDriverUser(users.other, { onlineStatus: 'ONLINE' });
+    await createDriverUser(users.claimer, { onlineStatus: 'ONLINE' });
+    await createDriverUser(users.racerB, { onlineStatus: 'ONLINE' });
+    await createDriverUser(users.racerC, { onlineStatus: 'ONLINE' });
+    await createDriverUser(users.suspendTarget, { onlineStatus: 'ONLINE' });
+    await createDriverUser(users.dual, { onlineStatus: 'ONLINE' });
 
     await seedOrder({ id: orders.draft, suffix: 'DRAFT', status: 'DRAFT' });
     await seedOrder({ id: orders.open, suffix: 'OPEN', status: 'OPEN' });
@@ -536,5 +571,268 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
     expect(afterDriver).toEqual(beforeDriver);
     expect(afterEvents).toBe(beforeEvents);
     expect(afterEvents).toBe(0);
+  });
+
+  it('returns 401 when unauthenticated driver accepts', async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orders.open}/accept`)
+      .expect(401);
+    expect(asBody<ApiErrorBody>(response).error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('returns 403 when an ADMIN accepts', async () => {
+    const cookie = await loginAs(users.admin.username);
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orders.open}/accept`)
+      .set('Cookie', cookie)
+      .send({ driver_id: users.claimer.driverId, user_id: users.claimer.id })
+      .expect(403);
+    expect(asBody<ApiErrorBody>(response).error.code).toBe('FORBIDDEN');
+  });
+
+  it('lets an ONLINE DRIVER accept an OPEN order and writes ORDER_ACCEPTED', async () => {
+    const orderId = randomUUID();
+    await seedOrder({ id: orderId, suffix: 'ACC1', status: 'OPEN' });
+    const cookie = await loginAs(users.claimer.username);
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/accept`)
+      .set('Cookie', cookie)
+      .send({
+        driver_id: users.racerB.driverId,
+        user_id: users.racerB.id,
+      })
+      .expect(200);
+
+    const body = asBody<
+      ApiSuccessBody<{
+        id: string;
+        status: string;
+        driver_id: string;
+        accepted_at: string;
+      }>
+    >(response);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        id: orderId,
+        status: 'ACCEPTED',
+        driver_id: users.claimer.driverId,
+        accepted_at: body.data.accepted_at,
+      },
+    });
+    expect(new Date(body.data.accepted_at).toISOString()).toBe(
+      body.data.accepted_at,
+    );
+    expect(JSON.stringify(body)).not.toMatch(/prisma|p2002|sql/i);
+
+    const stored = await prisma.order.findUnique({ where: { id: orderId } });
+    expect(stored?.status).toBe('ACCEPTED');
+    expect(stored?.driverId).toBe(users.claimer.driverId);
+    expect(stored?.acceptedAt).not.toBeNull();
+
+    const events = await prisma.orderEvent.findMany({
+      where: { orderId, eventType: 'ORDER_ACCEPTED' },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0].actorUserId).toBe(users.claimer.id);
+  });
+
+  it('rejects OFFLINE, SUSPENDED, and drivers who already have an unfinished order', async () => {
+    const openForOffline = randomUUID();
+    const openForBusy = randomUUID();
+    const openForSuspended = randomUUID();
+    await seedOrder({ id: openForOffline, suffix: 'OFFA', status: 'OPEN' });
+    await seedOrder({ id: openForBusy, suffix: 'BUSY', status: 'OPEN' });
+    await seedOrder({
+      id: openForSuspended,
+      suffix: 'SUSO',
+      status: 'OPEN',
+    });
+
+    const offline = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${openForOffline}/accept`)
+      .set('Cookie', await loginAs(users.offline.username))
+      .expect(409);
+    expect(asBody<ApiErrorBody>(offline).error.code).toBe('DRIVER_OFFLINE');
+    expect(
+      await prisma.orderEvent.count({
+        where: { orderId: openForOffline, eventType: 'ORDER_ACCEPTED' },
+      }),
+    ).toBe(0);
+
+    const acceptedBusy = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${openForBusy}/accept`)
+      .set('Cookie', await loginAs(users.acceptedBusy.username))
+      .expect(409);
+    expect(asBody<ApiErrorBody>(acceptedBusy).error.code).toBe(
+      'DRIVER_HAS_ACTIVE_ORDER',
+    );
+
+    const inProgressBusy = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${openForBusy}/accept`)
+      .set('Cookie', await loginAs(users.inProgressBusy.username))
+      .expect(409);
+    expect(asBody<ApiErrorBody>(inProgressBusy).error.code).toBe(
+      'DRIVER_HAS_ACTIVE_ORDER',
+    );
+
+    const suspendCookie = await loginAs(users.suspendTarget.username);
+    await prisma.user.update({
+      where: { id: users.suspendTarget.id },
+      data: { status: 'SUSPENDED' },
+    });
+    const stillHasSession = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${openForSuspended}/accept`)
+      .set('Cookie', suspendCookie)
+      .expect(403);
+    expect(asBody<ApiErrorBody>(stillHasSession).error.code).toBe(
+      'ACCOUNT_SUSPENDED',
+    );
+
+    await prisma.user.update({
+      where: { id: users.suspendTarget.id },
+      data: { status: 'ACTIVE' },
+    });
+    const activeCookie = await loginAs(users.suspendTarget.username);
+    const admin = await loginAs(users.admin.username);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/drivers/${users.suspendTarget.driverId}/status`)
+      .set('Cookie', admin)
+      .send({ status: 'SUSPENDED' })
+      .expect(200);
+    const afterRevoke = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${openForSuspended}/accept`)
+      .set('Cookie', activeCookie)
+      .expect(401);
+    expect(asBody<ApiErrorBody>(afterRevoke).error.code).toBe('UNAUTHORIZED');
+    expect(
+      await prisma.orderEvent.count({
+        where: { orderId: openForSuspended, eventType: 'ORDER_ACCEPTED' },
+      }),
+    ).toBe(0);
+  });
+
+  it('rejects non-OPEN and missing orders with the mapped API error', async () => {
+    const cookie = await loginAs(users.racerB.username);
+
+    const draft = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orders.draft}/accept`)
+      .set('Cookie', cookie)
+      .expect(409);
+    expect(asBody<ApiErrorBody>(draft).error.code).toBe('INVALID_ORDER_STATUS');
+
+    const already = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orders.otherAccepted}/accept`)
+      .set('Cookie', cookie)
+      .expect(409);
+    expect(asBody<ApiErrorBody>(already).error.code).toBe(
+      'ORDER_ALREADY_ACCEPTED',
+    );
+
+    const missing = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${randomUUID()}/accept`)
+      .set('Cookie', cookie)
+      .expect(404);
+    expect(asBody<ApiErrorBody>(missing).error.code).toBe('NOT_FOUND');
+
+    const invalidId = await request(app.getHttpServer())
+      .post('/api/v1/driver/orders/not-a-uuid/accept')
+      .set('Cookie', cookie)
+      .expect(404);
+    expect(asBody<ApiErrorBody>(invalidId).error.code).toBe('NOT_FOUND');
+    expect(JSON.stringify(invalidId.body)).not.toMatch(/prisma|p2002|sql/i);
+  });
+
+  it('allows only one DRIVER to win when three accept the same OPEN order concurrently', async () => {
+    const orderId = randomUUID();
+    await seedOrder({ id: orderId, suffix: 'RACE', status: 'OPEN' });
+
+    const cookies = await Promise.all([
+      loginAs(users.racerB.username),
+      loginAs(users.racerC.username),
+      loginAs(users.viewer.username),
+    ]);
+
+    const responses = await Promise.all(
+      cookies.map((cookie) =>
+        request(app.getHttpServer())
+          .post(`/api/v1/driver/orders/${orderId}/accept`)
+          .set('Cookie', cookie),
+      ),
+    );
+
+    const statuses = responses.map((response) => response.status);
+    expect(statuses.filter((status) => status === 200)).toHaveLength(1);
+    expect(statuses.filter((status) => status === 409)).toHaveLength(2);
+
+    const winner = responses.find((response) => response.status === 200);
+    const winnerBody = asBody<
+      ApiSuccessBody<{ driver_id: string; status: string }>
+    >(winner!);
+    expect(winnerBody.data.status).toBe('ACCEPTED');
+    expect([
+      users.racerB.driverId,
+      users.racerC.driverId,
+      users.viewer.driverId,
+    ]).toContain(winnerBody.data.driver_id);
+
+    for (const response of responses.filter((item) => item.status === 409)) {
+      expect(asBody<ApiErrorBody>(response).error.code).toBe(
+        'ORDER_ALREADY_ACCEPTED',
+      );
+      expect(JSON.stringify(response.body)).not.toMatch(/prisma|p2002|sql/i);
+    }
+
+    const stored = await prisma.order.findUnique({ where: { id: orderId } });
+    expect(stored?.status).toBe('ACCEPTED');
+    expect(stored?.driverId).toBe(winnerBody.data.driver_id);
+    expect(
+      await prisma.orderEvent.count({
+        where: { orderId, eventType: 'ORDER_ACCEPTED' },
+      }),
+    ).toBe(1);
+  });
+
+  it('lets a DRIVER keep at most one unfinished order when accepting two OPEN orders concurrently', async () => {
+    const first = randomUUID();
+    const second = randomUUID();
+    await seedOrder({ id: first, suffix: 'DUAL1', status: 'OPEN' });
+    await seedOrder({ id: second, suffix: 'DUAL2', status: 'OPEN' });
+    const cookie = await loginAs(users.dual.username);
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post(`/api/v1/driver/orders/${first}/accept`)
+        .set('Cookie', cookie),
+      request(app.getHttpServer())
+        .post(`/api/v1/driver/orders/${second}/accept`)
+        .set('Cookie', cookie),
+    ]);
+
+    const successes = responses.filter((response) => response.status === 200);
+    const failures = responses.filter((response) => response.status !== 200);
+    expect(successes).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect(asBody<ApiErrorBody>(failures[0]).error.code).toBe(
+      'DRIVER_HAS_ACTIVE_ORDER',
+    );
+    expect(JSON.stringify(failures[0].body)).not.toMatch(/prisma|p2002|sql/i);
+
+    const unfinished = await prisma.order.count({
+      where: {
+        driverId: users.dual.driverId,
+        status: { in: ['ACCEPTED', 'IN_PROGRESS'] },
+      },
+    });
+    expect(unfinished).toBe(1);
+
+    const acceptedEvents = await prisma.orderEvent.count({
+      where: {
+        orderId: { in: [first, second] },
+        eventType: 'ORDER_ACCEPTED',
+      },
+    });
+    expect(acceptedEvents).toBe(1);
   });
 });

@@ -180,3 +180,10 @@ export type DriverOrderDetail = {
   note: string | null
   status: OrderStatus
 }
+
+export type AcceptOrderResult = {
+  id: string
+  status: 'ACCEPTED'
+  driver_id: string
+  accepted_at: string
+}

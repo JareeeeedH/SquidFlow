@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getDriverOrder, listOpenDriverOrders } from './driver-orders'
+import { getDriverOrder, listOpenDriverOrders, acceptDriverOrder } from './driver-orders'
 
 function ok(data: unknown) {
   return {
@@ -35,6 +35,22 @@ describe('driver orders API', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/driver/orders/order-1',
       expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    )
+  })
+
+  it('accepts an order without a request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ id: 'order-1' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await acceptDriverOrder('order-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/driver/orders/order-1/accept',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: undefined,
+      }),
     )
   })
 })

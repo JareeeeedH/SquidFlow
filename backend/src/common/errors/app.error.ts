@@ -39,4 +39,22 @@ export const AppErrors = {
       '訂單狀態不允許此操作',
       HttpStatus.CONFLICT,
     ),
+  orderAlreadyAccepted: () =>
+    new AppError(
+      'ORDER_ALREADY_ACCEPTED',
+      '此訂單已被其他司機接單',
+      HttpStatus.CONFLICT,
+    ),
+  driverOffline: () =>
+    new AppError(
+      'DRIVER_OFFLINE',
+      '司機目前為離線，無法接單',
+      HttpStatus.CONFLICT,
+    ),
+  driverHasActiveOrder: () =>
+    new AppError(
+      'DRIVER_HAS_ACTIVE_ORDER',
+      '司機尚有未完成訂單，無法接單',
+      HttpStatus.CONFLICT,
+    ),
 };
