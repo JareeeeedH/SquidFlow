@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -16,6 +17,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { AppErrors } from '../common/errors/app.error';
 import type { AuthenticatedUser } from '../common/types/authenticated-user';
 import { OrdersService } from './orders.service';
+import { parseDriverMyOrdersQuery } from './orders.validation';
 
 const parseOrderId = new ParseUUIDPipe({
   exceptionFactory: () => AppErrors.notFound('找不到訂單'),
@@ -26,6 +28,21 @@ const parseOrderId = new ParseUUIDPipe({
 @Roles(UserRole.DRIVER)
 export class DriverOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Get()
+  async listMine(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const data = await this.ordersService.listMine(
+      user,
+      parseDriverMyOrdersQuery(query),
+    );
+    return {
+      success: true,
+      data,
+    };
+  }
 
   @Get('open')
   async listOpen(@CurrentUser() user: AuthenticatedUser) {
@@ -43,6 +60,32 @@ export class DriverOrdersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const data = await this.ordersService.accept(id, user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Post(':id/start')
+  @HttpCode(HttpStatus.OK)
+  async start(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.ordersService.start(id, user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
+  async complete(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.ordersService.complete(id, user);
     return {
       success: true,
       data,

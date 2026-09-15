@@ -131,3 +131,24 @@ export function parseOrderListQuery(query: unknown): OrderListQuery {
   result.search = optionalQueryString(data.search);
   return result;
 }
+
+export type DriverMyOrdersQuery = {
+  status?: OrderStatus;
+};
+
+export function parseDriverMyOrdersQuery(query: unknown): DriverMyOrdersQuery {
+  const data =
+    query !== null && typeof query === 'object' && !Array.isArray(query)
+      ? (query as Record<string, unknown>)
+      : {};
+
+  const result: DriverMyOrdersQuery = {};
+  const status = optionalQueryString(data.status);
+  if (status !== undefined) {
+    if (!Object.values(OrderStatus).includes(status as OrderStatus)) {
+      throw AppErrors.validation('status 格式不正確');
+    }
+    result.status = status as OrderStatus;
+  }
+  return result;
+}

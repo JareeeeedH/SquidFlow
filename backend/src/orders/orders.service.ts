@@ -22,11 +22,16 @@ import {
 import {
   toCreateResponse,
   toDetail,
+  toDriverMyOrder,
   toDriverOpenOrder,
   toDriverOrderDetail,
   toListItem,
 } from './orders.mapper';
-import { OrderInput, OrderListQuery } from './orders.validation';
+import {
+  DriverMyOrdersQuery,
+  OrderInput,
+  OrderListQuery,
+} from './orders.validation';
 
 @Injectable()
 export class OrdersService {
@@ -124,6 +129,32 @@ export class OrdersService {
     }
 
     throw AppErrors.validation('訂單編號產生衝突，請重試');
+  }
+
+  async listMine(user: AuthenticatedUser, query: DriverMyOrdersQuery) {
+    const driver = await this.findCurrentDriverOrThrow(user.id);
+    const orders = await this.prisma.order.findMany({
+      where: {
+        driverId: driver.id,
+        AND: [
+          { status: { not: OrderStatus.DRAFT } },
+          ...(query.status ? [{ status: query.status }] : []),
+        ],
+      },
+      orderBy: [{ scheduledAt: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        orderNo: true,
+        scheduledAt: true,
+        pickupLocation: true,
+        destination: true,
+        vehicleType: true,
+        price: true,
+        status: true,
+      },
+    });
+
+    return orders.map(toDriverMyOrder);
   }
 
   async listOpenForDriver(user: AuthenticatedUser) {
@@ -282,6 +313,104 @@ export class OrdersService {
     }
   }
 
+  async start(id: string, user: AuthenticatedUser) {
+    this.assertDriverAccountActive(user);
+
+    return this.prisma.$transaction(async (tx) => {
+      const driver = await this.findDriverInTxOrThrow(tx, user.id);
+      const startedAt = new Date();
+      const updated = await tx.order.updateMany({
+        where: {
+          id,
+          status: OrderStatus.ACCEPTED,
+          driverId: driver.id,
+        },
+        data: {
+          status: OrderStatus.IN_PROGRESS,
+          startedAt,
+        },
+      });
+
+      if (updated.count !== 1) {
+        await this.throwOwnOrderTransitionError(tx, id, driver.id);
+      }
+
+      await tx.orderEvent.create({
+        data: {
+          orderId: id,
+          eventType: OrderEventType.ORDER_STARTED,
+          actorUserId: user.id,
+        },
+      });
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          startedAt: true,
+        },
+      });
+
+      return {
+        id: order.id,
+        status: order.status,
+        started_at: order.startedAt
+          ? order.startedAt.toISOString()
+          : startedAt.toISOString(),
+      };
+    });
+  }
+
+  async complete(id: string, user: AuthenticatedUser) {
+    this.assertDriverAccountActive(user);
+
+    return this.prisma.$transaction(async (tx) => {
+      const driver = await this.findDriverInTxOrThrow(tx, user.id);
+      const completedAt = new Date();
+      const updated = await tx.order.updateMany({
+        where: {
+          id,
+          status: OrderStatus.IN_PROGRESS,
+          driverId: driver.id,
+        },
+        data: {
+          status: OrderStatus.COMPLETED,
+          completedAt,
+        },
+      });
+
+      if (updated.count !== 1) {
+        await this.throwOwnOrderTransitionError(tx, id, driver.id);
+      }
+
+      await tx.orderEvent.create({
+        data: {
+          orderId: id,
+          eventType: OrderEventType.ORDER_COMPLETED,
+          actorUserId: user.id,
+        },
+      });
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          completedAt: true,
+        },
+      });
+
+      return {
+        id: order.id,
+        status: order.status,
+        completed_at: order.completedAt
+          ? order.completedAt.toISOString()
+          : completedAt.toISOString(),
+      };
+    });
+  }
+
   async publish(id: string, user: AuthenticatedUser) {
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({
@@ -397,6 +526,38 @@ export class OrdersService {
       throw AppErrors.notFound('找不到訂單');
     }
     return order;
+  }
+
+  private assertDriverAccountActive(user: AuthenticatedUser) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+  }
+
+  private async findDriverInTxOrThrow(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ) {
+    const driver = await tx.driver.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+    return driver;
+  }
+
+  private async throwOwnOrderTransitionError(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    driverId: string,
+  ): Promise<never> {
+    const existing = await tx.order.findUnique({ where: { id: orderId } });
+    if (!existing || existing.driverId !== driverId) {
+      throw AppErrors.notFound('找不到訂單');
+    }
+    throw AppErrors.invalidOrderStatus();
   }
 
   private async findCurrentDriverOrThrow(userId: string) {

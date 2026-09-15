@@ -43,6 +43,17 @@ export type OrderDetail = {
   updated_at: string;
 };
 
+export type DriverMyOrder = {
+  id: string;
+  order_no: string;
+  scheduled_at: string;
+  pickup_location: string;
+  destination: string;
+  vehicle_type: string;
+  price: number;
+  status: OrderStatus;
+};
+
 export type DriverOpenOrder = {
   id: string;
   order_no: string;
@@ -66,6 +77,18 @@ export type DriverOrderDetail = {
   note: string | null;
   status: OrderStatus;
 };
+
+type DriverMyOrderRow = Pick<
+  Order,
+  | 'id'
+  | 'orderNo'
+  | 'scheduledAt'
+  | 'pickupLocation'
+  | 'destination'
+  | 'vehicleType'
+  | 'price'
+  | 'status'
+>;
 
 type DriverOpenOrderRow = Pick<
   Order,
@@ -147,6 +170,19 @@ export function toDetail(order: Order): OrderDetail {
     cancelled_at: iso(order.cancelledAt),
     created_at: order.createdAt.toISOString(),
     updated_at: order.updatedAt.toISOString(),
+  };
+}
+
+export function toDriverMyOrder(order: DriverMyOrderRow): DriverMyOrder {
+  return {
+    id: order.id,
+    order_no: order.orderNo,
+    scheduled_at: order.scheduledAt.toISOString(),
+    pickup_location: order.pickupLocation,
+    destination: order.destination,
+    vehicle_type: order.vehicleType,
+    price: priceNumber(order.price),
+    status: order.status,
   };
 }
 

@@ -259,3 +259,23 @@
 - 同一 Driver 未完成訂單由 Business Rule + `idx_one_active_order_per_driver` 雙重保護
 - Driver UI「我要接單」以 Backend 回傳為準
 - 未實作 Start / Complete / Cancel、My Orders、Web Push
+
+---
+
+## TASK-010 — Driver My Orders / Start / Complete
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/driver/orders`：僅回傳目前 Driver 自己的訂單，支援 `status` filter，不回傳 DRAFT
+- `POST /api/v1/driver/orders/:id/start`：僅自己的 `ACCEPTED` → `IN_PROGRESS`，寫入 `started_at` 與 `ORDER_STARTED`
+- `POST /api/v1/driver/orders/:id/complete`：僅自己的 `IN_PROGRESS` → `COMPLETED`，寫入 `completed_at` 與 `ORDER_COMPLETED`
+- 狀態、timestamp、event 同一 transaction；atomic `UPDATE ... WHERE`
+- 非法 / 重複 transition → `INVALID_ORDER_STATUS`；其他 Driver → `404`；Admin → `403`
+- 不接受 client `driver_id` / `user_id` / timestamp
+- ONLINE / OFFLINE 不影響已接訂單的 Start / Complete
+- SUSPENDED：沿用 leftover session `ACCOUNT_SUSPENDED`、正式停權撤 session `401`
+- 未實作 Cancel、My Orders Frontend、Web Push
+
+---
