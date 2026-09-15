@@ -338,3 +338,18 @@
 - 未實作 `GET /notifications`、deployment
 
 ---
+
+## TASK-014 — Real Push & End-to-End Flow Verification
+
+**Status:** completed
+
+### 已完成
+
+- 驗證 Publish → OPEN → Accept → Start → Complete → COMPLETED（`backend/test/dispatch-flow.e2e-spec.ts` + 本機瀏覽器 / API）
+- 驗證 Offline / Busy / SUSPENDED / 同時搶單 / Admin Cancel（既有 e2e + dispatch-flow；本機另驗證 Offline Accept 與 Admin Cancel）
+- 驗證 Push failure 不影響 Publish / Order
+- 瀏覽器：Notification Permission = granted、Service Worker `/sw.js` 已註冊、`showNotification` 可顯示、click message 可導向 `/driver/orders/:id`、Driver UI「我要接單」成功
+- Cursor 內建 Chromium 的 `PushManager.subscribe` 回 `AbortError: Registration failed - push service not available`，因此無法在此環境完成真實 Web Push 網路投遞 / FCM subscription
+- 未實作 Driver Start / Complete UI、Admin Cancel UI、`GET /notifications`、deployment（Start / Complete 以 Driver API 驗證）
+
+---
