@@ -259,10 +259,6 @@ watch(
                 <h3>車輛資訊</h3>
                 <dl class="fields">
                   <div>
-                    <dt>車型</dt>
-                    <dd>{{ driver.vehicle_type }}</dd>
-                  </div>
-                  <div>
                     <dt>車牌</dt>
                     <dd>{{ driver.license_plate }}</dd>
                   </div>
@@ -277,10 +273,6 @@ watch(
                   <div>
                     <dt>車色</dt>
                     <dd>{{ driver.vehicle_color }}</dd>
-                  </div>
-                  <div>
-                    <dt>年份</dt>
-                    <dd>{{ driver.vehicle_year }}</dd>
                   </div>
                 </dl>
               </section>

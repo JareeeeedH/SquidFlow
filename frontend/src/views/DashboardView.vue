@@ -8,7 +8,7 @@ import { ApiClientError } from '../api/types'
 import type { AdminDashboard, DashboardBoardOrder, OrderStatus } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { groupBoardOrders } from '../lib/dashboard'
-import { formatPrice, formatScheduledAt } from '../lib/format'
+import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 import {
   DASHBOARD_BOARD_STATUSES,
   ORDER_STATUSES,
@@ -186,16 +186,16 @@ void loadDashboard()
                   <span class="order-no">{{ order.order_no }}</span>
                   <span class="price">{{ formatPrice(order.price) }}</span>
                 </div>
-                <p class="customer">{{ order.customer_name }}</p>
+                <p class="customer">{{ formatOptionalText(order.customer_name) }}</p>
                 <p class="route">
                   {{ order.pickup_location }}
                   <span class="arrow">→</span>
-                  {{ order.destination }}
+                  {{ formatOptionalText(order.destination) }}
                 </p>
                 <div class="card-row meta">
                   <span class="time">
                     <Clock :size="12" />
-                    {{ formatScheduledAt(order.scheduled_at) }}
+                    {{ formatScheduledAt(order.created_at) }}
                   </span>
                   <span
                     class="driver"

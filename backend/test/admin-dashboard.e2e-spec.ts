@@ -43,11 +43,11 @@ type ApiSuccessBody<T> = {
 type DashboardBoardOrder = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  price: number;
+  destination: string | null;
+  created_at: string;
+  price: number | null;
   status: OrderStatus;
   driver: { username: string } | null;
 };
@@ -137,7 +137,6 @@ describe('Admin Dashboard (e2e)', () => {
   async function seedOrder(input: {
     serial: string;
     status: OrderStatus;
-    scheduledAt: string;
     driverId?: string;
     customerName?: string;
   }) {
@@ -147,8 +146,6 @@ describe('Admin Dashboard (e2e)', () => {
         customerName: input.customerName ?? '王先生',
         pickupLocation: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduledAt: new Date(input.scheduledAt),
-        vehicleType: '5人座',
         price: new Prisma.Decimal('1200.00'),
         status: input.status,
         dispatchMode: 'OPEN',
@@ -228,39 +225,32 @@ describe('Admin Dashboard (e2e)', () => {
     const open = await seedOrder({
       serial: 'OPEN',
       status: OrderStatus.OPEN,
-      scheduledAt: '2026-09-15T06:00:00.000Z',
     });
     const accepted = await seedOrder({
       serial: 'ACCEPTED',
       status: OrderStatus.ACCEPTED,
-      scheduledAt: '2026-09-15T08:00:00.000Z',
       driverId: users.driver.driverId,
     });
     const draftLate = await seedOrder({
       serial: 'DRAFT-LATE',
       status: OrderStatus.DRAFT,
-      scheduledAt: '2026-09-15T10:00:00.000Z',
     });
     const draftEarly = await seedOrder({
       serial: 'DRAFT-EARLY',
       status: OrderStatus.DRAFT,
-      scheduledAt: '2026-09-15T07:00:00.000Z',
     });
     const inProgress = await seedOrder({
       serial: 'IN-PROGRESS',
       status: OrderStatus.IN_PROGRESS,
-      scheduledAt: '2026-09-15T09:00:00.000Z',
       driverId: users.driverB.driverId,
     });
     const completed = await seedOrder({
       serial: 'COMPLETED',
       status: OrderStatus.COMPLETED,
-      scheduledAt: '2026-09-15T05:00:00.000Z',
     });
     const cancelled = await seedOrder({
       serial: 'CANCELLED',
       status: OrderStatus.CANCELLED,
-      scheduledAt: '2026-09-15T04:00:00.000Z',
     });
 
     const response = await request(app.getHttpServer())
@@ -285,11 +275,11 @@ describe('Admin Dashboard (e2e)', () => {
       order.order_no.startsWith(`ORD-D16A-${suffix}-`),
     );
     expect(ours.map((order) => order.order_no)).toEqual([
-      open.orderNo,
-      draftEarly.orderNo,
-      accepted.orderNo,
       inProgress.orderNo,
+      draftEarly.orderNo,
       draftLate.orderNo,
+      accepted.orderNo,
+      open.orderNo,
     ]);
     expect(ours.map((order) => order.status)).not.toContain(
       OrderStatus.COMPLETED,
@@ -311,11 +301,11 @@ describe('Admin Dashboard (e2e)', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T06:00:00.000Z',
       price: 1200,
       status: 'OPEN',
       driver: null,
     });
+    expect(typeof unassigned?.created_at).toBe('string');
 
     const assigned = ours.find((order) => order.id === accepted.id);
     expect(assigned?.driver).toEqual({ username: users.driver.username });

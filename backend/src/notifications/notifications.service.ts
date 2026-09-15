@@ -102,10 +102,8 @@ export class NotificationsService {
       where: { id: orderId },
       select: {
         status: true,
-        scheduledAt: true,
         pickupLocation: true,
         destination: true,
-        vehicleType: true,
         price: true,
       },
     });
@@ -117,10 +115,8 @@ export class NotificationsService {
     const payload = JSON.stringify(
       formatPushPayload({
         id: orderId,
-        scheduledAt: order.scheduledAt,
         pickupLocation: order.pickupLocation,
         destination: order.destination,
-        vehicleType: order.vehicleType,
         price: order.price,
       }),
     );

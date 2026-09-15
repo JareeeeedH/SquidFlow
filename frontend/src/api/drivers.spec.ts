@@ -39,25 +39,23 @@ describe('drivers API', () => {
     await createDriver({
       username: 'driver01',
       password: 'Secret123!',
-      vehicle_type: '5人座',
       license_plate: 'ABC-1234',
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
       vehicle_color: '黑色',
-      vehicle_year: 2024,
     })
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
     expect(body).toEqual({
       username: 'driver01',
       password: 'Secret123!',
-      vehicle_type: '5人座',
       license_plate: 'ABC-1234',
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
       vehicle_color: '黑色',
-      vehicle_year: 2024,
     })
+    expect(body).not.toHaveProperty('vehicle_type')
+    expect(body).not.toHaveProperty('vehicle_year')
     expect(body).not.toHaveProperty('role')
     expect(body).not.toHaveProperty('online_status')
     expect(body).not.toHaveProperty('status')
@@ -69,12 +67,10 @@ describe('drivers API', () => {
 
     await updateDriver('d1', {
       username: 'driver01',
-      vehicle_type: '5人座',
       license_plate: 'ABC-1234',
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
       vehicle_color: '黑色',
-      vehicle_year: 2024,
     })
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)

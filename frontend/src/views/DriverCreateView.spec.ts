@@ -15,12 +15,10 @@ import { createDriver } from '../api/drivers'
 const created: DriverItem = {
   id: 'driver-new',
   username: 'driver01',
-  vehicle_type: '5人座',
   license_plate: 'ABC-1234',
   vehicle_brand: 'Toyota',
   vehicle_model: 'Camry',
   vehicle_color: '黑色',
-  vehicle_year: 2024,
   online_status: 'OFFLINE',
   status: 'ACTIVE',
 }
@@ -56,14 +54,10 @@ async function fillValidForm(
 ) {
   await wrapper.get('input[placeholder="例如 driver01"]').setValue('driver01')
   await wrapper.get('input[placeholder="請輸入密碼"]').setValue('Secret123!')
-  await wrapper.get('input[placeholder="例如 5人座"]').setValue('5人座')
   await wrapper.get('input[placeholder="例如 ABC-1234"]').setValue('ABC-1234')
   await wrapper.get('input[placeholder="例如 Toyota"]').setValue('Toyota')
   await wrapper.get('input[placeholder="例如 Camry"]').setValue('Camry')
   await wrapper.get('input[placeholder="例如 黑色"]').setValue('黑色')
-  await wrapper
-    .findComponent({ name: 'InputNumber' })
-    .vm.$emit('update:value', 2024)
 }
 
 describe('DriverCreateView', () => {
@@ -82,13 +76,13 @@ describe('DriverCreateView', () => {
     expect(wrapper.text()).toContain('新增司機')
     expect(wrapper.text()).toContain('帳號')
     expect(wrapper.text()).toContain('密碼')
-    expect(wrapper.text()).toContain('車型')
     expect(wrapper.text()).toContain('車牌')
     expect(wrapper.text()).toContain('品牌')
     expect(wrapper.text()).toContain('型號')
     expect(wrapper.text()).toContain('車色')
-    expect(wrapper.text()).toContain('年份')
     expect(wrapper.text()).toContain('建立司機')
+    expect(wrapper.text()).not.toContain('車型')
+    expect(wrapper.text()).not.toContain('年份')
     expect(wrapper.text()).not.toContain('role')
     expect(wrapper.html()).not.toContain('online_status')
   })
@@ -115,12 +109,10 @@ describe('DriverCreateView', () => {
     expect(createDriver).toHaveBeenCalledWith({
       username: 'driver01',
       password: 'Secret123!',
-      vehicle_type: '5人座',
       license_plate: 'ABC-1234',
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
       vehicle_color: '黑色',
-      vehicle_year: 2024,
     })
     expect(push).toHaveBeenCalledWith({
       name: 'driver-detail',

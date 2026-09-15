@@ -43,11 +43,10 @@ type ApiSuccessBody<T> = {
 type MyOrderItem = {
   id: string;
   order_no: string;
-  scheduled_at: string;
+  created_at: string;
   pickup_location: string;
-  destination: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   status: string;
 };
 
@@ -186,7 +185,6 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     status:
       'DRAFT' | 'OPEN' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
     driverId?: string;
-    scheduledAt?: Date;
   }) {
     await prisma.order.create({
       data: {
@@ -195,8 +193,6 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
         customerName: '王先生',
         pickupLocation: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduledAt: input.scheduledAt ?? new Date('2026-09-15T07:30:00Z'),
-        vehicleType: '5人座',
         price: new Prisma.Decimal('1200.00'),
         note: '2件行李',
         status: input.status,
@@ -254,14 +250,12 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       suffix: 'MINEC',
       status: 'COMPLETED',
       driverId: users.mine.driverId,
-      scheduledAt: new Date('2026-09-14T07:30:00Z'),
     });
     await seedOrder({
       id: orders.mineCancelled,
       suffix: 'MINEK',
       status: 'CANCELLED',
       driverId: users.mine.driverId,
-      scheduledAt: new Date('2026-09-16T07:30:00Z'),
     });
     await seedOrder({
       id: orders.startAccepted,
@@ -388,13 +382,13 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     expect(body.data[0]).toEqual({
       id: orders.mineCancelled,
       order_no: `ORD-D10-MINEK-${suffix}`,
-      scheduled_at: '2026-09-16T07:30:00.000Z',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      vehicle_type: '5人座',
       price: 1200,
       status: 'CANCELLED',
+      created_at: body.data[0].created_at,
     });
+    expect(typeof body.data[0].created_at).toBe('string');
     expect(JSON.stringify(body)).not.toMatch(/customer_name|driver_id|"note"/);
     assertNoSecrets(body);
 

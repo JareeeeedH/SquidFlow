@@ -148,8 +148,6 @@ describe('Admin Order Cancel (e2e)', () => {
         customerName: '王先生',
         pickupLocation: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduledAt: new Date('2026-09-15T07:30:00Z'),
-        vehicleType: '5人座',
         price: new Prisma.Decimal('1200.00'),
         note: '2件行李',
         status: input.status,

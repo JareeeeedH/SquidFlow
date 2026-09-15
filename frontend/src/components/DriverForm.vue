@@ -5,7 +5,6 @@ import {
   NForm,
   NFormItem,
   NInput,
-  NInputNumber,
   type FormInst,
 } from 'naive-ui'
 import { computed, reactive, ref, watch } from 'vue'
@@ -116,13 +115,6 @@ async function onSubmit() {
         :disabled="submitting"
       />
     </NFormItem>
-    <NFormItem path="vehicle_type" label="車型">
-      <NInput
-        v-model:value="form.vehicle_type"
-        placeholder="例如 5人座"
-        :disabled="submitting"
-      />
-    </NFormItem>
     <NFormItem path="license_plate" label="車牌">
       <NInput
         v-model:value="form.license_plate"
@@ -151,16 +143,6 @@ async function onSubmit() {
         :disabled="submitting"
       />
     </NFormItem>
-    <NFormItem path="vehicle_year" label="年份">
-      <NInputNumber
-        v-model:value="form.vehicle_year"
-        class="year"
-        :show-button="false"
-        :precision="0"
-        placeholder="例如 2024"
-        :disabled="submitting"
-      />
-    </NFormItem>
 
     <div class="actions">
       <NButton
@@ -186,10 +168,6 @@ async function onSubmit() {
 <style scoped>
 .alert {
   margin-bottom: var(--space-16);
-}
-
-.year {
-  width: 100%;
 }
 
 .actions {

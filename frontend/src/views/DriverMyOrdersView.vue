@@ -12,7 +12,7 @@ import { ApiClientError } from '../api/types'
 import type { DriverMyOrder } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { splitDriverMyOrders } from '../lib/driver-my-orders'
-import { formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
 
 const router = useRouter()
 const orders = ref<DriverMyOrder[]>([])
@@ -191,17 +191,16 @@ void loadOrders()
                   @click="openDetail(order.id)"
                 >
                   <div class="card-top">
-                    <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
+                    <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
                     <OrderStatusTag :status="order.status" />
                   </div>
                   <div class="route">
                     <p class="place">{{ order.pickup_location }}</p>
                     <p class="arrow" aria-hidden="true">↓</p>
-                    <p class="place">{{ order.destination }}</p>
+                    <p class="place">{{ formatOptionalText(order.destination) }}</p>
                   </div>
                   <p class="order-no">{{ order.order_no }}</p>
                   <div class="meta">
-                    <span>{{ order.vehicle_type }}</span>
                     <span class="price">{{ formatPrice(order.price) }}</span>
                   </div>
                 </button>
@@ -248,13 +247,13 @@ void loadOrders()
                 @click="openDetail(order.id)"
               >
                 <div class="card-top">
-                  <p class="time">{{ historyDate(order.scheduled_at) }}</p>
+                  <p class="time">{{ historyDate(order.created_at) }}</p>
                   <OrderStatusTag :status="order.status" />
                 </div>
                 <div class="route">
                   <p class="place">{{ order.pickup_location }}</p>
                   <p class="arrow" aria-hidden="true">↓</p>
-                  <p class="place">{{ order.destination }}</p>
+                  <p class="place">{{ formatOptionalText(order.destination) }}</p>
                 </div>
                 <p class="order-no">{{ order.order_no }}</p>
               </button>

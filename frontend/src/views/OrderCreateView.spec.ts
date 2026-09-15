@@ -51,8 +51,8 @@ describe('OrderCreateView', () => {
     expect(wrapper.text()).toContain('客戶姓名')
     expect(wrapper.text()).toContain('上車地點')
     expect(wrapper.text()).toContain('目的地')
-    expect(wrapper.text()).toContain('預約時間')
-    expect(wrapper.text()).toContain('車型')
+    expect(wrapper.text()).not.toContain('預約時間')
+    expect(wrapper.text()).not.toContain('車型')
     expect(wrapper.text()).toContain('價格')
     expect(wrapper.text()).toContain('備註')
     expect(wrapper.text()).toContain('儲存草稿')
@@ -66,7 +66,7 @@ describe('OrderCreateView', () => {
     await flushPromises()
 
     expect(createOrder).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('請輸入客戶姓名')
+    expect(wrapper.text()).toContain('請輸入上車地點')
   })
 
   it('creates a draft and navigates to detail', async () => {
@@ -76,11 +76,6 @@ describe('OrderCreateView', () => {
     await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
     await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
     await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.get('input[placeholder="例如 5人座"]').setValue('5人座')
-    await wrapper.findComponent({ name: 'DatePicker' }).vm.$emit(
-      'update:value',
-      new Date('2026-09-15T15:30:00+08:00').getTime(),
-    )
     await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
@@ -90,8 +85,6 @@ describe('OrderCreateView', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
-      vehicle_type: '5人座',
       price: 1200,
       note: null,
     })
@@ -118,11 +111,6 @@ describe('OrderCreateView', () => {
     await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
     await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
     await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.get('input[placeholder="例如 5人座"]').setValue('5人座')
-    await wrapper.findComponent({ name: 'DatePicker' }).vm.$emit(
-      'update:value',
-      new Date('2026-09-15T15:30:00+08:00').getTime(),
-    )
     await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
 
     await wrapper.get('form').trigger('submit')
@@ -148,11 +136,6 @@ describe('OrderCreateView', () => {
     await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
     await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
     await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.get('input[placeholder="例如 5人座"]').setValue('5人座')
-    await wrapper.findComponent({ name: 'DatePicker' }).vm.$emit(
-      'update:value',
-      new Date('2026-09-15T15:30:00+08:00').getTime(),
-    )
     await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
     await wrapper.get('form').trigger('submit')
     await flushPromises()

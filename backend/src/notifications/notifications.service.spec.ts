@@ -122,10 +122,8 @@ describe('NotificationsService', () => {
     ]);
     prisma.order.findUnique.mockResolvedValue({
       status: OrderStatus.OPEN,
-      scheduledAt: new Date('2026-09-15T15:30:00+08:00'),
       pickupLocation: '左營高鐵站',
       destination: '小港機場',
-      vehicleType: '5人座',
       price: '1200.00',
     });
     let capturedSentAt: Date | undefined;
@@ -172,10 +170,8 @@ describe('NotificationsService', () => {
     ]);
     prisma.order.findUnique.mockResolvedValue({
       status: OrderStatus.OPEN,
-      scheduledAt: new Date('2026-09-15T15:30:00+08:00'),
       pickupLocation: '左營高鐵站',
       destination: '小港機場',
-      vehicleType: '5人座',
       price: '1200.00',
     });
     webPush.send.mockResolvedValue({ ok: false, invalid: true });
@@ -212,10 +208,8 @@ describe('NotificationsService', () => {
     ]);
     prisma.order.findUnique.mockResolvedValue({
       status: OrderStatus.OPEN,
-      scheduledAt: new Date('2026-09-15T15:30:00+08:00'),
       pickupLocation: '左營高鐵站',
       destination: '小港機場',
-      vehicleType: '5人座',
       price: '1200.00',
     });
     webPush.send.mockResolvedValue({ ok: false, invalid: false });

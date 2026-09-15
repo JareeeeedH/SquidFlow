@@ -70,7 +70,7 @@ const columns: DataTableColumns<DriverItem> = [
         h(
           'span',
           { class: 'vehicle-meta' },
-          `${row.vehicle_color} · ${row.vehicle_year}`,
+          row.vehicle_color,
         ),
       ])
     },
@@ -83,14 +83,6 @@ const columns: DataTableColumns<DriverItem> = [
       return h('div', { class: 'status-cell status-cell-account' }, [
         h(AccountStatusTag, { status: row.status }),
       ])
-    },
-  },
-  {
-    title: '車型',
-    key: 'vehicle_type',
-    width: 88,
-    render(row) {
-      return h('span', { class: 'type-cell' }, row.vehicle_type)
     },
   },
   {
@@ -315,8 +307,7 @@ h1 {
   font: var(--font-label);
 }
 
-.vehicle-meta,
-.type-cell {
+.vehicle-meta {
   color: var(--color-muted-text);
   font: var(--font-caption);
 }

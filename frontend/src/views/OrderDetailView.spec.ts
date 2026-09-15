@@ -22,8 +22,6 @@ const draft: OrderDetail = {
   customer_name: '王先生',
   pickup_location: '左營高鐵站',
   destination: '高雄小港機場',
-  scheduled_at: '2026-09-15T07:30:00.000Z',
-  vehicle_type: '5人座',
   price: 1200,
   note: '2件行李',
   status: 'DRAFT',
@@ -108,7 +106,6 @@ describe('OrderDetailView', () => {
       driver_id: 'driver-1',
       driver: {
         username: 'driver01',
-        vehicle_type: '7人座',
         license_plate: 'ABC-1234',
         vehicle_brand: 'Toyota',
         vehicle_model: 'Sienta',
@@ -118,7 +115,6 @@ describe('OrderDetailView', () => {
     const { wrapper } = await mountDetail()
 
     expect(wrapper.text()).toContain('driver01')
-    expect(wrapper.text()).toContain('7人座')
     expect(wrapper.text()).toContain('ABC-1234')
     expect(wrapper.text()).toContain('Toyota')
     expect(wrapper.text()).toContain('Sienta')
@@ -175,7 +171,6 @@ describe('OrderDetailView', () => {
       expect.objectContaining({
         customer_name: '林小姐',
         price: 1600,
-        scheduled_at: '2026-09-15T15:30:00+08:00',
       }),
     )
     expect(wrapper.text()).toContain('林小姐')
@@ -190,13 +185,13 @@ describe('OrderDetailView', () => {
 
     await clickNamed(wrapper, '編輯')
     await flushPromises()
-    await wrapper.get('input[placeholder="例如 王先生"]').setValue('')
+    await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(updateOrder).not.toHaveBeenCalled()
-    expect(wrapper.text()).toContain('請輸入客戶姓名')
+    expect(wrapper.text()).toContain('請輸入上車地點')
 
-    await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
+    await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(wrapper.text()).toContain('VALIDATION_ERROR')

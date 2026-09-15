@@ -85,7 +85,14 @@ export function toScheduledAtIso(value: number): string {
   return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}:${get('second')}+08:00`
 }
 
-export function formatPrice(price: number): string {
+export function formatOptionalText(value: string | null | undefined): string {
+  return value ? value : '—'
+}
+
+export function formatPrice(price: number | null | undefined): string {
+  if (price == null) {
+    return '—'
+  }
   const hasFraction = !Number.isInteger(price)
   return `NT$ ${price.toLocaleString('en-US', {
     minimumFractionDigits: hasFraction ? 2 : 0,

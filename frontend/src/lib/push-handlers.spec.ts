@@ -15,12 +15,12 @@ describe('push handlers', () => {
     expect(
       parsePushPayload({
         title: '🚕 新派車單',
-        body: '15:30\n左營高鐵站 → 小港機場\n5人座 / $1,200',
+        body: '左營高鐵站 → 小港機場\n$1,200',
         order_id: 'order-1',
       }),
     ).toEqual({
       title: '🚕 新派車單',
-      body: '15:30\n左營高鐵站 → 小港機場\n5人座 / $1,200',
+      body: '左營高鐵站 → 小港機場\n$1,200',
       orderId: 'order-1',
     })
   })

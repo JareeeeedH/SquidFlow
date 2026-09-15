@@ -3,17 +3,12 @@ import { AppErrors } from '../common/errors/app.error';
 import { taipeiDayRange } from './order-number';
 
 export type OrderInput = {
-  customerName: string;
+  customerName: string | null;
   pickupLocation: string;
-  destination: string;
-  scheduledAt: Date;
-  vehicleType: string;
-  price: Prisma.Decimal;
+  destination: string | null;
+  price: Prisma.Decimal | null;
   note: string | null;
 };
-
-const ISO_WITH_TIMEZONE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
 function asRecord(body: unknown): Record<string, unknown> {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
@@ -30,6 +25,21 @@ function requireString(data: Record<string, unknown>, field: string): string {
   return value.trim();
 }
 
+function optionalString(
+  data: Record<string, unknown>,
+  field: string,
+): string | null {
+  const value = data[field];
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw AppErrors.validation(`${field} 格式不正確`);
+  }
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 function optionalNote(value: unknown): string | null {
   if (value === undefined || value === null) {
     return null;
@@ -41,18 +51,7 @@ function optionalNote(value: unknown): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-function requireScheduledAt(value: unknown): Date {
-  if (typeof value !== 'string' || !ISO_WITH_TIMEZONE.test(value)) {
-    throw AppErrors.validation('scheduled_at 必須為含時區的 ISO 8601');
-  }
-  const scheduledAt = new Date(value);
-  if (Number.isNaN(scheduledAt.getTime())) {
-    throw AppErrors.validation('scheduled_at 必須為含時區的 ISO 8601');
-  }
-  return scheduledAt;
-}
-
-function requirePrice(value: unknown): Prisma.Decimal {
+function parsePrice(value: unknown): Prisma.Decimal {
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) {
       throw AppErrors.validation('price 格式不正確');
@@ -71,22 +70,27 @@ function requirePrice(value: unknown): Prisma.Decimal {
   throw AppErrors.validation('price 格式不正確');
 }
 
+function optionalPrice(value: unknown): Prisma.Decimal | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  return parsePrice(value);
+}
+
 export function parseOrderBody(body: unknown): OrderInput {
   const data = asRecord(body);
   return {
-    customerName: requireString(data, 'customer_name'),
+    customerName: optionalString(data, 'customer_name'),
     pickupLocation: requireString(data, 'pickup_location'),
-    destination: requireString(data, 'destination'),
-    scheduledAt: requireScheduledAt(data.scheduled_at),
-    vehicleType: requireString(data, 'vehicle_type'),
-    price: requirePrice(data.price),
+    destination: optionalString(data, 'destination'),
+    price: optionalPrice(data.price),
     note: optionalNote(data.note),
   };
 }
 
 export type OrderListQuery = {
   status?: OrderStatus;
-  scheduledAt?: {
+  createdAt?: {
     start: Date;
     endExclusive: Date;
   };
@@ -125,7 +129,7 @@ export function parseOrderListQuery(query: unknown): OrderListQuery {
     if (!range) {
       throw AppErrors.validation('date 格式不正確');
     }
-    result.scheduledAt = range;
+    result.createdAt = range;
   }
 
   result.search = optionalQueryString(data.search);

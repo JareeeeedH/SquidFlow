@@ -44,12 +44,10 @@ type ApiSuccessBody<T> = {
 type DriverBody = {
   id: string;
   username: string;
-  vehicle_type: string;
   license_plate: string;
   vehicle_brand: string;
   vehicle_model: string;
   vehicle_color: string;
-  vehicle_year: number;
   online_status: string;
   status: string;
 };
@@ -101,12 +99,10 @@ describe('Admin Driver Management (e2e)', () => {
 
   function vehicleFields(licensePlate: string) {
     return {
-      vehicle_type: '5人座',
       license_plate: licensePlate,
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
       vehicle_color: '黑色',
-      vehicle_year: 2024,
     };
   }
 
@@ -299,6 +295,8 @@ describe('Admin Driver Management (e2e)', () => {
       username,
       password,
       ...vehicleFields(licensePlate),
+      vehicle_type: '7人座',
+      vehicle_year: 2025,
       role: 'ADMIN',
       status: 'SUSPENDED',
       online_status: 'ONLINE',
@@ -320,6 +318,8 @@ describe('Admin Driver Management (e2e)', () => {
         status: 'ACTIVE',
       },
     });
+    expect(body.data).not.toHaveProperty('vehicle_type');
+    expect(body.data).not.toHaveProperty('vehicle_year');
     expect(typeof body.data.id).toBe('string');
     assertNoSecrets(body);
 
@@ -327,6 +327,9 @@ describe('Admin Driver Management (e2e)', () => {
       where: { id: body.data.id },
       include: { user: true },
     });
+    expect(created).not.toBeNull();
+    expect(created?.vehicleType).toBeNull();
+    expect(created?.vehicleYear).toBeNull();
     expect(created).not.toBeNull();
     expect(created?.user.role).toBe('DRIVER');
     expect(created?.user.status).toBe('ACTIVE');
@@ -409,6 +412,8 @@ describe('Admin Driver Management (e2e)', () => {
       expect(item).not.toHaveProperty('passwordHash');
       expect(item).not.toHaveProperty('sessions');
       expect(item).not.toHaveProperty('pushSubscriptions');
+      expect(item).not.toHaveProperty('vehicle_type');
+      expect(item).not.toHaveProperty('vehicle_year');
     }
   });
 
@@ -460,23 +465,28 @@ describe('Admin Driver Management (e2e)', () => {
       .send({
         username: users.updateTarget.username,
         ...vehicleFields(users.updateTarget.licensePlate),
-        vehicle_type: '7人座',
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       })
       .expect(200);
 
-    expect(asBody<ApiSuccessBody<DriverBody>>(response).data).toMatchObject({
+    const updated = asBody<ApiSuccessBody<DriverBody>>(response).data;
+    expect(updated).toMatchObject({
       id: users.updateTarget.driverId,
       username: users.updateTarget.username,
-      vehicle_type: '7人座',
       vehicle_brand: 'Honda',
       vehicle_model: 'CR-V',
       vehicle_color: '白色',
-      vehicle_year: 2025,
     });
+    expect(updated).not.toHaveProperty('vehicle_type');
+    expect(updated).not.toHaveProperty('vehicle_year');
+
+    const stored = await prisma.driver.findUnique({
+      where: { id: users.updateTarget.driverId },
+    });
+    expect(stored?.vehicleType).toBe('5人座');
+    expect(stored?.vehicleYear).toBe(2024);
 
     const after = await prisma.user.findUnique({
       where: { id: users.updateTarget.id },
@@ -496,12 +506,10 @@ describe('Admin Driver Management (e2e)', () => {
       .send({
         username: users.updateTarget.username,
         password: updatedPassword,
-        vehicle_type: '7人座',
         license_plate: users.updateTarget.licensePlate,
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       })
       .expect(200);
 
@@ -539,12 +547,10 @@ describe('Admin Driver Management (e2e)', () => {
       .send({
         username: users.updateTarget.username,
         password: '',
-        vehicle_type: '7人座',
         license_plate: users.updateTarget.licensePlate,
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       })
       .expect(400);
 
@@ -568,12 +574,10 @@ describe('Admin Driver Management (e2e)', () => {
       .set('Cookie', cookie)
       .send({
         username: users.updateTarget.username,
-        vehicle_type: '7人座',
         license_plate: users.updateTarget.licensePlate,
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
         role: 'ADMIN',
         status: 'SUSPENDED',
         online_status: 'ONLINE',
@@ -600,12 +604,10 @@ describe('Admin Driver Management (e2e)', () => {
       .set('Cookie', cookie)
       .send({
         username: users.driver.username,
-        vehicle_type: '7人座',
         license_plate: users.updateTarget.licensePlate,
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       })
       .expect(409);
 
@@ -622,12 +624,10 @@ describe('Admin Driver Management (e2e)', () => {
       .set('Cookie', cookie)
       .send({
         username: users.updateTarget.username,
-        vehicle_type: '7人座',
         license_plate: users.driver.licensePlate,
         vehicle_brand: 'Honda',
         vehicle_model: 'CR-V',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       })
       .expect(409);
 

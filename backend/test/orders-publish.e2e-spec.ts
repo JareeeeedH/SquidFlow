@@ -116,8 +116,6 @@ describe('Admin Order Publish (e2e)', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
-      vehicle_type: '5人座',
       price: 1200,
       note: '2件行李',
     };
@@ -189,8 +187,6 @@ describe('Admin Order Publish (e2e)', () => {
         customerName: '測試乘客',
         pickupLocation: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduledAt: new Date('2026-09-15T07:30:00Z'),
-        vehicleType: '5人座',
         price: new Prisma.Decimal('1200.00'),
         status,
         dispatchMode: 'OPEN',

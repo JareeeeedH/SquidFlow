@@ -80,12 +80,12 @@ model User {
 model Driver {
   id           String             @id @default(uuid()) @db.Uuid
   userId       String             @unique @map("user_id") @db.Uuid
-  vehicleType  String             @map("vehicle_type") @db.VarChar
+  vehicleType  String?            @map("vehicle_type") @db.VarChar
   licensePlate String             @unique @map("license_plate") @db.VarChar
   vehicleBrand String             @map("vehicle_brand") @db.VarChar
   vehicleModel String             @map("vehicle_model") @db.VarChar
   vehicleColor String             @map("vehicle_color") @db.VarChar
-  vehicleYear  Int                @map("vehicle_year") @db.SmallInt
+  vehicleYear  Int?               @map("vehicle_year") @db.SmallInt
   onlineStatus DriverOnlineStatus @map("online_status")
   createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -98,12 +98,10 @@ model Driver {
 model Order {
   id             String         @id @default(uuid()) @db.Uuid
   orderNo        String         @unique @map("order_no") @db.VarChar
-  customerName   String         @map("customer_name") @db.VarChar
+  customerName   String?        @map("customer_name") @db.VarChar
   pickupLocation String         @map("pickup_location") @db.Text
-  destination    String         @db.Text
-  scheduledAt    DateTime       @map("scheduled_at") @db.Timestamptz(6)
-  vehicleType    String         @map("vehicle_type") @db.VarChar
-  price          Decimal        @db.Decimal(10, 2)
+  destination    String?        @db.Text
+  price          Decimal?       @db.Decimal(10, 2)
   note           String?        @db.Text
   status         OrderStatus
   dispatchMode   DispatchMode   @map("dispatch_mode")

@@ -12,7 +12,7 @@ import {
 import { ApiClientError } from '../api/types'
 import type { DriverOrderDetail } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
-import { formatPrice, formatScheduledAt } from '../lib/format'
+import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -247,20 +247,16 @@ watch(
           <p class="kicker">{{ order.order_no }}</p>
           <OrderStatusTag :status="order.status" />
         </header>
-        <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
+        <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
         <div class="route">
           <p class="place">{{ order.pickup_location }}</p>
           <p class="arrow" aria-hidden="true">↓</p>
-          <p class="place">{{ order.destination }}</p>
+          <p class="place">{{ formatOptionalText(order.destination) }}</p>
         </div>
         <dl class="fields">
           <div>
             <dt>客戶</dt>
-            <dd>{{ order.customer_name }}</dd>
-          </div>
-          <div>
-            <dt>車型</dt>
-            <dd>{{ order.vehicle_type }}</dd>
+            <dd>{{ formatOptionalText(order.customer_name) }}</dd>
           </div>
           <div class="price-row">
             <dt>價格</dt>
@@ -268,7 +264,7 @@ watch(
           </div>
           <div class="note-row">
             <dt>備註</dt>
-            <dd>{{ order.note || '—' }}</dd>
+            <dd>{{ formatOptionalText(order.note) }}</dd>
           </div>
         </dl>
 

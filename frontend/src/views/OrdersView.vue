@@ -16,7 +16,7 @@ import { listOrders } from '../api/orders'
 import { ApiClientError } from '../api/types'
 import type { OrderListItem, OrderListQuery, OrderStatus } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
-import { formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
 import { ORDER_STATUS_LABELS, ORDER_STATUSES, parseOrderStatus } from '../lib/order-status'
 
 const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = ORDER_STATUSES.map(
@@ -64,11 +64,11 @@ const columns: DataTableColumns<OrderListItem> = [
     ellipsis: { tooltip: true },
   },
   {
-    title: '預約時間',
-    key: 'scheduled_at',
+    title: '建立時間',
+    key: 'created_at',
     width: 112,
     render(row) {
-      return formatScheduledAt(row.scheduled_at)
+      return formatScheduledAt(row.created_at)
     },
   },
   {
@@ -76,6 +76,9 @@ const columns: DataTableColumns<OrderListItem> = [
     key: 'customer_name',
     width: 112,
     ellipsis: { tooltip: true },
+    render(row) {
+      return formatOptionalText(row.customer_name)
+    },
   },
   {
     title: '上車地點',
@@ -88,11 +91,9 @@ const columns: DataTableColumns<OrderListItem> = [
     key: 'destination',
     ellipsis: { tooltip: true },
     minWidth: 140,
-  },
-  {
-    title: '車型',
-    key: 'vehicle_type',
-    width: 88,
+    render(row) {
+      return formatOptionalText(row.destination)
+    },
   },
   {
     title: '價格',
@@ -247,7 +248,7 @@ watch(query, () => {
         type="date"
         clearable
         format="yyyy/MM/dd"
-        placeholder="預約日期"
+        placeholder="建立日期"
       />
       <NButton
         v-if="hasFilters"

@@ -106,12 +106,10 @@ GET /api/v1/drivers
     {
       "id": "uuid",
       "username": "driver001",
-      "vehicle_type": "5人座",
       "license_plate": "ABC-1234",
       "vehicle_brand": "Toyota",
       "vehicle_model": "Camry",
       "vehicle_color": "黑色",
-      "vehicle_year": 2024,
       "online_status": "ONLINE",
       "status": "ACTIVE"
     }
@@ -133,14 +131,14 @@ POST /api/v1/drivers
 {
   "username": "driver001",
   "password": "********",
-  "vehicle_type": "5人座",
   "license_plate": "ABC-1234",
   "vehicle_brand": "Toyota",
   "vehicle_model": "Camry",
-  "vehicle_color": "黑色",
-  "vehicle_year": 2024
+  "vehicle_color": "黑色"
 }
 ```
+
+不接受 `vehicle_type`、`vehicle_year`。新 Driver 這兩欄為 `NULL`。
 
 ### Response
 
@@ -150,12 +148,10 @@ POST /api/v1/drivers
   "data": {
     "id": "uuid",
     "username": "driver001",
-    "vehicle_type": "5人座",
     "license_plate": "ABC-1234",
     "vehicle_brand": "Toyota",
     "vehicle_model": "Camry",
     "vehicle_color": "黑色",
-    "vehicle_year": 2024,
     "online_status": "OFFLINE",
     "status": "ACTIVE"
   }
@@ -178,12 +174,10 @@ GET /api/v1/drivers/:id
   "data": {
     "id": "uuid",
     "username": "driver001",
-    "vehicle_type": "5人座",
     "license_plate": "ABC-1234",
     "vehicle_brand": "Toyota",
     "vehicle_model": "Camry",
     "vehicle_color": "黑色",
-    "vehicle_year": 2024,
     "online_status": "ONLINE",
     "status": "ACTIVE"
   }
@@ -204,14 +198,14 @@ PUT /api/v1/drivers/:id
 {
   "username": "driver001",
   "password": "********",
-  "vehicle_type": "5人座",
   "license_plate": "ABC-1234",
   "vehicle_brand": "Toyota",
   "vehicle_model": "Camry",
-  "vehicle_color": "黑色",
-  "vehicle_year": 2024
+  "vehicle_color": "黑色"
 }
 ```
+
+不更新 `vehicle_type`、`vehicle_year`；既有資料保留。
 
 ### Response
 
@@ -276,6 +270,10 @@ order_no
 customer_name
 ```
 
+`date` 為 Taipei 日曆日，篩選 `created_at`。列表依 `created_at` 降序。
+
+未填寫的選填欄位回 `null`。不含 `scheduled_at`、`vehicle_type`。
+
 ### Response
 
 ```json
@@ -288,12 +286,11 @@ customer_name
       "customer_name": "王先生",
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
-      "scheduled_at": "2026-09-15T15:30:00+08:00",
-      "vehicle_type": "5人座",
       "price": 1200,
       "note": "2件行李",
       "status": "OPEN",
-      "driver_id": null
+      "driver_id": null,
+      "created_at": "2026-09-15T07:00:00Z"
     }
   ]
 }
@@ -314,12 +311,12 @@ POST /api/v1/orders
   "customer_name": "王先生",
   "pickup_location": "左營高鐵站",
   "destination": "高雄小港機場",
-  "scheduled_at": "2026-09-15T15:30:00+08:00",
-  "vehicle_type": "5人座",
   "price": 1200,
   "note": "2件行李"
 }
 ```
+
+`pickup_location` 必填。`customer_name`、`destination`、`price`、`note` 選填；未填或空字串存 `NULL`，不使用 `0`。不接受 `scheduled_at`、`vehicle_type`。
 
 ### Response
 
@@ -354,8 +351,6 @@ GET /api/v1/orders/:id
     "customer_name": "王先生",
     "pickup_location": "左營高鐵站",
     "destination": "高雄小港機場",
-    "scheduled_at": "2026-09-15T15:30:00+08:00",
-    "vehicle_type": "5人座",
     "price": 1200,
     "note": "2件行李",
     "status": "ACCEPTED",
@@ -363,7 +358,6 @@ GET /api/v1/orders/:id
     "driver_id": "driver-uuid",
     "driver": {
       "username": "driver001",
-      "vehicle_type": "5人座",
       "license_plate": "ABC-1234",
       "vehicle_brand": "Toyota",
       "vehicle_model": "Camry",
@@ -380,7 +374,7 @@ GET /api/v1/orders/:id
 }
 ```
 
-未指派司機時 `driver` 為 `null`。`driver` 只包含上述欄位，不含 `id`、`vehicle_year`、`online_status`、帳號 `status`。
+未指派司機時 `driver` 為 `null`。`driver` 只包含上述欄位，不含 `id`、`vehicle_type`、`vehicle_year`、`online_status`、帳號 `status`。選填欄位未填時為 `null`。不含 `scheduled_at`、訂單 `vehicle_type`。
 
 ---
 
@@ -397,14 +391,12 @@ PUT /api/v1/orders/:id
   "customer_name": "王先生",
   "pickup_location": "左營高鐵站",
   "destination": "高雄小港機場",
-  "scheduled_at": "2026-09-15T15:30:00+08:00",
-  "vehicle_type": "5人座",
   "price": 1200,
   "note": "2件行李"
 }
 ```
 
-僅允許 `DRAFT`。
+欄位規則同 Create Order。僅允許 `DRAFT`。
 
 ### Response
 
@@ -492,7 +484,7 @@ Admin-only。Driver 回 `403 FORBIDDEN`。
 
 未指派司機時 `driver` 為 `null`。已指派時 `driver` 只含 `username`。
 
-`board_orders` 依 `scheduled_at` 升序。
+`board_orders` 依 `created_at` 降序。選填欄位未填時為 `null`。不含 `scheduled_at`、`vehicle_type`。
 
 ### Response
 
@@ -515,7 +507,7 @@ Admin-only。Driver 回 `403 FORBIDDEN`。
         "customer_name": "王先生",
         "pickup_location": "左營高鐵站",
         "destination": "高雄小港機場",
-        "scheduled_at": "2026-09-15T15:30:00+08:00",
+        "created_at": "2026-09-15T07:00:00Z",
         "price": 1200,
         "status": "ACCEPTED",
         "driver": {
@@ -578,10 +570,9 @@ GET /api/v1/driver/orders
     {
       "id": "uuid",
       "order_no": "ORD-20260915-001",
-      "scheduled_at": "2026-09-15T15:30:00+08:00",
+      "created_at": "2026-09-15T07:00:00Z",
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
-      "vehicle_type": "5人座",
       "price": 1200,
       "status": "COMPLETED"
     }
@@ -589,7 +580,7 @@ GET /api/v1/driver/orders
 }
 ```
 
-僅回傳目前登入 Driver 的訂單。
+僅回傳目前登入 Driver 的訂單。依 `created_at` 降序。
 
 ---
 
@@ -608,10 +599,9 @@ GET /api/v1/driver/orders/open
     {
       "id": "uuid",
       "order_no": "ORD-20260915-001",
-      "scheduled_at": "2026-09-15T15:30:00+08:00",
+      "created_at": "2026-09-15T07:00:00Z",
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
-      "vehicle_type": "5人座",
       "price": 1200,
       "note": "2件行李"
     }
@@ -631,7 +621,7 @@ status = OPEN
 online_status = ONLINE
 ```
 
-並可接單的訂單。
+並可接單的訂單。依 `created_at` 降序。
 
 ---
 
@@ -665,8 +655,7 @@ status = OPEN
     "customer_name": "王先生",
     "pickup_location": "左營高鐵站",
     "destination": "高雄小港機場",
-    "scheduled_at": "2026-09-15T15:30:00+08:00",
-    "vehicle_type": "5人座",
+    "created_at": "2026-09-15T07:00:00Z",
     "price": 1200,
     "note": "2件行李",
     "status": "ACCEPTED"

@@ -12,8 +12,6 @@ const sample: OrderDetail = {
   customer_name: '王先生',
   pickup_location: '左營高鐵站',
   destination: '高雄小港機場',
-  scheduled_at: '2026-09-15T07:30:00.000Z',
-  vehicle_type: '5人座',
   price: 1200,
   note: '2件行李',
   status: 'DRAFT',
@@ -38,8 +36,6 @@ describe('order form helpers', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
-      vehicle_type: '5人座',
       price: 1200,
       note: '2件行李',
     })
@@ -51,8 +47,6 @@ describe('order form helpers', () => {
         customer_name: '王先生',
         pickup_location: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduled_at: '2026-09-15T15:30:00+08:00',
-        vehicle_type: '5人座',
         price: 1200,
         note: '   ',
       }),
@@ -60,10 +54,35 @@ describe('order form helpers', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
-      vehicle_type: '5人座',
       price: 1200,
       note: null,
     })
+  })
+
+  it('maps empty optional fields to null and requires pickup_location', () => {
+    expect(
+      formValuesToInput({
+        customer_name: '  ',
+        pickup_location: '左營高鐵站',
+        destination: '',
+        price: null,
+        note: '',
+      }),
+    ).toEqual({
+      customer_name: null,
+      pickup_location: '左營高鐵站',
+      destination: null,
+      price: null,
+      note: null,
+    })
+    expect(
+      formValuesToInput({
+        customer_name: '王先生',
+        pickup_location: '   ',
+        destination: '小港機場',
+        price: 1200,
+        note: '2件行李',
+      }),
+    ).toBeNull()
   })
 })

@@ -15,10 +15,9 @@ import { listOpenDriverOrders } from '../api/driver-orders'
 const sample: DriverOpenOrder = {
   id: 'order-1',
   order_no: 'ORD-20260915-002',
-  scheduled_at: '2026-09-15T07:30:00.000Z',
   pickup_location: '左營高鐵站',
   destination: '高雄小港機場',
-  vehicle_type: '5人座',
+  created_at: '2026-09-15T07:30:00.000Z',
   price: 1200,
   note: '2件行李',
 }
@@ -64,7 +63,6 @@ describe('DriverOpenOrdersView', () => {
     expect(wrapper.text()).toContain('ORD-20260915-002')
     expect(wrapper.text()).toContain('左營高鐵站')
     expect(wrapper.text()).toContain('高雄小港機場')
-    expect(wrapper.text()).toContain('5人座')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).toContain('2件行李')
     expect(wrapper.text()).toContain('搶單中')

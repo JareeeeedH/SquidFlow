@@ -62,12 +62,10 @@ export class DriversService {
         return tx.driver.create({
           data: {
             userId: user.id,
-            vehicleType: input.vehicleType,
             licensePlate: input.licensePlate,
             vehicleBrand: input.vehicleBrand,
             vehicleModel: input.vehicleModel,
             vehicleColor: input.vehicleColor,
-            vehicleYear: input.vehicleYear,
             onlineStatus: DriverOnlineStatus.OFFLINE,
           },
           include: {
@@ -104,12 +102,10 @@ export class DriversService {
         return tx.driver.update({
           where: { id },
           data: {
-            vehicleType: input.vehicleType,
             licensePlate: input.licensePlate,
             vehicleBrand: input.vehicleBrand,
             vehicleModel: input.vehicleModel,
             vehicleColor: input.vehicleColor,
-            vehicleYear: input.vehicleYear,
           },
           include: {
             user: {

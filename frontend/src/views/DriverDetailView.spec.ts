@@ -17,12 +17,10 @@ import { getDriver, updateDriver, updateDriverStatus } from '../api/drivers'
 const activeDriver: DriverItem = {
   id: 'driver-1',
   username: 'driver01',
-  vehicle_type: '5人座',
   license_plate: 'ABC-1234',
   vehicle_brand: 'Toyota',
   vehicle_model: 'Camry',
   vehicle_color: '黑色',
-  vehicle_year: 2024,
   online_status: 'OFFLINE',
   status: 'ACTIVE',
 }
@@ -92,7 +90,8 @@ describe('DriverDetailView', () => {
     expect(wrapper.text()).toContain('Toyota')
     expect(wrapper.text()).toContain('Camry')
     expect(wrapper.text()).toContain('黑色')
-    expect(wrapper.text()).toContain('2024')
+    expect(wrapper.text()).not.toContain('車型')
+    expect(wrapper.text()).not.toContain('年份')
     expect(wrapper.text()).toContain('帳號狀態')
     expect(wrapper.text()).toContain('上線狀態')
     expect(wrapper.text()).toContain('啟用')
@@ -106,16 +105,12 @@ describe('DriverDetailView', () => {
     vi.mocked(updateDriver).mockResolvedValue({
       ...activeDriver,
       vehicle_color: '白色',
-      vehicle_year: 2025,
     })
     const { wrapper } = await mountDetail()
 
     await clickNamed(wrapper, '編輯')
     await flushPromises()
     await wrapper.get('input[placeholder="例如 黑色"]').setValue('白色')
-    await wrapper
-      .findComponent({ name: 'InputNumber' })
-      .vm.$emit('update:value', 2025)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
 
@@ -124,12 +119,12 @@ describe('DriverDetailView', () => {
       expect.objectContaining({
         username: 'driver01',
         vehicle_color: '白色',
-        vehicle_year: 2025,
       }),
     )
     expect(updateDriver.mock.calls[0][1]).not.toHaveProperty('password')
+    expect(updateDriver.mock.calls[0][1]).not.toHaveProperty('vehicle_type')
+    expect(updateDriver.mock.calls[0][1]).not.toHaveProperty('vehicle_year')
     expect(wrapper.text()).toContain('白色')
-    expect(wrapper.text()).toContain('2025')
   })
 
   it('omits blank password on edit', async () => {

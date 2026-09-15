@@ -11,7 +11,7 @@ function boardOrder(
     customer_name: '王先生',
     pickup_location: '左營高鐵站',
     destination: '高雄小港機場',
-    scheduled_at: '2026-09-15T07:30:00.000Z',
+    created_at: '2026-09-15T07:00:00.000Z',
     price: 1200,
     status: 'OPEN',
     driver: null,

@@ -2,7 +2,6 @@
 import {
   NAlert,
   NButton,
-  NDatePicker,
   NForm,
   NFormItem,
   NInput,
@@ -99,7 +98,7 @@ async function onSubmit() {
         :disabled="submitting"
       />
     </NFormItem>
-    <NFormItem path="pickup_location" label="上車地點">
+    <NFormItem path="pickup_location" label="上車地點" required>
       <NInput
         v-model:value="form.pickup_location"
         placeholder="例如 左營高鐵站"
@@ -110,24 +109,6 @@ async function onSubmit() {
       <NInput
         v-model:value="form.destination"
         placeholder="例如 高雄小港機場"
-        :disabled="submitting"
-      />
-    </NFormItem>
-    <NFormItem path="scheduled_at" label="預約時間">
-      <NDatePicker
-        v-model:value="form.scheduled_at"
-        class="datetime"
-        type="datetime"
-        format="yyyy/MM/dd HH:mm"
-        placeholder="選擇台灣時間"
-        :disabled="submitting"
-        clearable
-      />
-    </NFormItem>
-    <NFormItem path="vehicle_type" label="車型">
-      <NInput
-        v-model:value="form.vehicle_type"
-        placeholder="例如 5人座"
         :disabled="submitting"
       />
     </NFormItem>
@@ -179,7 +160,6 @@ async function onSubmit() {
   margin-bottom: var(--space-16);
 }
 
-.datetime,
 .price {
   width: 100%;
 }

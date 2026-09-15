@@ -49,15 +49,14 @@ export type OrderStatus =
 export type OrderListItem = {
   id: string
   order_no: string
-  customer_name: string
+  customer_name: string | null
   pickup_location: string
-  destination: string
-  scheduled_at: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  price: number | null
   note: string | null
   status: OrderStatus
   driver_id: string | null
+  created_at: string
 }
 
 export type OrderListQuery = {
@@ -78,11 +77,11 @@ export type DashboardSummary = {
 export type DashboardBoardOrder = {
   id: string
   order_no: string
-  customer_name: string
+  customer_name: string | null
   pickup_location: string
-  destination: string
-  scheduled_at: string
-  price: number
+  destination: string | null
+  created_at: string
+  price: number | null
   status: OrderStatus
   driver: { username: string } | null
 }
@@ -94,7 +93,6 @@ export type AdminDashboard = {
 
 export type AssignedDriver = {
   username: string
-  vehicle_type: string
   license_plate: string
   vehicle_brand: string
   vehicle_model: string
@@ -104,12 +102,10 @@ export type AssignedDriver = {
 export type OrderDetail = {
   id: string
   order_no: string
-  customer_name: string
+  customer_name: string | null
   pickup_location: string
-  destination: string
-  scheduled_at: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  price: number | null
   note: string | null
   status: OrderStatus
   dispatch_mode: 'OPEN' | 'DIRECT' | 'PRIORITY' | 'AUTO'
@@ -125,12 +121,10 @@ export type OrderDetail = {
 }
 
 export type CreateOrderInput = {
-  customer_name: string
+  customer_name: string | null
   pickup_location: string
-  destination: string
-  scheduled_at: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  price: number | null
   note?: string | null
 }
 
@@ -152,12 +146,10 @@ export type OnlineStatus = 'ONLINE' | 'OFFLINE'
 export type DriverItem = {
   id: string
   username: string
-  vehicle_type: string
   license_plate: string
   vehicle_brand: string
   vehicle_model: string
   vehicle_color: string
-  vehicle_year: number
   online_status: OnlineStatus
   status: AccountStatus
 }
@@ -165,23 +157,19 @@ export type DriverItem = {
 export type CreateDriverInput = {
   username: string
   password: string
-  vehicle_type: string
   license_plate: string
   vehicle_brand: string
   vehicle_model: string
   vehicle_color: string
-  vehicle_year: number
 }
 
 export type UpdateDriverInput = {
   username: string
   password?: string
-  vehicle_type: string
   license_plate: string
   vehicle_brand: string
   vehicle_model: string
   vehicle_color: string
-  vehicle_year: number
 }
 
 export type DriverStatusResult = {
@@ -196,23 +184,21 @@ export type DriverOnlineStatusResult = {
 export type DriverOpenOrder = {
   id: string
   order_no: string
-  scheduled_at: string
+  created_at: string
   pickup_location: string
-  destination: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  price: number | null
   note: string | null
 }
 
 export type DriverOrderDetail = {
   id: string
   order_no: string
-  customer_name: string
+  customer_name: string | null
   pickup_location: string
-  destination: string
-  scheduled_at: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  created_at: string
+  price: number | null
   note: string | null
   status: OrderStatus
 }
@@ -227,11 +213,10 @@ export type AcceptOrderResult = {
 export type DriverMyOrder = {
   id: string
   order_no: string
-  scheduled_at: string
+  created_at: string
   pickup_location: string
-  destination: string
-  vehicle_type: string
-  price: number
+  destination: string | null
+  price: number | null
   status: OrderStatus
 }
 

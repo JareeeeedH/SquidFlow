@@ -15,12 +15,10 @@ import { listDrivers } from '../api/drivers'
 const sampleDriver: DriverItem = {
   id: 'driver-1',
   username: 'driver01',
-  vehicle_type: '5人座',
   license_plate: 'ABC-1234',
   vehicle_brand: 'Toyota',
   vehicle_model: 'Camry',
   vehicle_color: '黑色',
-  vehicle_year: 2024,
   online_status: 'OFFLINE',
   status: 'ACTIVE',
 }
@@ -78,7 +76,8 @@ describe('DriversView', () => {
     expect(wrapper.text()).toContain('ABC-1234')
     expect(wrapper.text()).toContain('Toyota Camry')
     expect(wrapper.text()).toContain('黑色')
-    expect(wrapper.text()).toContain('2024')
+    expect(wrapper.text()).not.toContain('5人座')
+    expect(wrapper.text()).not.toContain('2024')
     expect(wrapper.text()).toContain('啟用')
     expect(wrapper.text()).toContain('離線')
     expect(wrapper.text()).toContain('上線狀態')

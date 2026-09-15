@@ -4,23 +4,19 @@ import { AppErrors } from '../common/errors/app.error';
 export type CreateDriverInput = {
   username: string;
   password: string;
-  vehicleType: string;
   licensePlate: string;
   vehicleBrand: string;
   vehicleModel: string;
   vehicleColor: string;
-  vehicleYear: number;
 };
 
 export type UpdateDriverInput = {
   username: string;
   password?: string;
-  vehicleType: string;
   licensePlate: string;
   vehicleBrand: string;
   vehicleModel: string;
   vehicleColor: string;
-  vehicleYear: number;
 };
 
 function asRecord(body: unknown): Record<string, unknown> {
@@ -45,29 +41,15 @@ function requirePassword(value: unknown): string {
   return value;
 }
 
-function requireVehicleYear(value: unknown): number {
-  if (
-    typeof value !== 'number' ||
-    !Number.isInteger(value) ||
-    value < -32768 ||
-    value > 32767
-  ) {
-    throw AppErrors.validation('vehicle_year 格式不正確');
-  }
-  return value;
-}
-
 export function parseCreateDriverBody(body: unknown): CreateDriverInput {
   const data = asRecord(body);
   return {
     username: requireString(data, 'username'),
     password: requirePassword(data.password),
-    vehicleType: requireString(data, 'vehicle_type'),
     licensePlate: requireString(data, 'license_plate'),
     vehicleBrand: requireString(data, 'vehicle_brand'),
     vehicleModel: requireString(data, 'vehicle_model'),
     vehicleColor: requireString(data, 'vehicle_color'),
-    vehicleYear: requireVehicleYear(data.vehicle_year),
   };
 }
 
@@ -75,12 +57,10 @@ export function parseUpdateDriverBody(body: unknown): UpdateDriverInput {
   const data = asRecord(body);
   const input: UpdateDriverInput = {
     username: requireString(data, 'username'),
-    vehicleType: requireString(data, 'vehicle_type'),
     licensePlate: requireString(data, 'license_plate'),
     vehicleBrand: requireString(data, 'vehicle_brand'),
     vehicleModel: requireString(data, 'vehicle_model'),
     vehicleColor: requireString(data, 'vehicle_color'),
-    vehicleYear: requireVehicleYear(data.vehicle_year),
   };
 
   if (Object.prototype.hasOwnProperty.call(data, 'password')) {

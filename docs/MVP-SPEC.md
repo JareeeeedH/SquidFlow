@@ -112,12 +112,10 @@ SUSPENDED
 
 - 帳號
 - 密碼
-- 車型
 - 車牌
 - 車輛品牌
 - 車輛型號
 - 車輛顏色
-- 車輛年份
 
 ## 司機登入
 
@@ -143,6 +141,8 @@ Driver
 └─ updated_at
 ```
 
+`vehicle_type` 與 `vehicle_year` 保留於 Schema；新 Driver 不填寫，值為空。
+
 ### Online Status
 
 ```text
@@ -165,8 +165,6 @@ Order
 ├─ customer_name
 ├─ pickup_location
 ├─ destination
-├─ scheduled_at
-├─ vehicle_type
 ├─ price
 ├─ note
 ├─ status
@@ -186,13 +184,11 @@ Order
 | 欄位 | 說明 |
 |---|---|
 | `order_no` | 訂單編號 |
-| `customer_name` | 客戶姓名 |
-| `pickup_location` | 上車地點 |
-| `destination` | 目的地 |
-| `scheduled_at` | 預約日期與時間 |
-| `vehicle_type` | 訂單需求車型 |
-| `price` | 派車價格 |
-| `note` | 訂單備註 |
+| `customer_name` | 客戶姓名，選填 |
+| `pickup_location` | 上車地點，必填 |
+| `destination` | 目的地，選填 |
+| `price` | 派車價格，選填 |
+| `note` | 訂單備註，選填 |
 | `driver_id` | 成功接單的司機 |
 | `created_by` | 建立訂單的管理員 |
 
@@ -519,10 +515,8 @@ Driver 不可以查看其他 Driver 的已接單。
 可查看：
 
 - 訂單編號
-- 預約時間
 - 上車地點
 - 目的地
-- 車型
 - 價格
 - 備註
 

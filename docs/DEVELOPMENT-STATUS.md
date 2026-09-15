@@ -114,7 +114,7 @@
 - Create 與 `ORDER_CREATED` 同一 transaction
 - PUT / DELETE 僅允許 DRAFT；非 DRAFT 回 `INVALID_ORDER_STATUS`
 - DRAFT hard delete：先刪 OrderEvent / Notification，再刪 Order（不改 Schema CASCADE）
-- `GET /orders` query：`status`、`date`（Taipei `scheduled_at` 日曆日）、`search`（`order_no` / `customer_name`）
+- `GET /orders` query：`status`、`date`（Taipei `created_at` 日曆日）、`search`（`order_no` / `customer_name`）
 - 未實作 Publish、Cancel、搶單、Notification、Frontend Order UI
 
 ---
@@ -409,7 +409,7 @@
 
 - `GET /api/v1/admin/dashboard`：Admin-only
 - `summary`：Backend 聚合六種 Order Status 數量
-- `board_orders`：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`，依 `scheduled_at` 升序
+- `board_orders`：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`，依 `created_at` 降序
 - 未指派 `driver: null`；已指派 `driver: { username }`，不另打 Driver API
 - 不使用 `active_orders`
 - Admin 登入後進入 Dashboard；Status Summary 點擊 → `/orders?status=<status>`
@@ -469,10 +469,42 @@
 ### 已完成
 
 - Driver Home：上線狀態作為主要狀態區，通知與帳號狀態降為次要層級，「可搶訂單」為 Primary CTA
-- Open Orders：卡片改為時間 / 行程 / 單號 / 車型與價格 / CTA 掃讀層級
+- Open Orders：卡片改為行程 / 單號 / 價格 / CTA 掃讀層級
 - Order Detail：行程與時間優先，依既有狀態顯示「我要接單」「開始行程」「完成訂單」
 - My Orders：目前訂單與歷史訂單視覺分層，歷史保持唯讀
 - Loading / success / error 狀態更清楚，維持既有 double-submit guard
 - 未改 API / Schema / business rules / Notification Center / Dashboard / Realtime
+
+---
+
+## TASK — Remove Driver Vehicle Type / Year
+
+**Status:** completed
+
+### 已完成
+
+- `drivers.vehicle_type`、`drivers.vehicle_year` 改為 nullable，既有資料保留
+- Create / Update Driver API 不再要求或回傳這兩欄；新 Driver 寫入 `NULL`
+- Driver List / Detail / Create / Edit UI 移除車型與年份
+- Order API `AssignedDriver` 移除 `vehicle_type`（`vehicle_year` 本來就不在 nested driver）
+- `orders.vehicle_type` 後續已 DROP，見 Simplify Order Creation Fields
+- 已同步 MVP / DATABASE / API / UI-UX Spec
+
+---
+
+## TASK — Simplify Order Creation Fields
+
+**Status:** completed
+
+### 已完成
+
+- DROP `orders.scheduled_at`、`orders.vehicle_type`；不保留 nullable
+- `customer_name` / `destination` / `price` / `note` 改為 optional，DB 與 API 使用 `NULL`，UI 顯示 `—`
+- Create / Update 只要求 `pickup_location`；不接受已刪欄位
+- Dashboard / Driver Open / Driver My Orders / Admin Orders 皆依 `created_at` DESC
+- `GET /orders?date=` 改為 Taipei 日曆日篩選 `created_at`
+- Push 只顯示行程與有填的價格；無 destination 只顯示 pickup
+- `drivers.vehicle_type` 維持前次 nullable 決策，未再修改
+- 已同步 MVP / DATABASE / API / UI-UX Spec
 
 ---

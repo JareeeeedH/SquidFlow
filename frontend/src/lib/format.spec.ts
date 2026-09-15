@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatDateTimeTaipei,
+  formatOptionalText,
   formatPrice,
   formatScheduledAt,
   formatTaipeiYmd,
@@ -42,5 +43,14 @@ describe('formatPrice', () => {
   it('formats whole and fractional TWD amounts', () => {
     expect(formatPrice(1200)).toBe('NT$ 1,200')
     expect(formatPrice(1200.5)).toBe('NT$ 1,200.50')
+    expect(formatPrice(null)).toBe('—')
+  })
+})
+
+describe('formatOptionalText', () => {
+  it('shows an em dash when the value is missing', () => {
+    expect(formatOptionalText('王先生')).toBe('王先生')
+    expect(formatOptionalText(null)).toBe('—')
+    expect(formatOptionalText('')).toBe('—')
   })
 })

@@ -20,8 +20,6 @@ config();
 
 const prisma = new PrismaClient();
 const password = 'OrderDraftP@ss-never-log-this';
-const scheduledAt = '2026-09-15T15:30:00+08:00';
-const scheduledAtUtc = '2026-09-15T07:30:00.000Z';
 
 function cookieHeader(response: request.Response): string[] {
   const raw = response.headers['set-cookie'];
@@ -86,8 +84,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: scheduledAt,
-      vehicle_type: '5人座',
       price: 1200,
       note: '2件行李',
       ...overrides,
@@ -240,8 +236,9 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
     expect(created?.startedAt).toBeNull();
     expect(created?.completedAt).toBeNull();
     expect(created?.cancelledAt).toBeNull();
-    expect(created?.price.toNumber()).toBe(1200);
-    expect(created?.scheduledAt.toISOString()).toBe(scheduledAtUtc);
+    expect(created?.price?.toNumber()).toBe(1200);
+    expect(created).not.toHaveProperty('scheduledAt');
+    expect(created).not.toHaveProperty('vehicleType');
     expect(created?.events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -273,8 +270,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
         customerName: '舊單',
         pickupLocation: '左營高鐵站',
         destination: '小港機場',
-        scheduledAt: new Date('1999-01-01T01:00:00Z'),
-        vehicleType: '5人座',
         price: 100,
         status: 'DRAFT',
         dispatchMode: 'OPEN',
@@ -343,7 +338,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       ApiSuccessBody<{
         id: string;
         created_by: string;
-        scheduled_at: string;
         dispatch_mode: string;
       }>
     >(detail);
@@ -351,10 +345,11 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       id: created.id,
       created_by: users.admin.id,
       dispatch_mode: 'OPEN',
-      scheduled_at: scheduledAtUtc,
       driver_id: null,
       driver: null,
     });
+    expect(detailBody.data).not.toHaveProperty('scheduled_at');
+    expect(detailBody.data).not.toHaveProperty('vehicle_type');
     assertNoSecrets(detailBody);
   });
 
@@ -379,7 +374,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
         driver_id: string;
         driver: {
           username: string;
-          vehicle_type: string;
           license_plate: string;
           vehicle_brand: string;
           vehicle_model: string;
@@ -391,7 +385,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
     expect(detailBody.data.driver_id).toBe(users.driver.driverId);
     expect(detailBody.data.driver).toEqual({
       username: users.driver.username,
-      vehicle_type: '5人座',
       license_plate: users.driver.licensePlate,
       vehicle_brand: 'Toyota',
       vehicle_model: 'Camry',
@@ -403,8 +396,8 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       'vehicle_brand',
       'vehicle_color',
       'vehicle_model',
-      'vehicle_type',
     ]);
+    expect(detailBody.data.driver).not.toHaveProperty('vehicle_type');
     expect(JSON.stringify(detailBody.data.driver)).not.toContain(
       'vehicle_year',
     );
@@ -446,15 +439,21 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
     expect(draftIds).not.toContain(open.id);
   });
 
-  it('filters orders by Taipei scheduled_at date', async () => {
+  it('filters orders by Taipei created_at date', async () => {
     const cookie = await adminCookie();
     const sept15 = await createDraft(cookie, {
       customer_name: 'date-15',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
     });
     const sept16 = await createDraft(cookie, {
       customer_name: 'date-16',
-      scheduled_at: '2026-09-16T10:00:00+08:00',
+    });
+    await prisma.order.update({
+      where: { id: sept15.id },
+      data: { createdAt: new Date('2026-09-15T07:00:00.000Z') },
+    });
+    await prisma.order.update({
+      where: { id: sept16.id },
+      data: { createdAt: new Date('2026-09-16T07:00:00.000Z') },
     });
 
     const listed = await request(app.getHttpServer())
@@ -545,8 +544,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
         customer_name: '李先生',
         pickup_location: '高雄車站',
         destination: '義享天地',
-        scheduled_at: '2026-09-16T10:00:00+08:00',
-        vehicle_type: '7人座',
         price: 1500.5,
         note: '3件行李',
         order_no: 'ORD-19990101-001',
@@ -565,14 +562,12 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
         driver_id: string | null;
         dispatch_mode: string;
         price: number;
-        scheduled_at: string;
       }>
     >(response);
     expect(body.data).toMatchObject({
       customer_name: '李先生',
       pickup_location: '高雄車站',
       destination: '義享天地',
-      vehicle_type: '7人座',
       price: 1500.5,
       note: '3件行李',
       order_no: created.order_no,
@@ -580,7 +575,6 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       dispatch_mode: 'OPEN',
       driver_id: null,
       created_by: users.admin.id,
-      scheduled_at: '2026-09-16T02:00:00.000Z',
     });
     expect(before?.orderNo).toBe(created.order_no);
   });
@@ -682,15 +676,27 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
     expect(asBody<ApiErrorBody>(response).error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns VALIDATION_ERROR for scheduled_at without a timezone', async () => {
+  it('creates an order with only pickup_location and stores optional fields as null', async () => {
     const cookie = await adminCookie();
     const response = await request(app.getHttpServer())
       .post('/api/v1/orders')
       .set('Cookie', cookie)
-      .send(orderPayload({ scheduled_at: '2026-09-15T15:30:00' }))
-      .expect(400);
+      .send({
+        pickup_location: '左營高鐵站',
+        scheduled_at: '2026-09-15T15:30:00',
+        vehicle_type: '5人座',
+      })
+      .expect(200);
 
-    expect(asBody<ApiErrorBody>(response).error.code).toBe('VALIDATION_ERROR');
+    const body = asBody<ApiSuccessBody<CreateOrderData>>(response);
+    const stored = await prisma.order.findUnique({
+      where: { id: body.data.id },
+    });
+    expect(stored?.pickupLocation).toBe('左營高鐵站');
+    expect(stored?.customerName).toBeNull();
+    expect(stored?.destination).toBeNull();
+    expect(stored?.price).toBeNull();
+    expect(stored?.note).toBeNull();
   });
 
   it('returns VALIDATION_ERROR for an invalid price', async () => {

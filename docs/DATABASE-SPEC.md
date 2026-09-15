@@ -76,12 +76,12 @@ Driver
 |---|---|:---:|
 | `id` | UUID | ✅ |
 | `user_id` | UUID | ✅ |
-| `vehicle_type` | VARCHAR | ✅ |
+| `vehicle_type` | VARCHAR | ❌ |
 | `license_plate` | VARCHAR | ✅ |
 | `vehicle_brand` | VARCHAR | ✅ |
 | `vehicle_model` | VARCHAR | ✅ |
 | `vehicle_color` | VARCHAR | ✅ |
-| `vehicle_year` | SMALLINT | ✅ |
+| `vehicle_year` | SMALLINT | ❌ |
 | `online_status` | ENUM | ✅ |
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
@@ -90,6 +90,8 @@ Driver
 online_status:
 ONLINE / OFFLINE
 ```
+
+`vehicle_type` 與 `vehicle_year` 保留既有資料；新 Driver 不再寫入這兩欄，值為 `NULL`。
 
 ---
 
@@ -102,8 +104,6 @@ Order
 ├─ customer_name
 ├─ pickup_location
 ├─ destination
-├─ scheduled_at
-├─ vehicle_type
 ├─ price
 ├─ note
 ├─ status
@@ -122,12 +122,10 @@ Order
 |---|---|:---:|
 | `id` | UUID | ✅ |
 | `order_no` | VARCHAR | ✅ |
-| `customer_name` | VARCHAR | ✅ |
+| `customer_name` | VARCHAR | ❌ |
 | `pickup_location` | TEXT | ✅ |
-| `destination` | TEXT | ✅ |
-| `scheduled_at` | TIMESTAMP WITH TIME ZONE | ✅ |
-| `vehicle_type` | VARCHAR | ✅ |
-| `price` | DECIMAL(10,2) | ✅ |
+| `destination` | TEXT | ❌ |
+| `price` | DECIMAL(10,2) | ❌ |
 | `note` | TEXT | ❌ |
 | `status` | ENUM | ✅ |
 | `dispatch_mode` | ENUM | ✅ |
@@ -505,13 +503,14 @@ Database 以 UTC 儲存。
 Admin 輸入：
 
 ```text
-customer_name       必填
+customer_name       選填
 pickup_location     必填
-destination         必填
-scheduled_at        必填
-vehicle_type        必填
-price               必填
+destination         選填
+price               選填
 note                選填
+
+未填寫的選填欄位存 `NULL`，不使用空字串或 `0`。
+不使用 `scheduled_at`、`vehicle_type`。
 ```
 
 系統產生：

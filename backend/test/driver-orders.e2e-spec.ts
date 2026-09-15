@@ -43,23 +43,21 @@ type ApiSuccessBody<T> = {
 type OpenOrderItem = {
   id: string;
   order_no: string;
-  scheduled_at: string;
+  created_at: string;
   pickup_location: string;
-  destination: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   note: string | null;
 };
 
 type DriverOrderDetail = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  created_at: string;
+  price: number | null;
   note: string | null;
   status: string;
 };
@@ -220,8 +218,6 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         customerName: '王先生',
         pickupLocation: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduledAt: new Date('2026-09-15T07:30:00Z'),
-        vehicleType: '5人座',
         price: new Prisma.Decimal('1200.00'),
         note: '2件行李',
         status: input.status,
@@ -358,23 +354,22 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
     expect(openItem).toEqual({
       id: orders.open,
       order_no: `ORD-D8-OPEN-${suffix}`,
-      scheduled_at: new Date('2026-09-15T07:30:00Z').toISOString(),
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      vehicle_type: '5人座',
       price: 1200,
       note: '2件行李',
+      created_at: openItem?.created_at,
     });
+    expect(typeof openItem?.created_at).toBe('string');
     expect(Object.keys(openItem as OpenOrderItem).sort()).toEqual(
       [
+        'created_at',
         'destination',
         'id',
         'note',
         'order_no',
         'pickup_location',
         'price',
-        'scheduled_at',
-        'vehicle_type',
       ].sort(),
     );
 
@@ -447,16 +442,17 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         customer_name: '王先生',
         pickup_location: '左營高鐵站',
         destination: '高雄小港機場',
-        scheduled_at: new Date('2026-09-15T07:30:00Z').toISOString(),
-        vehicle_type: '5人座',
         price: 1200,
         note: '2件行李',
         status: 'OPEN',
+        created_at: body.data.created_at,
       },
     });
+    expect(typeof body.data.created_at).toBe('string');
     assertNoSecrets(body);
     expect(Object.keys(body.data).sort()).toEqual(
       [
+        'created_at',
         'customer_name',
         'destination',
         'id',
@@ -464,9 +460,7 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         'order_no',
         'pickup_location',
         'price',
-        'scheduled_at',
         'status',
-        'vehicle_type',
       ].sort(),
     );
     expect(JSON.stringify(body)).not.toContain('driver_id');

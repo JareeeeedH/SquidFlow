@@ -16,8 +16,6 @@ function orderRow(
     customerName: '王先生',
     pickupLocation: '左營高鐵站',
     destination: '高雄小港機場',
-    scheduledAt: new Date('2026-09-15T07:30:00.000Z'),
-    vehicleType: '5人座',
     price: new Prisma.Decimal('1200.00'),
     note: '2件行李',
     status: OrderStatus.DRAFT,
@@ -48,7 +46,6 @@ describe('toDetail', () => {
         driverId: 'driver-1',
         acceptedAt: new Date('2026-09-15T07:05:00.000Z'),
         driver: {
-          vehicleType: '7人座',
           licensePlate: 'ABC-1234',
           vehicleBrand: 'Toyota',
           vehicleModel: 'Sienta',
@@ -61,7 +58,6 @@ describe('toDetail', () => {
     expect(detail.driver_id).toBe('driver-1');
     expect(detail.driver).toEqual({
       username: 'driver01',
-      vehicle_type: '7人座',
       license_plate: 'ABC-1234',
       vehicle_brand: 'Toyota',
       vehicle_model: 'Sienta',
@@ -73,8 +69,9 @@ describe('toDetail', () => {
       'vehicle_brand',
       'vehicle_color',
       'vehicle_model',
-      'vehicle_type',
     ]);
+    expect(detail.driver).not.toHaveProperty('vehicle_type');
+    expect(detail.driver).not.toHaveProperty('vehicle_year');
   });
 });
 
@@ -101,13 +98,28 @@ describe('toDashboardBoardOrder', () => {
     expect(toDashboardBoardOrder(orderRow()).driver).toBeNull();
   });
 
+  it('maps optional order fields as null without scheduled_at or vehicle_type', () => {
+    const item = toDashboardBoardOrder(
+      orderRow({
+        customerName: null,
+        destination: null,
+        price: null,
+      }),
+    );
+
+    expect(item.customer_name).toBeNull();
+    expect(item.destination).toBeNull();
+    expect(item.price).toBeNull();
+    expect(item).not.toHaveProperty('scheduled_at');
+    expect(item).not.toHaveProperty('vehicle_type');
+  });
+
   it('maps only username for an assigned driver', () => {
     const item = toDashboardBoardOrder(
       orderRow({
         status: OrderStatus.ACCEPTED,
         driverId: 'driver-1',
         driver: {
-          vehicleType: '7人座',
           licensePlate: 'ABC-1234',
           vehicleBrand: 'Toyota',
           vehicleModel: 'Sienta',
@@ -123,7 +135,7 @@ describe('toDashboardBoardOrder', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '高雄小港機場',
-      scheduled_at: '2026-09-15T07:30:00.000Z',
+      created_at: '2026-09-15T07:00:00.000Z',
       price: 1200,
       status: OrderStatus.ACCEPTED,
       driver: { username: 'driver01' },

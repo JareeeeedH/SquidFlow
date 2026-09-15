@@ -26,8 +26,7 @@ const openOrder: DriverOrderDetail = {
   customer_name: '李小姐',
   pickup_location: '左營高鐵站',
   destination: '高雄小港機場',
-  scheduled_at: '2026-09-15T07:30:00.000Z',
-  vehicle_type: '5人座',
+  created_at: '2026-09-15T07:30:00.000Z',
   price: 1200,
   note: '2件行李',
   status: 'OPEN',
@@ -92,7 +91,6 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).toContain('李小姐')
     expect(wrapper.text()).toContain('左營高鐵站')
     expect(wrapper.text()).toContain('高雄小港機場')
-    expect(wrapper.text()).toContain('5人座')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).toContain('2件行李')
     expect(wrapper.text()).toContain('我要接單')

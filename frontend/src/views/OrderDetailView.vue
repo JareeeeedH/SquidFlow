@@ -8,7 +8,7 @@ import { ApiClientError } from '../api/types'
 import type { CreateOrderInput, OrderDetail, OrderStatus } from '../api/types'
 import OrderForm from '../components/OrderForm.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
-import { formatDateTimeTaipei, formatPrice, formatScheduledAt } from '../lib/format'
+import { formatDateTimeTaipei, formatOptionalText, formatPrice } from '../lib/format'
 import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form'
 
 const STATUS_HINT: Record<OrderStatus, string> = {
@@ -309,23 +309,15 @@ watch(
             <dl v-else class="fields">
               <div>
                 <dt>客戶</dt>
-                <dd>{{ order.customer_name }}</dd>
-              </div>
-              <div>
-                <dt>預約時間</dt>
-                <dd>{{ formatScheduledAt(order.scheduled_at) }}</dd>
+                <dd>{{ formatOptionalText(order.customer_name) }}</dd>
               </div>
               <div class="route">
                 <dt>行程</dt>
                 <dd>
                   <span>{{ order.pickup_location }}</span>
                   <span class="route-arrow">↓</span>
-                  <span>{{ order.destination }}</span>
+                  <span>{{ formatOptionalText(order.destination) }}</span>
                 </dd>
-              </div>
-              <div>
-                <dt>車型</dt>
-                <dd>{{ order.vehicle_type }}</dd>
               </div>
               <div>
                 <dt>價格</dt>
@@ -333,7 +325,7 @@ watch(
               </div>
               <div>
                 <dt>備註</dt>
-                <dd>{{ order.note || '—' }}</dd>
+                <dd>{{ formatOptionalText(order.note) }}</dd>
               </div>
             </dl>
           </article>
@@ -346,10 +338,6 @@ watch(
               <template v-if="order.driver">
                 <p class="driver-value">{{ order.driver.username }}</p>
                 <dl class="driver-fields">
-                  <div>
-                    <dt>車型</dt>
-                    <dd>{{ order.driver.vehicle_type }}</dd>
-                  </div>
                   <div>
                     <dt>車牌</dt>
                     <dd>{{ order.driver.license_plate }}</dd>

@@ -7,7 +7,7 @@ import { listOpenDriverOrders } from '../api/driver-orders'
 import { ApiClientError } from '../api/types'
 import type { DriverOpenOrder } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
-import { formatPrice, formatScheduledAt } from '../lib/format'
+import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 
 const router = useRouter()
 const orders = ref<DriverOpenOrder[]>([])
@@ -109,17 +109,16 @@ void loadOrders()
             "
           >
             <div class="card-top">
-              <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
+              <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
               <OrderStatusTag status="OPEN" />
             </div>
             <div class="route">
               <p class="place">{{ order.pickup_location }}</p>
               <p class="arrow" aria-hidden="true">↓</p>
-              <p class="place">{{ order.destination }}</p>
+              <p class="place">{{ formatOptionalText(order.destination) }}</p>
             </div>
             <p class="order-no">{{ order.order_no }}</p>
             <div class="meta">
-              <span>{{ order.vehicle_type }}</span>
               <span class="price">{{ formatPrice(order.price) }}</span>
             </div>
             <p v-if="order.note" class="note">{{ order.note }}</p>

@@ -79,8 +79,6 @@ describe('Dispatch end-to-end flow (e2e)', () => {
       customer_name: '王先生',
       pickup_location: '左營高鐵站',
       destination: '小港機場',
-      scheduled_at: '2026-09-15T15:30:00+08:00',
-      vehicle_type: '5人座',
       price: 1200,
       note: '2件行李',
     };

@@ -2,11 +2,9 @@ import { Prisma } from '@prisma/client';
 
 export type PushOrderPayloadInput = {
   id: string;
-  scheduledAt: Date;
   pickupLocation: string;
-  destination: string;
-  vehicleType: string;
-  price: Prisma.Decimal | string | number;
+  destination: string | null;
+  price: Prisma.Decimal | string | number | null;
 };
 
 export type PushPayload = {
@@ -15,13 +13,13 @@ export type PushPayload = {
   order_id: string;
 };
 
-export function formatTaipeiTime(scheduledAt: Date): string {
+export function formatTaipeiTime(value: Date): string {
   return new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Taipei',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(scheduledAt);
+  }).format(value);
 }
 
 export function formatPushPrice(
@@ -36,11 +34,16 @@ export function formatPushPrice(
 }
 
 export function formatPushPayload(order: PushOrderPayloadInput): PushPayload {
-  const time = formatTaipeiTime(order.scheduledAt);
-  const price = formatPushPrice(order.price);
+  const route = order.destination
+    ? `${order.pickupLocation} → ${order.destination}`
+    : order.pickupLocation;
+  const lines = [route];
+  if (order.price != null && order.price !== '') {
+    lines.push(formatPushPrice(order.price));
+  }
   return {
     title: '🚕 新派車單',
-    body: `${time}\n${order.pickupLocation} → ${order.destination}\n${order.vehicleType} / ${price}`,
+    body: lines.join('\n'),
     order_id: order.id,
   };
 }

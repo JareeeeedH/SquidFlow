@@ -10,20 +10,18 @@ export type OrderCreateResponse = {
 export type OrderListItem = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   note: string | null;
   status: OrderStatus;
   driver_id: string | null;
+  created_at: string;
 };
 
 export type AssignedDriver = {
   username: string;
-  vehicle_type: string;
   license_plate: string;
   vehicle_brand: string;
   vehicle_model: string;
@@ -33,12 +31,10 @@ export type AssignedDriver = {
 export type OrderDetail = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   note: string | null;
   status: OrderStatus;
   dispatch_mode: DispatchMode;
@@ -55,7 +51,6 @@ export type OrderDetail = {
 
 export type OrderWithAssignedDriver = Order & {
   driver: {
-    vehicleType: string;
     licensePlate: string;
     vehicleBrand: string;
     vehicleModel: string;
@@ -73,11 +68,11 @@ export type DashboardBoardDriver = {
 export type DashboardBoardOrder = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  price: number;
+  destination: string | null;
+  created_at: string;
+  price: number | null;
   status: OrderStatus;
   driver: DashboardBoardDriver | null;
 };
@@ -106,34 +101,31 @@ export const DASHBOARD_BOARD_STATUSES: OrderStatus[] = [
 export type DriverMyOrder = {
   id: string;
   order_no: string;
-  scheduled_at: string;
+  created_at: string;
   pickup_location: string;
-  destination: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   status: OrderStatus;
 };
 
 export type DriverOpenOrder = {
   id: string;
   order_no: string;
-  scheduled_at: string;
+  created_at: string;
   pickup_location: string;
-  destination: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  price: number | null;
   note: string | null;
 };
 
 export type DriverOrderDetail = {
   id: string;
   order_no: string;
-  customer_name: string;
+  customer_name: string | null;
   pickup_location: string;
-  destination: string;
-  scheduled_at: string;
-  vehicle_type: string;
-  price: number;
+  destination: string | null;
+  created_at: string;
+  price: number | null;
   note: string | null;
   status: OrderStatus;
 };
@@ -142,10 +134,9 @@ type DriverMyOrderRow = Pick<
   Order,
   | 'id'
   | 'orderNo'
-  | 'scheduledAt'
+  | 'createdAt'
   | 'pickupLocation'
   | 'destination'
-  | 'vehicleType'
   | 'price'
   | 'status'
 >;
@@ -154,10 +145,9 @@ type DriverOpenOrderRow = Pick<
   Order,
   | 'id'
   | 'orderNo'
-  | 'scheduledAt'
+  | 'createdAt'
   | 'pickupLocation'
   | 'destination'
-  | 'vehicleType'
   | 'price'
   | 'note'
 >;
@@ -169,8 +159,7 @@ type DriverOrderDetailRow = Pick<
   | 'customerName'
   | 'pickupLocation'
   | 'destination'
-  | 'scheduledAt'
-  | 'vehicleType'
+  | 'createdAt'
   | 'price'
   | 'note'
   | 'status'
@@ -180,8 +169,8 @@ function iso(value: Date | null): string | null {
   return value ? value.toISOString() : null;
 }
 
-function priceNumber(price: Order['price']): number {
-  return price.toNumber();
+function priceNumber(price: Order['price']): number | null {
+  return price == null ? null : price.toNumber();
 }
 
 export function toCreateResponse(order: Order): OrderCreateResponse {
@@ -200,12 +189,11 @@ export function toListItem(order: Order): OrderListItem {
     customer_name: order.customerName,
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    scheduled_at: order.scheduledAt.toISOString(),
-    vehicle_type: order.vehicleType,
     price: priceNumber(order.price),
     note: order.note,
     status: order.status,
     driver_id: order.driverId,
+    created_at: order.createdAt.toISOString(),
   };
 }
 
@@ -239,7 +227,7 @@ export function toDashboardBoardOrder(
     customer_name: order.customerName,
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    scheduled_at: order.scheduledAt.toISOString(),
+    created_at: order.createdAt.toISOString(),
     price: priceNumber(order.price),
     status: order.status,
     driver: order.driver ? { username: order.driver.user.username } : null,
@@ -254,7 +242,6 @@ export function toAssignedDriver(
   }
   return {
     username: driver.user.username,
-    vehicle_type: driver.vehicleType,
     license_plate: driver.licensePlate,
     vehicle_brand: driver.vehicleBrand,
     vehicle_model: driver.vehicleModel,
@@ -269,8 +256,6 @@ export function toDetail(order: OrderWithAssignedDriver): OrderDetail {
     customer_name: order.customerName,
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    scheduled_at: order.scheduledAt.toISOString(),
-    vehicle_type: order.vehicleType,
     price: priceNumber(order.price),
     note: order.note,
     status: order.status,
@@ -291,10 +276,9 @@ export function toDriverMyOrder(order: DriverMyOrderRow): DriverMyOrder {
   return {
     id: order.id,
     order_no: order.orderNo,
-    scheduled_at: order.scheduledAt.toISOString(),
+    created_at: order.createdAt.toISOString(),
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    vehicle_type: order.vehicleType,
     price: priceNumber(order.price),
     status: order.status,
   };
@@ -304,10 +288,9 @@ export function toDriverOpenOrder(order: DriverOpenOrderRow): DriverOpenOrder {
   return {
     id: order.id,
     order_no: order.orderNo,
-    scheduled_at: order.scheduledAt.toISOString(),
+    created_at: order.createdAt.toISOString(),
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    vehicle_type: order.vehicleType,
     price: priceNumber(order.price),
     note: order.note,
   };
@@ -322,8 +305,7 @@ export function toDriverOrderDetail(
     customer_name: order.customerName,
     pickup_location: order.pickupLocation,
     destination: order.destination,
-    scheduled_at: order.scheduledAt.toISOString(),
-    vehicle_type: order.vehicleType,
+    created_at: order.createdAt.toISOString(),
     price: priceNumber(order.price),
     note: order.note,
     status: order.status,

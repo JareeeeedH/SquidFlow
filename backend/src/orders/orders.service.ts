@@ -62,10 +62,10 @@ export class OrdersService {
     if (query.status) {
       where.status = query.status;
     }
-    if (query.scheduledAt) {
-      where.scheduledAt = {
-        gte: query.scheduledAt.start,
-        lt: query.scheduledAt.endExclusive,
+    if (query.createdAt) {
+      where.createdAt = {
+        gte: query.createdAt.start,
+        lt: query.createdAt.endExclusive,
       };
     }
     if (query.search) {
@@ -105,7 +105,7 @@ export class OrdersService {
           },
         },
         include: assignedDriverInclude,
-        orderBy: { scheduledAt: 'asc' },
+        orderBy: { createdAt: 'desc' },
       }),
     ]);
 
@@ -136,8 +136,6 @@ export class OrdersService {
               customerName: input.customerName,
               pickupLocation: input.pickupLocation,
               destination: input.destination,
-              scheduledAt: input.scheduledAt,
-              vehicleType: input.vehicleType,
               price: input.price,
               note: input.note,
               status: OrderStatus.DRAFT,
@@ -189,14 +187,13 @@ export class OrdersService {
           ...(query.status ? [{ status: query.status }] : []),
         ],
       },
-      orderBy: [{ scheduledAt: 'desc' }, { createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         orderNo: true,
-        scheduledAt: true,
+        createdAt: true,
         pickupLocation: true,
         destination: true,
-        vehicleType: true,
         price: true,
         status: true,
       },
@@ -216,15 +213,14 @@ export class OrdersService {
         status: OrderStatus.OPEN,
       },
       orderBy: {
-        scheduledAt: 'asc',
+        createdAt: 'desc',
       },
       select: {
         id: true,
         orderNo: true,
-        scheduledAt: true,
+        createdAt: true,
         pickupLocation: true,
         destination: true,
-        vehicleType: true,
         price: true,
         note: true,
       },
@@ -243,8 +239,7 @@ export class OrdersService {
         customerName: true,
         pickupLocation: true,
         destination: true,
-        scheduledAt: true,
-        vehicleType: true,
+        createdAt: true,
         price: true,
         note: true,
         status: true,
@@ -591,8 +586,6 @@ export class OrdersService {
         customerName: input.customerName,
         pickupLocation: input.pickupLocation,
         destination: input.destination,
-        scheduledAt: input.scheduledAt,
-        vehicleType: input.vehicleType,
         price: input.price,
         note: input.note,
       },

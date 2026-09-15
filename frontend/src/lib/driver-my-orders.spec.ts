@@ -5,10 +5,9 @@ import { isCurrentDriverOrder, splitDriverMyOrders } from './driver-my-orders'
 const accepted: DriverMyOrder = {
   id: 'a',
   order_no: 'ORD-1',
-  scheduled_at: '2026-09-15T07:30:00.000Z',
   pickup_location: '左營高鐵站',
   destination: '小港機場',
-  vehicle_type: '5人座',
+  created_at: '2026-09-15T07:30:00.000Z',
   price: 1200,
   status: 'ACCEPTED',
 }
