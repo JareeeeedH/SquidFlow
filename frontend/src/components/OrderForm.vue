@@ -96,7 +96,6 @@ async function onSubmit() {
     <section class="form-section">
       <header v-if="grouped" class="section-header">
         <h2>行程資訊</h2>
-        <p>上車地點為必填，其餘可留空。</p>
       </header>
       <NFormItem path="customer_name" label="客戶姓名">
         <NInput
@@ -127,10 +126,6 @@ async function onSubmit() {
     </section>
 
     <section class="form-section">
-      <header v-if="grouped" class="section-header">
-        <h2>費用與備註</h2>
-        <p>價格與備註皆為選填。</p>
-      </header>
       <NFormItem path="price" label="價格">
         <NInputNumber
           v-model:value="form.price"
@@ -192,12 +187,6 @@ async function onSubmit() {
 .section-header h2 {
   margin: 0;
   font: var(--font-section-title);
-}
-
-.section-header p {
-  margin: var(--space-4) 0 0;
-  color: var(--color-muted-text);
-  font: var(--font-caption);
 }
 
 .grouped .form-section + .form-section {

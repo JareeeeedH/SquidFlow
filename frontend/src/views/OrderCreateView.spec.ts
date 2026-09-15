@@ -49,7 +49,9 @@ describe('OrderCreateView', () => {
 
     expect(wrapper.text()).toContain('建立派車單')
     expect(wrapper.text()).toContain('行程資訊')
-    expect(wrapper.text()).toContain('費用與備註')
+    expect(wrapper.text()).not.toContain('上車地點為必填，其餘可留空。')
+    expect(wrapper.text()).not.toContain('費用與備註')
+    expect(wrapper.text()).not.toContain('價格與備註皆為選填。')
     expect(wrapper.text()).toContain('客戶姓名')
     expect(wrapper.text()).toContain('上車地點')
     expect(wrapper.text()).toContain('目的地')
