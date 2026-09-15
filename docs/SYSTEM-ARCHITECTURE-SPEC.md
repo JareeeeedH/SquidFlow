@@ -998,8 +998,14 @@ Send Web Push
 User role = DRIVER
 User status = ACTIVE
 Driver online_status = ONLINE
-Driver has no active order
+有效 PushSubscription
 ```
+
+即使 Driver 目前持有 `ACCEPTED` / `IN_PROGRESS` Order，仍建立 Notification 並發送 Web Push。
+
+Accept 資格維持既有規則，不因通知資格放寬而改變。
+
+實際發送時，該 Order 必須仍為 `OPEN`。已不是 `OPEN` 的 PENDING Notification 不發送。
 
 ---
 
@@ -1053,12 +1059,11 @@ Driver 仍可以透過 Open Orders 頁面查看。
 
 Push Subscription 用於記錄「通知送到哪裡」。
 
-同一 User 可以有多個 Subscription：
+同一 User 同時間只保留一筆有效 PushSubscription：
 
 ```text
-User
- ├── Desktop Browser
- └── Mobile Browser
+新 subscription 取代舊的
+Logout / unsubscribe 移除目前這筆 subscription
 ```
 
 Push Subscription 與 Notification 分工：
@@ -1159,10 +1164,13 @@ Order = OPEN
 ORDER_PUBLISHED
   ↓
 Find eligible ONLINE Drivers
+（ACTIVE + 有效 PushSubscription；
+可含已有未完成 Order 的 Driver）
   ↓
 Create Notification
   ↓
 Web Push
+（僅當 Order 仍為 OPEN）
 ```
 
 ---

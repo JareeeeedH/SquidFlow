@@ -248,6 +248,13 @@ PushSubscription
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 
+用途：
+
+- 記錄該 User 的 Web Push 送達目標
+- 同一 User 同時間只保留一筆有效 PushSubscription
+- 新 subscription 取代舊的
+- Logout / unsubscribe 移除目前這筆 subscription
+
 ---
 
 ---
@@ -288,7 +295,7 @@ User
  ├── 1 : 0..1 → Driver
  ├── 1 : N    → Order
  ├── 1 : N    → Notification
- ├── 1 : N    → PushSubscription
+ ├── 1 : 0..1 → PushSubscription
  └── 1 : N    → Session
 
 Driver
@@ -356,8 +363,11 @@ notifications.order_id → orders.id
 
 ```text
 push_subscriptions.user_id → users.id
+push_subscriptions.user_id UNIQUE
 push_subscriptions.endpoint UNIQUE
 ```
+
+同一 User 同時間只保留一筆有效 PushSubscription。新 subscription 取代舊的。Logout / unsubscribe 移除目前這筆 subscription。
 
 ### Session
 

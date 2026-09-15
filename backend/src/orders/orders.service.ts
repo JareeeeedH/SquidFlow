@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ORDER_NO_LOCK_NAMESPACE,
@@ -35,7 +36,10 @@ import {
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async list(query: OrderListQuery) {
     const where: Prisma.OrderWhereInput = {};
@@ -412,7 +416,7 @@ export class OrdersService {
   }
 
   async publish(id: string, user: AuthenticatedUser) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.order.updateMany({
         where: {
           id,
@@ -445,12 +449,8 @@ export class OrdersService {
           user: {
             role: UserRole.DRIVER,
             status: UserStatus.ACTIVE,
-          },
-          orders: {
-            none: {
-              status: {
-                in: [OrderStatus.ACCEPTED, OrderStatus.IN_PROGRESS],
-              },
+            pushSubscription: {
+              isNot: null,
             },
           },
         },
@@ -483,6 +483,9 @@ export class OrdersService {
         status: order.status,
       };
     });
+
+    await this.notificationsService.deliverPendingForOrder(result.id);
+    return result;
   }
 
   async cancel(id: string, user: AuthenticatedUser) {

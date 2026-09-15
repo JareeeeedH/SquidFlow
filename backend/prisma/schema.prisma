@@ -71,7 +71,7 @@ model User {
   createdOrders     Order[]            @relation("OrderCreatedBy")
   orderEvents       OrderEvent[]
   notifications     Notification[]
-  pushSubscriptions PushSubscription[]
+  pushSubscription  PushSubscription?
   sessions          Session[]
 
   @@map("users")
@@ -151,7 +151,7 @@ model Notification {
 
 model PushSubscription {
   id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
   endpoint  String   @unique @db.Text
   p256dh    String   @db.Text
   auth      String   @db.Text

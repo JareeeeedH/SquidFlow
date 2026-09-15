@@ -57,7 +57,24 @@ export class SessionService {
     });
   }
 
-  async revokeById(sessionId: string): Promise<void> {
+  async revokeById(sessionId: string): Promise<string | null> {
+    const session = await this.prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!session) {
+      return null;
+    }
+
     await this.prisma.session.updateMany({
       where: {
         id: sessionId,
@@ -70,6 +87,8 @@ export class SessionService {
         revokedAt: new Date(),
       },
     });
+
+    return session.userId;
   }
 
   async findAuthenticatedUser(

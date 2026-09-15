@@ -187,4 +187,26 @@ describe('Database schema constraints', () => {
       }),
     ).rejects.toMatchObject({ code: 'P2002' });
   });
+
+  it('rejects a second push subscription for the same user', async () => {
+    await prisma.pushSubscription.create({
+      data: {
+        userId: ids.driverUserId,
+        endpoint: `https://push.example.test/${ids.driverUserId}`,
+        p256dh: 'p256dh',
+        auth: 'auth',
+      },
+    });
+
+    await expect(
+      prisma.pushSubscription.create({
+        data: {
+          userId: ids.driverUserId,
+          endpoint: `https://push.example.test/other-${ids.driverUserId}`,
+          p256dh: 'p256dh',
+          auth: 'auth',
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
 });

@@ -56,6 +56,11 @@ export class AuthService {
     if (!sessionId) {
       return;
     }
-    await this.sessionService.revokeById(sessionId);
+    const userId = await this.sessionService.revokeById(sessionId);
+    if (userId) {
+      await this.prisma.pushSubscription.deleteMany({
+        where: { userId },
+      });
+    }
   }
 }

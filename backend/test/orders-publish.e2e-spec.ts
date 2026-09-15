@@ -8,6 +8,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
+import { WebPushService } from '../src/notifications/web-push.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 import { cleanupTestUsers } from './cleanup-test-data';
@@ -65,6 +66,7 @@ function assertNoSecrets(body: unknown) {
 
 describe('Admin Order Publish (e2e)', () => {
   let app: INestApplication<App>;
+  const webPushSend = jest.fn();
   const suffix = randomUUID().slice(0, 8);
   const users = {
     admin: {
@@ -223,14 +225,30 @@ describe('Admin Order Publish (e2e)', () => {
     await createDriverUser(users.inProgressBusy, { onlineStatus: 'ONLINE' });
     await seedAssignedOrder(users.acceptedBusy.driverId, 'ACCEPTED');
     await seedAssignedOrder(users.inProgressBusy.driverId, 'IN_PROGRESS');
+    await prisma.pushSubscription.create({
+      data: {
+        userId: users.online.id,
+        endpoint: `https://push.example.test/d7-online-${suffix}`,
+        p256dh: 'p256dh-test',
+        auth: 'auth-test',
+      },
+    });
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(WebPushService)
+      .useValue({ send: webPushSend })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     setupApp(app);
     await app.init();
+  });
+
+  beforeEach(() => {
+    webPushSend.mockReset();
+    webPushSend.mockResolvedValue({ ok: true });
   });
 
   afterAll(async () => {
@@ -366,7 +384,7 @@ describe('Admin Order Publish (e2e)', () => {
     expect(order?.cancelledAt).toBeNull();
   });
 
-  it('creates PENDING notifications only for ACTIVE ONLINE drivers without active orders', async () => {
+  it('creates SENT notifications only for ACTIVE ONLINE drivers with a PushSubscription', async () => {
     const cookie = await adminCookie();
     const created = await createDraft(cookie);
 
@@ -390,11 +408,29 @@ describe('Admin Order Publish (e2e)', () => {
     const onlineNotification = notifications.find(
       (item) => item.userId === users.online.id,
     );
-    expect(onlineNotification?.status).toBe('PENDING');
-    expect(onlineNotification?.sentAt).toBeNull();
+    expect(onlineNotification?.status).toBe('SENT');
+    expect(onlineNotification?.sentAt).not.toBeNull();
+    expect(webPushSend).toHaveBeenCalled();
   });
 
-  it('does not notify ACTIVE ONLINE drivers who already have ACCEPTED or IN_PROGRESS orders', async () => {
+  it('notifies ACTIVE ONLINE drivers who already have ACCEPTED or IN_PROGRESS orders', async () => {
+    await prisma.pushSubscription.createMany({
+      data: [
+        {
+          userId: users.acceptedBusy.id,
+          endpoint: `https://push.example.test/d7-accepted-${suffix}`,
+          p256dh: 'p256dh-test',
+          auth: 'auth-test',
+        },
+        {
+          userId: users.inProgressBusy.id,
+          endpoint: `https://push.example.test/d7-inprogress-${suffix}`,
+          p256dh: 'p256dh-test',
+          auth: 'auth-test',
+        },
+      ],
+    });
+
     const cookie = await adminCookie();
     const created = await createDraft(cookie);
 
@@ -414,8 +450,15 @@ describe('Admin Order Publish (e2e)', () => {
     const userIds = notifications.map((item) => item.userId);
 
     expect(userIds).toContain(users.online.id);
-    expect(userIds).not.toContain(users.acceptedBusy.id);
-    expect(userIds).not.toContain(users.inProgressBusy.id);
+    expect(userIds).toContain(users.acceptedBusy.id);
+    expect(userIds).toContain(users.inProgressBusy.id);
+    expect(notifications.every((item) => item.status === 'SENT')).toBe(true);
+
+    await prisma.pushSubscription.deleteMany({
+      where: {
+        userId: { in: [users.acceptedBusy.id, users.inProgressBusy.id] },
+      },
+    });
   });
 
   it('publishes successfully with zero notifications when no local driver is eligible', async () => {

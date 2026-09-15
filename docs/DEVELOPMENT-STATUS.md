@@ -297,3 +297,25 @@
 - 未實作 Cancel Frontend、Web Push
 
 ---
+
+## TASK-012 — Web Push
+
+**Status:** completed
+
+### 已完成
+
+- `POST /api/v1/notifications/subscription`、`DELETE /api/v1/notifications/subscription`
+- Driver-only；未登入 `401`、Admin `403`、SUSPENDED leftover session `ACCOUNT_SUSPENDED`
+- 同一 User 只保留一筆 PushSubscription；新 subscription 取代舊的（含相同 endpoint）
+- Logout / unsubscribe 移除目前 subscription
+- Publish 同一 transaction：Order `OPEN` + `ORDER_PUBLISHED` + `Notification(PENDING)`
+- 通知資格：`DRIVER + ACTIVE + ONLINE + 有效 PushSubscription`；持有 `ACCEPTED` / `IN_PROGRESS` 仍可收到通知
+- Accept 資格維持既有規則，不因通知放寬而改變
+- Transaction commit 後發送 Web Push；`PENDING → SENT / FAILED`
+- 實際發送時 Order 必須仍為 `OPEN`；已不是 `OPEN` 的 PENDING 不發送
+- Invalid subscription（404 / 410）：移除 subscription，Notification → `FAILED`
+- Push failure 不影響 Publish / Order state；不做 retry / queue
+- Web Push title / body 不存入 Notification；VAPID 由 env 提供
+- 未實作 Frontend integration、`GET /notifications`、deployment
+
+---
