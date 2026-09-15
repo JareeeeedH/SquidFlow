@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Clock, RotateCcw, User, UserX } from 'lucide-vue-next'
+import { RotateCcw, User, UserX } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -183,20 +183,17 @@ void loadDashboard()
                 @click="openOrder(order.id)"
               >
                 <div class="card-row">
-                  <span class="order-no">{{ order.order_no }}</span>
+                  <span class="identity">{{ order.order_no }}<template v-if="order.customer_name"> · {{ order.customer_name }}</template></span>
                   <span class="price">{{ formatPrice(order.price) }}</span>
                 </div>
-                <p class="customer">{{ formatOptionalText(order.customer_name) }}</p>
                 <p class="route">
                   {{ order.pickup_location }}
                   <span class="arrow">→</span>
                   {{ formatOptionalText(order.destination) }}
                 </p>
-                <div class="card-row meta">
-                  <span class="time">
-                    <Clock :size="12" />
-                    {{ formatScheduledAt(order.created_at) }}
-                  </span>
+                <p class="meta">
+                  <span class="time">{{ formatScheduledAt(order.created_at) }}</span>
+                  <span class="sep">·</span>
                   <span
                     class="driver"
                     :class="isAssigned(order) ? 'is-assigned' : 'is-unassigned'"
@@ -205,7 +202,7 @@ void loadDashboard()
                     <UserX v-else :size="12" />
                     {{ driverLabel(order) }}
                   </span>
-                </div>
+                </p>
               </button>
             </div>
           </div>
@@ -391,8 +388,8 @@ h1 {
 .column-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
-  padding: var(--space-12);
+  gap: var(--space-4);
+  padding: var(--space-8);
   flex: 1;
 }
 
@@ -407,9 +404,9 @@ h1 {
 .order-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-4);
   width: 100%;
-  padding: var(--space-12);
+  padding: var(--space-8);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-left: 3px solid var(--status-color);
@@ -430,13 +427,21 @@ h1 {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-8);
+  min-width: 0;
 }
 
-.order-no {
-  font: var(--font-label);
+.identity,
+.route,
+.meta {
+  margin: 0;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.identity {
+  font: var(--font-label);
 }
 
 .price {
@@ -445,56 +450,41 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
-.customer,
-.route {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.customer {
-  font: var(--font-body);
-}
-
-.route {
+.route,
+.meta {
   color: var(--color-muted-text);
   font: var(--font-caption);
 }
 
-.arrow {
+.arrow,
+.sep {
   margin: 0 var(--space-4);
 }
 
 .meta {
-  color: var(--color-muted-text);
-  font: var(--font-caption);
+  display: flex;
   align-items: center;
 }
 
-.time,
+.time {
+  flex-shrink: 0;
+}
+
 .driver {
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
   min-width: 0;
-}
-
-.driver {
-  flex-shrink: 0;
-  max-width: 46%;
   overflow: hidden;
-  padding: 2px var(--space-8);
-  border-radius: var(--radius-4);
+  text-overflow: ellipsis;
 }
 
 .driver.is-assigned {
   color: var(--color-text);
-  background: var(--color-surface);
 }
 
 .driver.is-unassigned {
   color: var(--color-muted-text);
-  background: color-mix(in srgb, var(--color-muted-text) 8%, transparent);
 }
 
 @media (max-width: 1280px) {

@@ -178,15 +178,12 @@ CANCELLED    0
 Board card：
 
 ```text
-訂單編號
-客戶
-上車地點 → 目的地
-建立時間
-司機
-價格
+ORD-20260915-026 · 王先生        NT$ 1,200
+左營高鐵站 → 高雄小港機場
+09/15 11:20 · 未指派
 ```
 
-未指派司機顯示未指派；已指派顯示司機 username。
+有 `customer_name` 才顯示姓名，不留空白。`price` / `destination` 未填顯示 `—`。未指派司機顯示未指派；已指派顯示司機 username。長地址以 ellipsis 單行顯示。
 
 點擊卡片進入 Order Detail。
 

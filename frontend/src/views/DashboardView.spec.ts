@@ -34,6 +34,17 @@ const sampleDashboard: AdminDashboard = {
       driver: null,
     },
     {
+      id: 'open-1',
+      order_no: 'ORD-20260915-003',
+      customer_name: null,
+      pickup_location: '左營高鐵站',
+      destination: null,
+      created_at: '2026-09-15T09:00:00.000Z',
+      price: null,
+      status: 'OPEN',
+      driver: null,
+    },
+    {
       id: 'accepted-1',
       order_no: 'ORD-20260915-002',
       customer_name: '李小姐',
@@ -123,6 +134,27 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('driver01')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).not.toContain('ORD-COMPLETED')
+
+    const named = wrapper
+      .findAll('.order-card')
+      .find((button) => button.text().includes('ORD-20260915-001'))
+    expect(named?.get('.identity').text()).toBe('ORD-20260915-001 · 王先生')
+  })
+
+  it('keeps compact board cards and omits a missing customer name', async () => {
+    const { wrapper } = await mountDashboard()
+    const card = wrapper
+      .findAll('.order-card')
+      .find((button) => button.text().includes('ORD-20260915-003'))
+    expect(card).toBeTruthy()
+
+    const identity = card!.get('.identity').text()
+    expect(identity).toBe('ORD-20260915-003')
+    expect(identity).not.toContain('·')
+    expect(card!.get('.price').text()).toBe('—')
+    expect(card!.get('.route').text()).toContain('→')
+    expect(card!.get('.route').text()).toContain('—')
+    expect(card!.get('.meta').text()).toContain('未指派')
   })
 
   it('emphasizes operational statuses in the summary', async () => {

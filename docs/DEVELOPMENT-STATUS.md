@@ -534,3 +534,16 @@
 - 未改欄位、API、Schema、validation、routing 或 business rules
 
 ---
+
+## TASK — Compact Admin Dashboard Order Cards
+
+**Status:** completed
+
+### 已完成
+
+- Dispatch Board 卡片改為三行：單號+客戶+價格、行程、時間+司機
+- 無 `customer_name` 不留空白；`price` / `destination` 顯示 `—`；未指派顯示未指派
+- 降低 card padding 與垂直間距，保留 status 色條與 click / hover
+- 未改 API / Schema / business rules
+
+---
