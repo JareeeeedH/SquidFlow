@@ -76,6 +76,16 @@ async function mountHome() {
   return { wrapper, router }
 }
 
+function switches(
+  wrapper: Awaited<ReturnType<typeof mountHome>>['wrapper'],
+) {
+  const byName = wrapper.findAllComponents({ name: 'Switch' })
+  if (byName.length > 0) {
+    return byName
+  }
+  return wrapper.findAllComponents({ name: 'NSwitch' })
+}
+
 describe('DriverHomeView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -92,51 +102,68 @@ describe('DriverHomeView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('shows username and separate account / online status after login', async () => {
+  it('shows username and compact status switches after login', async () => {
     const { wrapper } = await mountHome()
 
     expect(wrapper.text()).toContain('driver01')
     expect(wrapper.text()).toContain('帳號狀態')
     expect(wrapper.text()).toContain('啟用')
     expect(wrapper.text()).toContain('上線狀態')
-    expect(wrapper.text()).toContain('尚未向伺服器確認')
-    expect(wrapper.text()).toContain('上線')
-    expect(wrapper.text()).toContain('可搶訂單')
-    expect(wrapper.text()).toContain('開啟通知')
+    expect(wrapper.text()).toContain('未同步')
+    expect(wrapper.text()).toContain('尚未向伺服器確認上線狀態')
+    expect(wrapper.text()).toContain('通知')
     expect(wrapper.text()).toContain('通知未開啟')
+    expect(wrapper.text()).toContain('查看可搶訂單')
+    expect(wrapper.text()).not.toContain('我的訂單')
+    expect(switches(wrapper)).toHaveLength(2)
   })
 
   it('switches OFFLINE to ONLINE from the backend response', async () => {
+    useDriverStatusStore().onlineStatus = 'OFFLINE'
     vi.mocked(updateDriverOnlineStatus).mockResolvedValue({ status: 'ONLINE' })
     const { wrapper } = await mountHome()
 
-    const online = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '上線')
-    await online!.trigger('click')
+    await switches(wrapper)[0].vm.$emit('update:value', true)
     await flushPromises()
 
     expect(updateDriverOnlineStatus).toHaveBeenCalledWith('ONLINE')
     expect(useDriverStatusStore().onlineStatus).toBe('ONLINE')
     expect(wrapper.text()).toContain('上線')
-    expect(wrapper.text()).toContain('下線')
+  })
+
+  it('confirms before going offline', async () => {
+    useDriverStatusStore().onlineStatus = 'ONLINE'
+    vi.mocked(updateDriverOnlineStatus).mockResolvedValue({ status: 'OFFLINE' })
+    const { wrapper } = await mountHome()
+
+    await switches(wrapper)[0].vm.$emit('update:value', false)
+    await flushPromises()
+    expect(updateDriverOnlineStatus).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('確定要下線嗎')
+
+    const confirm = wrapper
+      .findAll('button')
+      .find((button) => button.text().trim() === '確定下線')
+    await confirm!.trigger('click')
+    await flushPromises()
+
+    expect(updateDriverOnlineStatus).toHaveBeenCalledWith('OFFLINE')
+    expect(useDriverStatusStore().onlineStatus).toBe('OFFLINE')
   })
 
   it('shows backend ACCOUNT_SUSPENDED without changing local status', async () => {
+    useDriverStatusStore().onlineStatus = 'OFFLINE'
     vi.mocked(updateDriverOnlineStatus).mockRejectedValue(
       new ApiClientError('ACCOUNT_SUSPENDED', '帳號已停用', 403),
     )
     const { wrapper } = await mountHome()
 
-    const online = wrapper
-      .findAll('button')
-      .find((button) => button.text().trim() === '上線')
-    await online!.trigger('click')
+    await switches(wrapper)[0].vm.$emit('update:value', true)
     await flushPromises()
 
     expect(wrapper.text()).toContain('ACCOUNT_SUSPENDED')
     expect(wrapper.text()).toContain('帳號已停用')
-    expect(useDriverStatusStore().onlineStatus).toBeNull()
+    expect(useDriverStatusStore().onlineStatus).toBe('OFFLINE')
   })
 
   it('shows loading then error on home refresh failure', async () => {
@@ -150,28 +177,16 @@ describe('DriverHomeView', () => {
     expect(wrapper.text()).toContain('重試')
   })
 
-  it('opens open orders from home', async () => {
+  it('opens open orders from the primary home CTA', async () => {
     const { wrapper, router } = await mountHome()
     const push = vi.spyOn(router, 'push')
 
     const entry = wrapper
       .findAll('button')
-      .find((button) => button.text().includes('可搶訂單'))
+      .find((button) => button.text().includes('查看可搶訂單'))
     await entry!.trigger('click')
 
     expect(push).toHaveBeenCalledWith({ name: 'driver-open-orders' })
-  })
-
-  it('opens my orders from home', async () => {
-    const { wrapper, router } = await mountHome()
-    const push = vi.spyOn(router, 'push')
-
-    const entry = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('我的訂單'))
-    await entry!.trigger('click')
-
-    expect(push).toHaveBeenCalledWith({ name: 'driver-my-orders' })
   })
 
   it('keeps auth user after successful home load', async () => {
@@ -179,14 +194,13 @@ describe('DriverHomeView', () => {
     expect(useAuthStore().currentUser?.username).toBe('driver01')
   })
 
-  it('hides the enable action when notification permission is denied', async () => {
+  it('disables the notification switch when permission is denied', async () => {
     vi.mocked(notificationPermission).mockReturnValue('denied')
     const { wrapper } = await mountHome()
 
     expect(wrapper.text()).toContain('通知未開啟')
-    expect(wrapper.text()).not.toContain('開啟通知')
-    expect(wrapper.text()).toContain('上線')
-    expect(wrapper.text()).toContain('可搶訂單')
+    expect(switches(wrapper)[1].props('disabled')).toBe(true)
+    expect(wrapper.text()).toContain('查看可搶訂單')
   })
 
   it('creates a backend subscription when notifications are enabled', async () => {
@@ -201,10 +215,7 @@ describe('DriverHomeView', () => {
     vi.mocked(createPushSubscription).mockResolvedValue({ id: 'sub-1' })
     const { wrapper } = await mountHome()
 
-    const enable = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('開啟通知'))
-    await enable!.trigger('click')
+    await switches(wrapper)[1].vm.$emit('update:value', true)
     await flushPromises()
 
     expect(createPushSubscription).toHaveBeenCalledWith({
@@ -213,7 +224,5 @@ describe('DriverHomeView', () => {
       auth: 'auth',
     })
     expect(wrapper.text()).toContain('通知已開啟')
-    expect(wrapper.text()).toContain('關閉通知')
-    expect(wrapper.text()).toContain('上線')
   })
 })

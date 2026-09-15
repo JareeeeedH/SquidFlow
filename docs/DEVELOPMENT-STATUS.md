@@ -605,6 +605,18 @@ Phase 3 — Advanced Dispatch & Communication
 
 ---
 
+## TASK — Polish Driver Home Mobile UI
+
+**Status:** completed
+
+### 已完成
+
+- Driver Home 改為 compact Online / Notification switch bar
+- 移除重複「可搶訂單」「我的訂單」入口；保留主 CTA「查看可搶訂單」
+- 未改 API、Push rules、導覽 IA 或 business rules
+
+---
+
 ## TASK — Update Phase 2 / Phase 3 Specification
 
 **Status:** completed

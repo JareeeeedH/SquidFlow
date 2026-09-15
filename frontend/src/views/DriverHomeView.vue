@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { Bell, BellOff, ChevronRight, RotateCcw } from 'lucide-vue-next'
-import { NButton, NResult, NSpin } from 'naive-ui'
+import { ChevronRight, RotateCcw } from 'lucide-vue-next'
+import { NButton, NResult, NSpin, NSwitch } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
 import type { OnlineStatus } from '../api/types'
 import AccountStatusTag from '../components/AccountStatusTag.vue'
-import OnlineStatusTag from '../components/OnlineStatusTag.vue'
 import { useAuthStore } from '../stores/auth'
 import { useDriverStatusStore } from '../stores/driver-status'
 import { usePushNotificationStore } from '../stores/push-notification'
@@ -21,19 +20,33 @@ const error = ref<{ code: string; message: string } | null>(null)
 const actionError = ref<{ code: string; message: string } | null>(null)
 const confirmOffline = ref(false)
 
-const nextStatus = computed<OnlineStatus>(() =>
-  driverStatus.onlineStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE',
-)
+const isOnline = computed(() => driverStatus.onlineStatus === 'ONLINE')
 
-const statusHint = computed(() => {
+const onlineLabel = computed(() => {
   if (driverStatus.onlineStatus === 'ONLINE') {
-    return '可搶單，並接收新訂單通知'
+    return '上線'
   }
   if (driverStatus.onlineStatus === 'OFFLINE') {
-    return '無法搶新訂單，也不會收到新的派車通知'
+    return '下線'
   }
-  return null
+  return '未同步'
 })
+
+const readiness = computed(() => {
+  if (driverStatus.onlineStatus === 'ONLINE') {
+    return '目前可搶單，並可接收新訂單通知'
+  }
+  if (driverStatus.onlineStatus === 'OFFLINE') {
+    return '目前無法搶新訂單，也不會收到新的派車通知'
+  }
+  return '尚未向伺服器確認上線狀態'
+})
+
+const notifySwitchDisabled = computed(
+  () =>
+    pushNotification.updating ||
+    !(pushNotification.canEnable || pushNotification.canDisable),
+)
 
 function captureError(caught: unknown) {
   if (caught instanceof ApiClientError) {
@@ -76,6 +89,26 @@ async function changeStatus(status: OnlineStatus) {
   }
 }
 
+function onOnlineSwitch(value: boolean) {
+  if (updating.value) {
+    return
+  }
+  if (value) {
+    confirmOffline.value = false
+    void changeStatus('ONLINE')
+    return
+  }
+  confirmOffline.value = true
+}
+
+function onNotifySwitch(value: boolean) {
+  if (value) {
+    void pushNotification.enable()
+    return
+  }
+  void pushNotification.disable()
+}
+
 void loadHome()
 </script>
 
@@ -104,157 +137,108 @@ void loadHome()
       <template v-else-if="auth.currentUser">
         <header class="identity">
           <p class="kicker">司機</p>
-          <h1>{{ auth.currentUser.username }}</h1>
+          <div class="identity-row">
+            <h1>{{ auth.currentUser.username }}</h1>
+            <div class="account-status">
+              <p class="row-label">帳號狀態</p>
+              <AccountStatusTag :status="auth.currentUser.status" />
+            </div>
+          </div>
         </header>
 
-        <article
-          class="hero"
-          :class="{
-            'is-online': driverStatus.onlineStatus === 'ONLINE',
-            'is-offline': driverStatus.onlineStatus === 'OFFLINE',
-          }"
-        >
-          <div class="hero-status">
-            <p class="label">上線狀態</p>
-            <OnlineStatusTag
-              v-if="driverStatus.onlineStatus"
-              :status="driverStatus.onlineStatus"
+        <section class="status-panel">
+          <div class="switch-row">
+            <div class="switch-copy">
+              <p class="row-label">上線狀態</p>
+              <p
+                class="row-value"
+                :class="{
+                  'is-online': isOnline,
+                  'is-offline': driverStatus.onlineStatus === 'OFFLINE',
+                }"
+              >
+                {{ onlineLabel }}
+              </p>
+            </div>
+            <NSwitch
+              size="large"
+              :value="isOnline"
+              :loading="updating"
+              :disabled="updating"
+              aria-label="切換上線狀態"
+              @update:value="onOnlineSwitch"
             />
-            <p v-else class="pending">尚未向伺服器確認</p>
           </div>
-          <p v-if="statusHint" class="status-hint">{{ statusHint }}</p>
+
+          <div class="switch-row">
+            <div class="switch-copy">
+              <p class="row-label">通知</p>
+              <p
+                class="row-value"
+                :class="{ 'is-online': pushNotification.enabled }"
+              >
+                {{ pushNotification.label }}
+              </p>
+            </div>
+            <NSwitch
+              size="large"
+              :value="pushNotification.enabled"
+              :loading="pushNotification.updating"
+              :disabled="notifySwitchDisabled"
+              aria-label="切換通知"
+              @update:value="onNotifySwitch"
+            />
+          </div>
+
+          <p class="readiness">{{ readiness }}</p>
 
           <p v-if="actionError" class="action-error">
             {{ actionError.code }} · {{ actionError.message }}
           </p>
-
-          <div v-if="confirmOffline" class="actions">
-            <p class="confirm-copy">
-              確定要下線嗎？下線後將不再收到新的派車通知。
-            </p>
-            <NButton
-              size="large"
-              block
-              :disabled="updating"
-              @click="confirmOffline = false"
-            >
-              取消
-            </NButton>
-            <NButton
-              size="large"
-              type="error"
-              block
-              :loading="updating"
-              :disabled="updating"
-              @click="changeStatus('OFFLINE')"
-            >
-              確定下線
-            </NButton>
-          </div>
-          <div v-else class="actions">
-            <NButton
-              v-if="nextStatus === 'ONLINE'"
-              size="large"
-              type="success"
-              block
-              :loading="updating"
-              :disabled="updating"
-              @click="changeStatus('ONLINE')"
-            >
-              上線
-            </NButton>
-            <NButton
-              v-else
-              size="large"
-              type="error"
-              ghost
-              block
-              :disabled="updating"
-              @click="confirmOffline = true"
-            >
-              下線
-            </NButton>
-          </div>
-        </article>
-
-        <article class="card secondary">
-          <div class="meta-row">
-            <div>
-              <p class="label">帳號狀態</p>
-              <AccountStatusTag :status="auth.currentUser.status" />
-            </div>
-            <div>
-              <p class="label">通知</p>
-              <p class="notify-status">{{ pushNotification.label }}</p>
-            </div>
-          </div>
-
           <p v-if="pushNotification.error" class="action-error">
             {{ pushNotification.error.code }} · {{ pushNotification.error.message }}
           </p>
 
-          <div
-            v-if="pushNotification.canEnable || pushNotification.canDisable"
-            class="notify-actions"
-          >
-            <NButton
-              v-if="pushNotification.canEnable"
-              size="large"
-              secondary
-              block
-              :loading="pushNotification.updating"
-              :disabled="pushNotification.updating"
-              @click="pushNotification.enable()"
-            >
-              <template #icon>
-                <Bell :size="18" />
-              </template>
-              開啟通知
-            </NButton>
-            <NButton
-              v-else-if="pushNotification.canDisable"
-              size="large"
-              ghost
-              block
-              :loading="pushNotification.updating"
-              :disabled="pushNotification.updating"
-              @click="pushNotification.disable()"
-            >
-              <template #icon>
-                <BellOff :size="18" />
-              </template>
-              關閉通知
-            </NButton>
+          <div v-if="confirmOffline" class="confirm">
+            <p class="confirm-copy">
+              確定要下線嗎？下線後將不再收到新的派車通知。
+            </p>
+            <div class="confirm-actions">
+              <NButton
+                size="large"
+                block
+                :disabled="updating"
+                @click="confirmOffline = false"
+              >
+                取消
+              </NButton>
+              <NButton
+                size="large"
+                type="error"
+                block
+                :loading="updating"
+                :disabled="updating"
+                @click="changeStatus('OFFLINE')"
+              >
+                確定下線
+              </NButton>
+            </div>
           </div>
-        </article>
+        </section>
 
-        <div class="nav-ctas">
-          <NButton
-            class="open-orders"
-            size="large"
-            type="primary"
-            block
-            icon-placement="right"
-            @click="router.push({ name: 'driver-open-orders' })"
-          >
-            可搶訂單
-            <template #icon>
-              <ChevronRight :size="18" />
-            </template>
-          </NButton>
-          <NButton
-            size="large"
-            block
-            ghost
-            icon-placement="right"
-            @click="router.push({ name: 'driver-my-orders' })"
-          >
-            我的訂單
-            <template #icon>
-              <ChevronRight :size="18" />
-            </template>
-          </NButton>
-        </div>
+        <NButton
+          class="primary-cta"
+          size="large"
+          type="primary"
+          block
+          icon-placement="right"
+          @click="router.push({ name: 'driver-open-orders' })"
+        >
+          查看可搶訂單
+          <template #icon>
+            <ChevronRight :size="18" />
+          </template>
+        </NButton>
       </template>
     </NSpin>
   </section>
@@ -264,7 +248,8 @@ void loadHome()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
+  gap: var(--space-16);
+  min-width: 0;
 }
 
 .page :deep(.n-spin-container),
@@ -272,82 +257,75 @@ void loadHome()
   overflow: visible;
 }
 
-.identity h1 {
-  margin: var(--space-4) 0 0;
-  font: var(--font-page-title);
+.identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-top: var(--space-4);
+}
+
+.account-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-shrink: 0;
 }
 
 .kicker,
-.label,
-.pending,
+.row-label,
 .error-detail,
 .confirm-copy,
-.status-hint {
+.readiness {
   margin: 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
 }
 
-.hero,
-.card {
+.status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
-  padding: var(--space-16);
 }
 
-.hero {
+.switch-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-12);
+  min-height: 44px;
 }
 
-.hero.is-online {
-  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
-}
-
-.hero.is-offline {
-  background: color-mix(in srgb, var(--color-muted-text) 5%, var(--color-surface));
-}
-
-.hero-status {
+.switch-copy {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
+  gap: var(--space-4);
 }
 
-.hero-status :deep(.n-tag) {
-  height: 28px;
-  font-size: 14px;
-  padding: 0 10px;
-}
-
-.status-hint {
-  color: var(--color-text);
-}
-
-.secondary {
-  padding: var(--space-12) var(--space-16);
-}
-
-.meta-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-12);
-}
-
-.meta-row > div {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-}
-
-.notify-status {
+.row-value {
   margin: 0;
+  color: var(--color-text);
   font: var(--font-label);
+}
+
+.row-value.is-online {
+  color: var(--color-success);
+}
+
+.row-value.is-offline {
+  color: var(--color-muted-text);
+}
+
+.readiness {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .action-error {
@@ -359,39 +337,40 @@ void loadHome()
   font: var(--font-caption);
 }
 
-.actions,
-.notify-actions,
-.nav-ctas {
+.confirm {
   display: grid;
   gap: var(--space-8);
-}
-
-.notify-actions {
-  margin-top: var(--space-12);
-}
-
-.actions :deep(.n-button),
-.notify-actions :deep(.n-button),
-.nav-ctas :deep(.n-button) {
-  min-height: 48px;
-}
-
-.nav-ctas :deep(.open-orders) {
-  min-height: 52px;
-  overflow: visible;
-  white-space: nowrap;
-}
-
-.open-orders :deep(.n-button__content) {
-  overflow: visible;
-  flex: 1 1 auto;
 }
 
 .confirm-copy {
   color: var(--color-text);
 }
 
+.confirm-actions {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.confirm-actions :deep(.n-button),
+.primary-cta {
+  min-height: 48px;
+}
+
+.primary-cta {
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.primary-cta :deep(.n-button__content) {
+  overflow: visible;
+  flex: 1 1 auto;
+}
+
 .state {
   padding: var(--space-24) 0;
+}
+
+:deep(.n-switch.n-switch--active) {
+  background: var(--color-success);
 }
 </style>

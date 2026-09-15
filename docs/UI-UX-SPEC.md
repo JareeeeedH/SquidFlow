@@ -379,6 +379,7 @@ Driver 採簡化導覽。
 ```text
 可搶訂單
 我的訂單
+狀態
 ```
 
 上方固定顯示：
@@ -387,18 +388,39 @@ Driver 採簡化導覽。
 🟢 ONLINE
 ```
 
+導覽保留「狀態 / 可搶訂單 / 我的訂單」。上線狀態於頂欄與狀態頁同步顯示。
+
 ---
 
-# 12. Driver Home — Open Orders
+# 12. Driver Status Home
 
-登入後進入「可搶訂單」。
+登入後進入狀態頁（導覽「狀態」）。
+
+```text
+┌─────────────────────┐
+│ 司機                 │
+│ driver01      啟用   │
+├─────────────────────┤
+│ 上線狀態      [● 上線]│
+│ 通知          [● 開啟]│
+│ 目前可搶單…          │
+├─────────────────────┤
+│ [查看可搶訂單]        │
+└─────────────────────┘
+```
+
+上線 / 通知採 compact switch。下線仍需確認。可搶訂單與我的訂單由上方導覽進入，Home 不重複列出兩入口。
+
+---
+
+# 13. Driver Open Orders
+
+顯示可搶的 OPEN 訂單列表。
 
 ```text
 ┌─────────────────────┐
 │ 🚕 派車              │
-│                     │
 │ 🟢 ONLINE            │
-│ [切換 OFFLINE]       │
 ├─────────────────────┤
 │ 新訂單                │
 │                     │
@@ -414,7 +436,7 @@ Driver 採簡化導覽。
 
 ---
 
-# 13. Driver Order Detail
+# 14. Driver Order Detail
 
 ```text
 ┌─────────────────────┐
@@ -434,7 +456,7 @@ Driver 採簡化導覽。
 
 ---
 
-# 14. Driver Accept Order
+# 15. Driver Accept Order
 
 點擊「我要接單」。
 
@@ -468,7 +490,7 @@ OPEN → ACCEPTED
 
 ---
 
-# 15. Driver My Orders
+# 16. Driver My Orders
 
 分為：
 
@@ -506,7 +528,7 @@ IN_PROGRESS
 
 ---
 
-# 16. Driver Online / Offline
+# 17. Driver Online / Offline
 
 狀態：
 
@@ -537,7 +559,7 @@ OFFLINE
 
 ---
 
-# 17. Web Push Notification
+# 18. Web Push Notification
 
 收到新訂單：
 
@@ -557,7 +579,7 @@ $1,200
 
 ---
 
-# 18. Status Visual Consistency
+# 19. Status Visual Consistency
 
 全系統 Status 必須使用一致的：
 
@@ -613,7 +635,7 @@ OFFLINE      Muted
 
 ---
 
-# 19. UX Rules
+# 20. UX Rules
 
 ### Admin
 
@@ -627,8 +649,9 @@ OFFLINE      Muted
 
 ### Driver
 
-- 登入後直接看到可搶訂單
+- 登入後進入狀態頁；可搶訂單與我的訂單由導覽進入
 - Online Status 固定可見
+- 上線 / 通知使用 compact switch
 - 新訂單優先使用 Web Push 通知
 - 搶單按鈕明確、醒目
 - 一個畫面完成主要操作
@@ -636,7 +659,7 @@ OFFLINE      Muted
 
 ---
 
-# 20. Responsive Design
+# 21. Responsive Design
 
 ### Admin
 
@@ -661,7 +684,7 @@ Driver UI 以 Mobile First 設計。
 
 ---
 
-# 21. MVP UI Scope
+# 22. MVP UI Scope
 
 ```text
 Authentication
@@ -676,6 +699,7 @@ Admin
 └── Driver Detail / Edit
 
 Driver
+├── Status Home
 ├── Open Orders
 ├── Order Detail
 └── My Orders
@@ -693,7 +717,7 @@ Phase 2 / Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phas
 
 ---
 
-# 22. UI Framework & Styling
+# 23. UI Framework & Styling
 
 ## Naive UI
 
@@ -741,7 +765,7 @@ CSS Variables + Scoped CSS
 
 ---
 
-# 23. Design Tokens
+# 24. Design Tokens
 
 目前只定義 Token 類型，不建立獨立 design-system package。
 
@@ -795,7 +819,7 @@ Important Number / Price
 
 ---
 
-# 24. Component Usage Rules
+# 25. Component Usage Rules
 
 1. 優先使用 Naive UI 現有元件。
 2. 不重複建立已有基礎元件。
