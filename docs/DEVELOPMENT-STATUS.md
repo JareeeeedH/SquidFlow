@@ -368,3 +368,20 @@
 - 未實作 `GET /notifications`、Order Events / Timeline、Dashboard、Security Hardening、deployment
 
 ---
+
+## TASK-016 — Production Security Hardening + Final QA
+
+**Status:** completed
+
+### 已完成
+
+- Login brute-force：同一 IP + username 連續失敗後鎖定；成功登入清除計數；鎖定期間不進行密碼驗證
+- Rate limiting（in-memory，非 Redis）：Login、Accept、Publish、Cancel；production 預設較嚴、dev/test 較鬆，可用 env 覆寫
+- Security headers：CSP、X-Content-Type-Options、Referrer-Policy、X-Frame-Options；HSTS 僅 production
+- Production CORS：`FRONTEND_ORIGIN` allowlist + credentials；production 未設定則瀏覽器 Origin 拒絕
+- Production Cookie 維持 HttpOnly / Secure / SameSite=Lax；`TRUST_PROXY` 供反代後取得真實 client IP
+- 明確 JSON body 上限 100kb
+- 未修改 Order business rules、Database Schema、API contract
+- 未實作 `GET /notifications`、Dashboard、deployment
+
+---

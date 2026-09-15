@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
+import { SecurityModule } from './common/security/security.module';
 import { DriversModule } from './drivers/drivers.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -8,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    SecurityModule,
     PrismaModule,
     HealthModule,
     AuthModule,

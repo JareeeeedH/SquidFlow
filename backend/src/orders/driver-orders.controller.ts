@@ -15,6 +15,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AppErrors } from '../common/errors/app.error';
+import { RateLimited } from '../common/security/rate-limit.decorator';
+import { RateLimitGuard } from '../common/security/rate-limit.guard';
 import type { AuthenticatedUser } from '../common/types/authenticated-user';
 import { OrdersService } from './orders.service';
 import { parseDriverMyOrdersQuery } from './orders.validation';
@@ -55,6 +57,8 @@ export class DriverOrdersController {
 
   @Post(':id/accept')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RateLimitGuard)
+  @RateLimited('accept')
   async accept(
     @Param('id', parseOrderId) id: string,
     @CurrentUser() user: AuthenticatedUser,

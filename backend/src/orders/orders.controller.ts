@@ -18,6 +18,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AppErrors } from '../common/errors/app.error';
+import { RateLimited } from '../common/security/rate-limit.decorator';
+import { RateLimitGuard } from '../common/security/rate-limit.guard';
 import type { AuthenticatedUser } from '../common/types/authenticated-user';
 import { OrdersService } from './orders.service';
 import { parseOrderBody, parseOrderListQuery } from './orders.validation';
@@ -53,6 +55,8 @@ export class OrdersController {
 
   @Post(':id/publish')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RateLimitGuard)
+  @RateLimited('publish')
   async publish(
     @Param('id', parseOrderId) id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -66,6 +70,8 @@ export class OrdersController {
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RateLimitGuard)
+  @RateLimited('cancel')
   async cancel(
     @Param('id', parseOrderId) id: string,
     @CurrentUser() user: AuthenticatedUser,

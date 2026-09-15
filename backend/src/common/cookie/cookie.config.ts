@@ -12,10 +12,14 @@ export function getSessionTtlSeconds(): number {
   return DEFAULT_SESSION_TTL_SECONDS;
 }
 
+export function isSecureSessionCookie(nodeEnv = process.env.NODE_ENV): boolean {
+  return nodeEnv === 'production';
+}
+
 export function sessionCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecureSessionCookie(),
     sameSite: 'lax',
     path: '/',
   };

@@ -57,4 +57,10 @@ export const AppErrors = {
       '司機尚有未完成訂單，無法接單',
       HttpStatus.CONFLICT,
     ),
+  tooManyRequests: () =>
+    new AppError(
+      'TOO_MANY_REQUESTS',
+      '請求過於頻繁，請稍後再試',
+      HttpStatus.TOO_MANY_REQUESTS,
+    ),
 };
