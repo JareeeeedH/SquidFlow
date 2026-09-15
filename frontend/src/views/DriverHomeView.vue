@@ -25,6 +25,16 @@ const nextStatus = computed<OnlineStatus>(() =>
   driverStatus.onlineStatus === 'ONLINE' ? 'OFFLINE' : 'ONLINE',
 )
 
+const statusHint = computed(() => {
+  if (driverStatus.onlineStatus === 'ONLINE') {
+    return '可搶單，並接收新訂單通知'
+  }
+  if (driverStatus.onlineStatus === 'OFFLINE') {
+    return '無法搶新訂單，也不會收到新的派車通知'
+  }
+  return null
+})
+
 function captureError(caught: unknown) {
   if (caught instanceof ApiClientError) {
     return { code: caught.code, message: caught.message }
@@ -97,21 +107,22 @@ void loadHome()
           <h1>{{ auth.currentUser.username }}</h1>
         </header>
 
-        <article class="card">
-          <div class="status-row">
-            <div>
-              <p class="label">帳號狀態</p>
-              <AccountStatusTag :status="auth.currentUser.status" />
-            </div>
-            <div>
-              <p class="label">上線狀態</p>
-              <OnlineStatusTag
-                v-if="driverStatus.onlineStatus"
-                :status="driverStatus.onlineStatus"
-              />
-              <p v-else class="pending">尚未向伺服器確認</p>
-            </div>
+        <article
+          class="hero"
+          :class="{
+            'is-online': driverStatus.onlineStatus === 'ONLINE',
+            'is-offline': driverStatus.onlineStatus === 'OFFLINE',
+          }"
+        >
+          <div class="hero-status">
+            <p class="label">上線狀態</p>
+            <OnlineStatusTag
+              v-if="driverStatus.onlineStatus"
+              :status="driverStatus.onlineStatus"
+            />
+            <p v-else class="pending">尚未向伺服器確認</p>
           </div>
+          <p v-if="statusHint" class="status-hint">{{ statusHint }}</p>
 
           <p v-if="actionError" class="action-error">
             {{ actionError.code }} · {{ actionError.message }}
@@ -166,8 +177,12 @@ void loadHome()
           </div>
         </article>
 
-        <article class="card">
-          <div class="notify-row">
+        <article class="card secondary">
+          <div class="meta-row">
+            <div>
+              <p class="label">帳號狀態</p>
+              <AccountStatusTag :status="auth.currentUser.status" />
+            </div>
             <div>
               <p class="label">通知</p>
               <p class="notify-status">{{ pushNotification.label }}</p>
@@ -180,11 +195,12 @@ void loadHome()
 
           <div
             v-if="pushNotification.canEnable || pushNotification.canDisable"
-            class="actions"
+            class="notify-actions"
           >
             <NButton
               v-if="pushNotification.canEnable"
               size="large"
+              secondary
               block
               :loading="pushNotification.updating"
               :disabled="pushNotification.updating"
@@ -212,31 +228,33 @@ void loadHome()
           </div>
         </article>
 
-        <NButton
-          class="open-orders"
-          size="large"
-          type="primary"
-          block
-          icon-placement="right"
-          @click="router.push({ name: 'driver-open-orders' })"
-        >
-          可搶訂單
-          <template #icon>
-            <ChevronRight :size="18" />
-          </template>
-        </NButton>
-        <NButton
-          class="open-orders"
-          size="large"
-          block
-          icon-placement="right"
-          @click="router.push({ name: 'driver-my-orders' })"
-        >
-          我的訂單
-          <template #icon>
-            <ChevronRight :size="18" />
-          </template>
-        </NButton>
+        <div class="nav-ctas">
+          <NButton
+            class="open-orders"
+            size="large"
+            type="primary"
+            block
+            icon-placement="right"
+            @click="router.push({ name: 'driver-open-orders' })"
+          >
+            可搶訂單
+            <template #icon>
+              <ChevronRight :size="18" />
+            </template>
+          </NButton>
+          <NButton
+            size="large"
+            block
+            ghost
+            icon-placement="right"
+            @click="router.push({ name: 'driver-my-orders' })"
+          >
+            我的訂單
+            <template #icon>
+              <ChevronRight :size="18" />
+            </template>
+          </NButton>
+        </div>
       </template>
     </NSpin>
   </section>
@@ -263,12 +281,14 @@ void loadHome()
 .label,
 .pending,
 .error-detail,
-.confirm-copy {
+.confirm-copy,
+.status-hint {
   margin: 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
 }
 
+.hero,
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -276,48 +296,88 @@ void loadHome()
   padding: var(--space-16);
 }
 
-.status-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.hero {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-12);
-  margin-bottom: var(--space-16);
 }
 
-.status-row > div {
+.hero.is-online {
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+}
+
+.hero.is-offline {
+  background: color-mix(in srgb, var(--color-muted-text) 5%, var(--color-surface));
+}
+
+.hero-status {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-8);
 }
 
-.notify-row {
+.hero-status :deep(.n-tag) {
+  height: 28px;
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+.status-hint {
+  color: var(--color-text);
+}
+
+.secondary {
+  padding: var(--space-12) var(--space-16);
+}
+
+.meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+}
+
+.meta-row > div {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  margin-bottom: var(--space-16);
+  gap: var(--space-8);
 }
 
 .notify-status {
-  margin: var(--space-8) 0 0;
+  margin: 0;
   font: var(--font-label);
 }
 
 .action-error {
-  margin: 0 0 var(--space-12);
+  margin: 0;
+  padding: var(--space-12);
+  border-radius: var(--radius-8);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
   color: var(--color-danger);
   font: var(--font-caption);
 }
 
-.actions {
+.actions,
+.notify-actions,
+.nav-ctas {
   display: grid;
   gap: var(--space-8);
 }
 
+.notify-actions {
+  margin-top: var(--space-12);
+}
+
 .actions :deep(.n-button),
-.open-orders {
+.notify-actions :deep(.n-button),
+.nav-ctas :deep(.n-button) {
   min-height: 48px;
 }
 
-.open-orders {
+.nav-ctas :deep(.open-orders) {
+  min-height: 52px;
   overflow: visible;
   white-space: nowrap;
 }
@@ -329,7 +389,6 @@ void loadHome()
 
 .confirm-copy {
   color: var(--color-text);
-  margin-bottom: var(--space-4);
 }
 
 .state {

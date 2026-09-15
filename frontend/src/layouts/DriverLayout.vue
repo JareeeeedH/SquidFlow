@@ -27,7 +27,13 @@ onMounted(() => {
 
 <template>
   <div class="shell">
-    <header class="topbar">
+    <header
+      class="topbar"
+      :class="{
+        'is-online': knownOnlineStatus === 'ONLINE',
+        'is-offline': knownOnlineStatus === 'OFFLINE',
+      }"
+    >
       <RouterLink class="brand" :to="{ name: 'driver-home' }">派車</RouterLink>
       <div class="topbar-status">
         <OnlineStatusTag v-if="knownOnlineStatus" :status="knownOnlineStatus" />
@@ -88,6 +94,14 @@ onMounted(() => {
   border-bottom: 1px solid var(--color-border);
 }
 
+.topbar.is-online {
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+}
+
+.topbar.is-offline {
+  background: var(--color-surface);
+}
+
 .brand {
   font: var(--font-section-title);
   color: var(--color-text);
@@ -98,6 +112,12 @@ onMounted(() => {
   flex: 1;
   display: flex;
   justify-content: center;
+}
+
+.topbar-status :deep(.n-tag) {
+  height: 28px;
+  font-size: 14px;
+  padding: 0 10px;
 }
 
 .status-pending {
@@ -121,10 +141,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-height: 44px;
+  padding: 0 var(--space-4);
   border-radius: var(--radius-8);
   color: var(--color-muted-text);
   text-decoration: none;
   font: var(--font-label);
+  white-space: nowrap;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
 }

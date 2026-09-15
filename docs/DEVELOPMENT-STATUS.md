@@ -460,6 +460,19 @@
 - 操作欄固定右側，「查看」進入既有司機詳情
 - 未改 API / Schema / business rules / filter / search
 
+---
 
+## TASK — Driver UI/UX Polish
+
+**Status:** completed
+
+### 已完成
+
+- Driver Home：上線狀態作為主要狀態區，通知與帳號狀態降為次要層級，「可搶訂單」為 Primary CTA
+- Open Orders：卡片改為時間 / 行程 / 單號 / 車型與價格 / CTA 掃讀層級
+- Order Detail：行程與時間優先，依既有狀態顯示「我要接單」「開始行程」「完成訂單」
+- My Orders：目前訂單與歷史訂單視覺分層，歷史保持唯讀
+- Loading / success / error 狀態更清楚，維持既有 double-submit guard
+- 未改 API / Schema / business rules / Notification Center / Dashboard / Realtime
 
 ---

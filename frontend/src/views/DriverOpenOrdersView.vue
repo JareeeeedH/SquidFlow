@@ -112,12 +112,12 @@ void loadOrders()
               <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
               <OrderStatusTag status="OPEN" />
             </div>
-            <p class="order-no">{{ order.order_no }}</p>
             <div class="route">
               <p class="place">{{ order.pickup_location }}</p>
               <p class="arrow" aria-hidden="true">↓</p>
               <p class="place">{{ order.destination }}</p>
             </div>
+            <p class="order-no">{{ order.order_no }}</p>
             <div class="meta">
               <span>{{ order.vehicle_type }}</span>
               <span class="price">{{ formatPrice(order.price) }}</span>
@@ -169,7 +169,7 @@ h1 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-12);
 }
 
 .card {
@@ -177,8 +177,8 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-4);
-  padding: var(--space-12);
+  gap: var(--space-8);
+  padding: var(--space-16);
   min-height: 48px;
   text-align: left;
   background: var(--color-surface);
@@ -186,10 +186,16 @@ h1 {
   border-radius: var(--radius-12);
   color: inherit;
   font: inherit;
+  cursor: pointer;
 }
 
 .card:active {
   background: #eff6ff;
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .card-top {
@@ -219,7 +225,7 @@ h1 {
 .place {
   margin: 0;
   font: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -235,7 +241,6 @@ h1 {
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-8);
-  margin-top: var(--space-4);
   font: var(--font-label);
   color: var(--color-muted-text);
 }
@@ -252,6 +257,11 @@ h1 {
 }
 
 .view {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
   color: var(--color-primary);
   font: var(--font-label);
 }

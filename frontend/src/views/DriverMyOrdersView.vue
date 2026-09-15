@@ -175,7 +175,7 @@ void loadOrders()
           {{ actionError.code }} · {{ actionError.message }}
         </p>
 
-        <section class="group">
+        <section class="group current-group">
           <h2>目前訂單</h2>
           <NEmpty
             v-if="!loading && grouped.current.length === 0"
@@ -184,7 +184,7 @@ void loadOrders()
           />
           <ul v-else class="list">
             <li v-for="order in grouped.current" :key="order.id">
-              <article class="card">
+              <article class="card current" :data-status="order.status">
                 <button
                   type="button"
                   class="card-main"
@@ -194,12 +194,12 @@ void loadOrders()
                     <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
                     <OrderStatusTag :status="order.status" />
                   </div>
-                  <p class="order-no">{{ order.order_no }}</p>
                   <div class="route">
                     <p class="place">{{ order.pickup_location }}</p>
                     <p class="arrow" aria-hidden="true">↓</p>
                     <p class="place">{{ order.destination }}</p>
                   </div>
+                  <p class="order-no">{{ order.order_no }}</p>
                   <div class="meta">
                     <span>{{ order.vehicle_type }}</span>
                     <span class="price">{{ formatPrice(order.price) }}</span>
@@ -232,7 +232,7 @@ void loadOrders()
           </ul>
         </section>
 
-        <section class="group">
+        <section class="group history-group">
           <h2>歷史訂單</h2>
           <NEmpty
             v-if="!loading && grouped.history.length === 0"
@@ -244,18 +244,19 @@ void loadOrders()
               <button
                 type="button"
                 class="card history"
+                :data-status="order.status"
                 @click="openDetail(order.id)"
               >
                 <div class="card-top">
                   <p class="time">{{ historyDate(order.scheduled_at) }}</p>
                   <OrderStatusTag :status="order.status" />
                 </div>
-                <p class="order-no">{{ order.order_no }}</p>
                 <div class="route">
                   <p class="place">{{ order.pickup_location }}</p>
                   <p class="arrow" aria-hidden="true">↓</p>
                   <p class="place">{{ order.destination }}</p>
                 </div>
+                <p class="order-no">{{ order.order_no }}</p>
               </button>
             </li>
           </ul>
@@ -302,14 +303,21 @@ h2 {
   font: var(--font-caption);
 }
 
-.success {
+.success,
+.action-error {
   margin: 0;
-  color: var(--color-success);
+  padding: var(--space-12);
+  border-radius: var(--radius-8);
   font: var(--font-label);
 }
 
+.success {
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  color: var(--color-success);
+}
+
 .action-error {
-  margin: 0;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
   color: var(--color-danger);
   font: var(--font-caption);
 }
@@ -319,22 +327,40 @@ h2 {
   flex-direction: column;
 }
 
+.history-group {
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
 .list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-12);
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
-  padding: var(--space-12);
+  gap: var(--space-12);
+  padding: var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
+}
+
+.card.current[data-status='ACCEPTED'] {
+  --status-color: var(--color-info);
+}
+
+.card.current[data-status='IN_PROGRESS'] {
+  --status-color: var(--color-primary);
+}
+
+.card.current {
+  box-shadow: inset 4px 0 0 var(--status-color);
+  border-color: color-mix(in srgb, var(--status-color) 28%, var(--color-border));
 }
 
 .card-main,
@@ -343,13 +369,26 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-4);
+  gap: var(--space-8);
   padding: 0;
   text-align: left;
   background: transparent;
   border: 0;
   color: inherit;
   font: inherit;
+  cursor: pointer;
+}
+
+.history {
+  gap: var(--space-4);
+  padding: var(--space-12) var(--space-16);
+  background: color-mix(in srgb, var(--color-muted-text) 5%, var(--color-surface));
+}
+
+.history:focus-visible,
+.card-main:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .card-top {
@@ -374,11 +413,15 @@ h2 {
 .place {
   margin: 0;
   font: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.history .place {
+  font-weight: 500;
 }
 
 .arrow {
@@ -390,7 +433,6 @@ h2 {
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-8);
-  margin-top: var(--space-4);
   font: var(--font-label);
   color: var(--color-muted-text);
 }
@@ -401,7 +443,7 @@ h2 {
 }
 
 .card :deep(.n-button) {
-  min-height: 48px;
+  min-height: 52px;
 }
 
 .empty,

@@ -82,6 +82,13 @@ const backTarget = computed(() =>
     : { name: 'driver-my-orders' as const, label: '返回我的訂單' },
 )
 
+const hasPrimaryAction = computed(
+  () =>
+    order.value?.status === 'OPEN' ||
+    order.value?.status === 'ACCEPTED' ||
+    order.value?.status === 'IN_PROGRESS',
+)
+
 async function acceptOrder() {
   if (!order.value || acting.value || order.value.status !== 'OPEN') {
     return
@@ -241,28 +248,25 @@ watch(
           <OrderStatusTag :status="order.status" />
         </header>
         <p class="time">{{ formatScheduledAt(order.scheduled_at) }}</p>
+        <div class="route">
+          <p class="place">{{ order.pickup_location }}</p>
+          <p class="arrow" aria-hidden="true">↓</p>
+          <p class="place">{{ order.destination }}</p>
+        </div>
         <dl class="fields">
           <div>
             <dt>客戶</dt>
             <dd>{{ order.customer_name }}</dd>
           </div>
-          <div class="route">
-            <dt>行程</dt>
-            <dd>
-              <span>{{ order.pickup_location }}</span>
-              <span class="arrow">↓</span>
-              <span>{{ order.destination }}</span>
-            </dd>
-          </div>
           <div>
             <dt>車型</dt>
             <dd>{{ order.vehicle_type }}</dd>
           </div>
-          <div>
+          <div class="price-row">
             <dt>價格</dt>
             <dd class="price">{{ formatPrice(order.price) }}</dd>
           </div>
-          <div>
+          <div class="note-row">
             <dt>備註</dt>
             <dd>{{ order.note || '—' }}</dd>
           </div>
@@ -273,42 +277,44 @@ watch(
           {{ actionError.code }} · {{ actionError.message }}
         </p>
 
-        <NButton
-          v-if="order.status === 'OPEN'"
-          class="accept"
-          size="large"
-          type="primary"
-          block
-          :loading="accepting"
-          :disabled="acting"
-          @click="acceptOrder"
-        >
-          {{ accepting ? '搶單中...' : '我要接單' }}
-        </NButton>
-        <NButton
-          v-else-if="order.status === 'ACCEPTED'"
-          class="accept"
-          size="large"
-          type="primary"
-          block
-          :loading="starting"
-          :disabled="acting"
-          @click="startOrder"
-        >
-          {{ starting ? '開始中...' : '開始行程' }}
-        </NButton>
-        <NButton
-          v-else-if="order.status === 'IN_PROGRESS'"
-          class="accept"
-          size="large"
-          type="primary"
-          block
-          :loading="completing"
-          :disabled="acting"
-          @click="completeOrder"
-        >
-          {{ completing ? '完成中...' : '完成訂單' }}
-        </NButton>
+        <div v-if="hasPrimaryAction" class="action-dock">
+          <NButton
+            v-if="order.status === 'OPEN'"
+            class="accept"
+            size="large"
+            type="primary"
+            block
+            :loading="accepting"
+            :disabled="acting"
+            @click="acceptOrder"
+          >
+            {{ accepting ? '搶單中...' : '我要接單' }}
+          </NButton>
+          <NButton
+            v-else-if="order.status === 'ACCEPTED'"
+            class="accept"
+            size="large"
+            type="primary"
+            block
+            :loading="starting"
+            :disabled="acting"
+            @click="startOrder"
+          >
+            {{ starting ? '開始中...' : '開始行程' }}
+          </NButton>
+          <NButton
+            v-else-if="order.status === 'IN_PROGRESS'"
+            class="accept"
+            size="large"
+            type="primary"
+            block
+            :loading="completing"
+            :disabled="acting"
+            @click="completeOrder"
+          >
+            {{ completing ? '完成中...' : '完成訂單' }}
+          </NButton>
+        </div>
       </article>
     </NSpin>
   </section>
@@ -330,7 +336,7 @@ watch(
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
-  padding: var(--space-24);
+  padding: var(--space-16);
 }
 
 .header {
@@ -349,19 +355,46 @@ watch(
 }
 
 .time {
-  margin: var(--space-12) 0 var(--space-24);
+  margin: var(--space-12) 0 var(--space-16);
   font: var(--font-page-title);
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: var(--space-16);
+}
+
+.place {
+  margin: 0;
+  font: var(--font-section-title);
+  line-height: 1.35;
+}
+
+.arrow {
+  display: block;
+  margin: var(--space-4) 0;
+  line-height: 1.1;
 }
 
 .fields {
   display: grid;
-  gap: var(--space-16);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12) var(--space-16);
   margin: 0;
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--color-border);
 }
 
 .fields > div {
   display: grid;
   gap: var(--space-4);
+}
+
+.price-row,
+.note-row {
+  grid-column: 1 / -1;
 }
 
 dt {
@@ -373,30 +406,42 @@ dd {
   margin: 0;
 }
 
-.arrow {
-  display: block;
-  margin: var(--space-4) 0;
-}
-
 .price {
   font: var(--font-price);
 }
 
-.success {
+.success,
+.action-error {
   margin: var(--space-16) 0 0;
-  color: var(--color-success);
+  padding: var(--space-12);
+  border-radius: var(--radius-8);
   font: var(--font-label);
 }
 
+.success {
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  color: var(--color-success);
+}
+
 .action-error {
-  margin: var(--space-16) 0 0;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
   color: var(--color-danger);
   font: var(--font-caption);
 }
 
+.action-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * var(--space-16));
+  padding: var(--space-16);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-12) var(--radius-12);
+}
+
 .accept {
-  margin-top: var(--space-16);
-  min-height: 48px;
+  min-height: 52px;
 }
 
 .state {
