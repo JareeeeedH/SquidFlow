@@ -418,5 +418,20 @@
 - 已同步 `API-SPEC`；未改 Schema、未做 WebSocket / SSE / 拖拉看板
 - 未實作 `GET /notifications`、Order Events / Timeline、deployment
 
+---
+
+## TASK-016B — Sync Dashboard UI-UX Spec
+
+**Status:** completed
+
+### 已完成
+
+- `UI-UX-SPEC`：Dashboard = Status Summary + Dispatch Board
+- Status Summary 顯示六種 status，不顯示「全部」；點擊 → `/orders?status=<status>`
+- Dispatch Board 四欄：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`；卡片進入 Order Detail
+- 完整訂單搜尋 / 篩選 / 管理維持在 `/orders`
+- Dashboard 不含完整 Order List、搜尋 / 日期篩選、BI / 報表、Realtime
+- 未改 Backend / Frontend / Schema / API contract
+
 
 ---

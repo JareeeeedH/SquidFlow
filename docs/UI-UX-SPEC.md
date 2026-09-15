@@ -60,9 +60,10 @@ UX 原則：
 
 畫面方向：
 
-- Dashboard + Status Board + Order List
+- Dashboard = Status Summary + Dispatch Board
+- 完整 Order List 在 `/orders`
 - 快速建單、派單、查看狀態
-- 操作集中於單一工作區
+- Dashboard 與訂單管理分頁，不把所有操作塞進同一畫面
 
 ### Driver
 
@@ -104,7 +105,8 @@ Authentication
 └── Login
 
 Admin
-├── Dashboard / Orders
+├── Dashboard
+├── Orders
 ├── Order Detail
 ├── Create Order
 ├── Driver Management
@@ -138,10 +140,15 @@ Driver
 
 Admin 登入後進入 Dashboard。
 
+Dashboard = **Status Summary + Dispatch Board**。
+
+數量由 Backend 聚合，Frontend 不自行加總。
+
 ## 4.1 Status Summary
 
+顯示六種 Order Status 數量。不顯示「全部」數量。
+
 ```text
-全部        12
 DRAFT        2
 OPEN         4
 ACCEPTED     3
@@ -150,11 +157,11 @@ COMPLETED    1
 CANCELLED    0
 ```
 
-點擊狀態可快速篩選訂單。
+點擊 status → `/orders?status=<status>`。
 
-## 4.2 Order Status Board
+## 4.2 Dispatch Board
 
-以狀態區塊呈現目前派車狀況：
+四欄呈現目前派車狀況：
 
 ```text
 ┌───────────┬───────────┬───────────┬──────────────┐
@@ -166,15 +173,49 @@ CANCELLED    0
 └───────────┴───────────┴───────────┴──────────────┘
 ```
 
+`COMPLETED` / `CANCELLED` 只出現在 Status Summary，不進入 Board。
+
+Board card：
+
+```text
+訂單編號
+客戶
+上車地點 → 目的地
+預約時間
+司機
+價格
+```
+
+未指派司機顯示未指派；已指派顯示司機 username。
+
+點擊卡片進入 Order Detail。
+
 用途：
 
 - 快速掌握目前訂單狀況
 - 快速找出正在搶單與正在執行的訂單
 - 保留看板的視覺感，但不把所有操作都塞進 Kanban
 
-## 4.3 Order List
+## 4.3 不包含
 
-Dashboard 下方提供完整訂單列表。
+Dashboard 不包含：
+
+```text
+完整 Order List
+搜尋 / 日期篩選
+BI / 報表
+Realtime
+```
+
+完整訂單搜尋 / 篩選 / 管理維持在 `/orders`。
+
+---
+
+# 5. Admin Orders
+
+路徑：`/orders`
+
+完整訂單搜尋 / 篩選 / 管理。不是 Dashboard 的一部分。
 
 欄位：
 
@@ -198,9 +239,11 @@ Dashboard 下方提供完整訂單列表。
 訂單編號 / 客戶搜尋
 ```
 
+可由 Dashboard Status Summary 帶入 `?status=<status>`。
+
 ---
 
-# 5. Admin Create Order
+# 6. Admin Create Order
 
 ## Form
 
@@ -238,7 +281,7 @@ Dashboard 下方提供完整訂單列表。
 
 ---
 
-# 6. Admin Order Detail
+# 7. Admin Order Detail
 
 採「訂單資訊 + 狀態 / 操作 + Timeline」布局。
 
@@ -270,7 +313,7 @@ Dashboard 下方提供完整訂單列表。
 
 ---
 
-# 7. Admin Order Actions
+# 8. Admin Order Actions
 
 依 Order Status 顯示可用操作。
 
@@ -285,7 +328,7 @@ Dashboard 下方提供完整訂單列表。
 
 ---
 
-# 8. Admin Driver Management
+# 9. Admin Driver Management
 
 ## Driver List
 
@@ -323,7 +366,7 @@ Online Status
 
 ---
 
-# 9. Admin Create Driver
+# 10. Admin Create Driver
 
 ```text
 新增司機
@@ -350,7 +393,7 @@ Driver
 
 ---
 
-# 10. Driver Navigation
+# 11. Driver Navigation
 
 Driver 採簡化導覽。
 
@@ -367,7 +410,7 @@ Driver 採簡化導覽。
 
 ---
 
-# 11. Driver Home — Open Orders
+# 12. Driver Home — Open Orders
 
 登入後進入「可搶訂單」。
 
@@ -394,7 +437,7 @@ Driver 採簡化導覽。
 
 ---
 
-# 12. Driver Order Detail
+# 13. Driver Order Detail
 
 ```text
 ┌─────────────────────┐
@@ -417,7 +460,7 @@ Driver 採簡化導覽。
 
 ---
 
-# 13. Driver Accept Order
+# 14. Driver Accept Order
 
 點擊「我要接單」。
 
@@ -451,7 +494,7 @@ OPEN → ACCEPTED
 
 ---
 
-# 14. Driver My Orders
+# 15. Driver My Orders
 
 分為：
 
@@ -490,7 +533,7 @@ IN_PROGRESS
 
 ---
 
-# 15. Driver Online / Offline
+# 16. Driver Online / Offline
 
 狀態：
 
@@ -521,7 +564,7 @@ OFFLINE
 
 ---
 
-# 16. Web Push Notification
+# 17. Web Push Notification
 
 收到新訂單：
 
@@ -539,7 +582,7 @@ OFFLINE
 
 ---
 
-# 17. Status Visual Consistency
+# 18. Status Visual Consistency
 
 全系統 Status 必須使用一致的：
 
@@ -549,7 +592,7 @@ OFFLINE
 
 不允許不同頁面自行發明新的 status visual language。
 
-## 17.1 Order Status
+## 18.1 Order Status
 
 ```text
 DRAFT        草稿
@@ -571,7 +614,7 @@ COMPLETED    Success
 CANCELLED    Danger
 ```
 
-## 17.2 Account / Driver Status
+## 18.2 Account / Driver Status
 
 ```text
 ACTIVE       啟用
@@ -595,14 +638,14 @@ OFFLINE      Muted
 
 ---
 
-# 18. UX Rules
+# 19. UX Rules
 
 ### Admin
 
 - 首頁以 Dashboard 為主
-- Status Summary 可快速篩選
-- Status Board 提供看板感
-- Order List 提供完整資訊
+- Status Summary 點擊後到 `/orders?status=<status>`
+- Dispatch Board 提供看板感
+- 完整 Order List 在 `/orders`
 - 建單盡量單頁完成
 - 發布後訂單唯讀
 - 只顯示目前狀態可執行的操作
@@ -618,7 +661,7 @@ OFFLINE      Muted
 
 ---
 
-# 19. Responsive Design
+# 20. Responsive Design
 
 ### Admin
 
@@ -643,7 +686,7 @@ Driver UI 以 Mobile First 設計。
 
 ---
 
-# 20. MVP UI Scope
+# 21. MVP UI Scope
 
 
 ```text
@@ -651,7 +694,8 @@ Authentication
 └── Login
 
 Admin
-├── Dashboard / Orders
+├── Dashboard
+├── Orders
 ├── Create Order
 ├── Order Detail
 ├── Driver List
@@ -666,7 +710,7 @@ Driver
 
 ---
 
-# 21. UI Framework & Styling
+# 22. UI Framework & Styling
 
 ## Naive UI
 
@@ -714,7 +758,7 @@ CSS Variables + Scoped CSS
 
 ---
 
-# 22. Design Tokens
+# 23. Design Tokens
 
 目前只定義 Token 類型，不建立獨立 design-system package。
 
@@ -768,7 +812,7 @@ Important Number / Price
 
 ---
 
-# 23. Component Usage Rules
+# 24. Component Usage Rules
 
 1. 優先使用 Naive UI 現有元件。
 2. 不重複建立已有基礎元件。
