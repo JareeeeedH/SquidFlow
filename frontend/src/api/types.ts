@@ -152,3 +152,31 @@ export type DriverStatusResult = {
   id: string
   status: AccountStatus
 }
+
+export type DriverOnlineStatusResult = {
+  status: OnlineStatus
+}
+
+export type DriverOpenOrder = {
+  id: string
+  order_no: string
+  scheduled_at: string
+  pickup_location: string
+  destination: string
+  vehicle_type: string
+  price: number
+  note: string | null
+}
+
+export type DriverOrderDetail = {
+  id: string
+  order_no: string
+  customer_name: string
+  pickup_location: string
+  destination: string
+  scheduled_at: string
+  vehicle_type: string
+  price: number
+  note: string | null
+  status: OrderStatus
+}

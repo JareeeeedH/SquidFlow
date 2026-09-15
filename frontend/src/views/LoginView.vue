@@ -13,6 +13,7 @@ import {
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
+import { homeRouteName } from '../lib/auth-redirect'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -50,7 +51,8 @@ async function onSubmit() {
   submitting.value = true
   try {
     await auth.login(form.username.trim(), form.password)
-    await router.push({ name: 'orders' })
+    const role = auth.currentUser?.role ?? 'ADMIN'
+    await router.push({ name: homeRouteName(role) })
   } catch (error) {
     if (error instanceof ApiClientError) {
       errorMessage.value = error.message

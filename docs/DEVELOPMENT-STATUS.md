@@ -228,6 +228,22 @@
 - 帳號狀態 `ACTIVE` / `SUSPENDED` 與上線狀態 `ONLINE` / `OFFLINE` 分開顯示
 - 未實作 Delete Driver、Force Logout、Driver UI、Accept、Web Push
 
+---
+
+## Frontend Phase A-6 — Driver UI
+
+**Status:** completed
+
+### 已完成
+
+- Driver 登入後進入 `/driver`
+- Admin / Driver 路由依 role 隔離
+- `PATCH /api/v1/driver/status` 上線 / 下線
+- `GET /api/v1/driver/orders/open` 可搶訂單
+- `GET /api/v1/driver/orders/:id` 司機訂單詳情
+- Mobile-first Card / 大觸控區
+- 未實作 Accept、My Orders、Start / Complete / Cancel、Web Push
+
 ### Next
 
 下一個 Task 等待中。

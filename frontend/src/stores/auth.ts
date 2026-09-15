@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { fetchCurrentUser, login as loginRequest, logout as logoutRequest } from '../api/auth'
 import { ApiClientError } from '../api/types'
 import type { CurrentUser } from '../api/types'
+import { useDriverStatusStore } from './driver-status'
 
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref<CurrentUser | null>(null)
@@ -14,6 +15,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   function clearAuthState() {
     currentUser.value = null
+    useDriverStatusStore().reset()
+  }
+
+  async function refresh() {
+    currentUser.value = await fetchCurrentUser()
   }
 
   async function initialize() {
@@ -81,6 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
     initError,
     initialize,
     login,
+    refresh,
     logout,
     handleUnauthorized,
     clearAuthState,
