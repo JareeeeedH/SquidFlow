@@ -71,7 +71,9 @@ describe('DriversView', () => {
     const { wrapper } = await mountDrivers()
 
     expect(listDrivers).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toContain('Drivers')
+    expect(wrapper.text()).toContain('司機管理')
+    expect(wrapper.text()).toContain('管理司機帳號、車輛與上線狀態')
+    expect(wrapper.text()).toContain('新增司機')
     expect(wrapper.text()).toContain('driver01')
     expect(wrapper.text()).toContain('ABC-1234')
     expect(wrapper.text()).toContain('Toyota Camry')
@@ -79,6 +81,8 @@ describe('DriversView', () => {
     expect(wrapper.text()).toContain('2024')
     expect(wrapper.text()).toContain('啟用')
     expect(wrapper.text()).toContain('離線')
+    expect(wrapper.text()).toContain('上線狀態')
+    expect(wrapper.text()).toContain('帳號狀態')
   })
 
   it('shows loading while the list request is in flight', async () => {
@@ -137,6 +141,27 @@ describe('DriversView', () => {
     expect(wrapper.text()).toContain('driver01')
   })
 
+  it('shows account and online status as separate values', async () => {
+    vi.mocked(listDrivers).mockResolvedValue([
+      { ...sampleDriver, id: 'driver-online', username: 'online01', online_status: 'ONLINE', status: 'ACTIVE' },
+      {
+        ...sampleDriver,
+        id: 'driver-suspended',
+        username: 'stopped01',
+        online_status: 'OFFLINE',
+        status: 'SUSPENDED',
+      },
+    ])
+    const { wrapper } = await mountDrivers()
+
+    expect(wrapper.text()).toContain('上線')
+    expect(wrapper.text()).toContain('離線')
+    expect(wrapper.text()).toContain('啟用')
+    expect(wrapper.text()).toContain('停用')
+    expect(wrapper.text()).toContain('上線狀態')
+    expect(wrapper.text()).toContain('帳號狀態')
+  })
+
   it('navigates to driver detail from view', async () => {
     const { wrapper, router } = await mountDrivers()
     const push = vi.spyOn(router, 'push')
@@ -151,5 +176,17 @@ describe('DriversView', () => {
       name: 'driver-detail',
       params: { id: 'driver-1' },
     })
+  })
+
+  it('keeps create as the primary header action', async () => {
+    const { wrapper, router } = await mountDrivers()
+    const push = vi.spyOn(router, 'push')
+    const create = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('新增司機'))
+    expect(create).toBeTruthy()
+    await create!.trigger('click')
+
+    expect(push).toHaveBeenCalledWith({ name: 'driver-create' })
   })
 })

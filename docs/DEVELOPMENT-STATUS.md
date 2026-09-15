@@ -446,6 +446,20 @@
 - Desktop / Laptop / Tablet 欄位切分調整
 - 未改 API / Schema / business rules / routing
 
+---
+
+## TASK — Driver Management UI Polish
+
+**Status:** completed
+
+### 已完成
+
+- 司機管理頁標題、說明與「新增司機」Primary CTA
+- 列表欄位層級：帳號、上線狀態、車牌、車輛、帳號狀態優先
+- Online Status 與 Account Status 維持分開顯示
+- 操作欄固定右側，「查看」進入既有司機詳情
+- 未改 API / Schema / business rules / filter / search
+
 
 
 ---

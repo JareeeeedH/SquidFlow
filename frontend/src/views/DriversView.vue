@@ -14,7 +14,6 @@ import { ApiClientError } from '../api/types'
 import type { DriverItem } from '../api/types'
 import AccountStatusTag from '../components/AccountStatusTag.vue'
 import OnlineStatusTag from '../components/OnlineStatusTag.vue'
-import { formatVehicleSummary } from '../lib/driver-form'
 
 const router = useRouter()
 const drivers = ref<DriverItem[]>([])
@@ -24,22 +23,37 @@ const forbidden = ref(false)
 
 let requestSeq = 0
 
+function openDriver(id: string) {
+  void router.push({ name: 'driver-detail', params: { id } })
+}
+
 const columns: DataTableColumns<DriverItem> = [
   {
     title: '帳號',
     key: 'username',
-    width: 140,
+    width: 168,
     ellipsis: { tooltip: true },
+    render(row) {
+      return h('span', { class: 'username-cell' }, row.username)
+    },
   },
   {
-    title: '車型',
-    key: 'vehicle_type',
-    width: 88,
+    title: '上線狀態',
+    key: 'online_status',
+    width: 112,
+    render(row) {
+      return h('div', { class: 'status-cell status-cell-online' }, [
+        h(OnlineStatusTag, { status: row.online_status }),
+      ])
+    },
   },
   {
     title: '車牌',
     key: 'license_plate',
-    width: 120,
+    width: 128,
+    render(row) {
+      return h('span', { class: 'plate-cell' }, row.license_plate)
+    },
   },
   {
     title: '車輛',
@@ -47,42 +61,56 @@ const columns: DataTableColumns<DriverItem> = [
     minWidth: 200,
     ellipsis: { tooltip: true },
     render(row) {
-      return formatVehicleSummary(row)
+      return h('div', { class: 'vehicle-cell' }, [
+        h(
+          'span',
+          { class: 'vehicle-name' },
+          `${row.vehicle_brand} ${row.vehicle_model}`,
+        ),
+        h(
+          'span',
+          { class: 'vehicle-meta' },
+          `${row.vehicle_color} · ${row.vehicle_year}`,
+        ),
+      ])
     },
   },
   {
     title: '帳號狀態',
     key: 'status',
-    width: 96,
+    width: 112,
     render(row) {
-      return h(AccountStatusTag, { status: row.status })
+      return h('div', { class: 'status-cell status-cell-account' }, [
+        h(AccountStatusTag, { status: row.status }),
+      ])
     },
   },
   {
-    title: '上線狀態',
-    key: 'online_status',
-    width: 96,
+    title: '車型',
+    key: 'vehicle_type',
+    width: 88,
     render(row) {
-      return h(OnlineStatusTag, { status: row.online_status })
+      return h('span', { class: 'type-cell' }, row.vehicle_type)
     },
   },
   {
     title: '操作',
     key: 'actions',
-    width: 80,
+    width: 88,
+    fixed: 'right',
     render(row) {
-      return h(
-        NButton,
-        {
-          text: true,
-          type: 'primary',
-          size: 'small',
-          onClick: () => {
-            void router.push({ name: 'driver-detail', params: { id: row.id } })
+      return h('div', { class: 'row-actions' }, [
+        h(
+          NButton,
+          {
+            size: 'small',
+            tertiary: true,
+            type: 'primary',
+            onClick: () => openDriver(row.id),
           },
-        },
-        { default: () => '查看' },
-      )
+          { default: () => '查看' },
+        ),
+      ])
     },
   },
 ]
@@ -126,8 +154,8 @@ void loadDrivers()
   <section class="page">
     <header class="page-header">
       <div>
-        <h1>Drivers</h1>
-        <p class="subtitle">司機管理</p>
+        <h1>司機管理</h1>
+        <p class="subtitle">管理司機帳號、車輛與上線狀態</p>
       </div>
       <div class="header-actions">
         <p v-if="!error && !loading" class="count">{{ drivers.length }} 位</p>
@@ -173,12 +201,13 @@ void loadDrivers()
 
       <NDataTable
         v-else
+        class="drivers-table"
         :columns="columns"
         :data="drivers"
         :loading="loading"
         :bordered="false"
         :single-line="false"
-        :scroll-x="920"
+        :scroll-x="980"
         size="small"
       >
         <template #empty>
@@ -193,7 +222,7 @@ void loadDrivers()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-24);
   min-width: 0;
 }
 
@@ -219,6 +248,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: var(--space-16);
+  flex-shrink: 0;
 }
 
 .count {
@@ -247,13 +277,78 @@ h1 {
 }
 
 .panel :deep(.n-data-table-th) {
-  font: var(--font-label);
+  font: var(--font-caption);
+  font-weight: 500;
   color: var(--color-muted-text);
+  background: var(--color-background);
+  padding: 10px 16px;
+}
+
+.panel :deep(.n-data-table-td) {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.panel :deep(.n-data-table-tr:hover .n-data-table-td) {
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+}
+
+.username-cell {
+  font: var(--font-label);
+  color: var(--color-text);
+}
+
+.plate-cell {
+  font: var(--font-label);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.vehicle-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vehicle-name {
+  font: var(--font-label);
+}
+
+.vehicle-meta,
+.type-cell {
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
 }
 
 @media (max-width: 900px) {
   h1 {
     font-size: 24px;
+  }
+
+  .page {
+    gap: var(--space-16);
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    justify-content: space-between;
   }
 }
 </style>
