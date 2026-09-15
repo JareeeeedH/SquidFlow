@@ -11,9 +11,10 @@ vi.mock('../api/orders', () => ({
   updateOrder: vi.fn(),
   deleteOrder: vi.fn(),
   publishOrder: vi.fn(),
+  cancelOrder: vi.fn(),
 }))
 
-import { deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
+import { cancelOrder, deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
 
 const draft: OrderDetail = {
   id: 'order-1',
@@ -106,6 +107,24 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).not.toContain('編輯')
     expect(wrapper.text()).not.toContain('發布')
     expect(wrapper.text()).not.toContain('刪除')
+    expect(wrapper.text()).toContain('取消訂單')
+    expect(wrapper.text()).toContain('可取消此訂單')
+  })
+
+  it('hides cancel on IN_PROGRESS, COMPLETED, and CANCELLED', async () => {
+    vi.mocked(getOrder).mockResolvedValue({ ...openOrder, status: 'IN_PROGRESS' })
+    const inProgress = await mountDetail()
+    expect(inProgress.wrapper.text()).toContain('此訂單為唯讀')
+    expect(namedButtons(inProgress.wrapper, '取消訂單')).toHaveLength(0)
+    expect(inProgress.wrapper.text()).not.toContain('編輯')
+
+    vi.mocked(getOrder).mockResolvedValue({ ...openOrder, status: 'COMPLETED' })
+    const completed = await mountDetail()
+    expect(namedButtons(completed.wrapper, '取消訂單')).toHaveLength(0)
+
+    vi.mocked(getOrder).mockResolvedValue({ ...openOrder, status: 'CANCELLED' })
+    const cancelled = await mountDetail()
+    expect(namedButtons(cancelled.wrapper, '取消訂單')).toHaveLength(0)
   })
 
   it('edits a draft and reloads detail from the API response', async () => {
@@ -204,6 +223,43 @@ describe('OrderDetailView', () => {
     await clickNamed(wrapper, '發布')
     await flushPromises()
     await clickNamed(wrapper, '確認發布')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('INVALID_ORDER_STATUS')
+    expect(wrapper.text()).toContain('訂單狀態不允許此操作')
+  })
+
+  it('cancels an OPEN order after confirmation', async () => {
+    vi.mocked(getOrder).mockResolvedValue(openOrder)
+    vi.mocked(cancelOrder).mockResolvedValue({ id: 'order-1', status: 'CANCELLED' })
+    vi.mocked(getOrder)
+      .mockResolvedValueOnce(openOrder)
+      .mockResolvedValueOnce({ ...openOrder, status: 'CANCELLED' })
+
+    const { wrapper } = await mountDetail()
+    await clickNamed(wrapper, '取消訂單')
+    await flushPromises()
+    expect(wrapper.text()).toContain('確定取消此訂單')
+    expect(cancelOrder).not.toHaveBeenCalled()
+
+    await clickNamed(wrapper, '確認取消')
+    await flushPromises()
+
+    expect(cancelOrder).toHaveBeenCalledWith('order-1')
+    expect(wrapper.text()).toContain('已取消')
+    expect(namedButtons(wrapper, '取消訂單')).toHaveLength(0)
+  })
+
+  it('shows cancel errors from the backend', async () => {
+    vi.mocked(getOrder).mockResolvedValue({ ...openOrder, status: 'ACCEPTED' })
+    vi.mocked(cancelOrder).mockRejectedValue(
+      new ApiClientError('INVALID_ORDER_STATUS', '訂單狀態不允許此操作', 409),
+    )
+    const { wrapper } = await mountDetail()
+
+    await clickNamed(wrapper, '取消訂單')
+    await flushPromises()
+    await clickNamed(wrapper, '確認取消')
     await flushPromises()
 
     expect(wrapper.text()).toContain('INVALID_ORDER_STATUS')

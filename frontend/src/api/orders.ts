@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  CancelOrderResult,
   CreateOrderInput,
   CreateOrderResult,
   OrderDetail,
@@ -47,4 +48,8 @@ export function deleteOrder(id: string) {
 
 export function publishOrder(id: string) {
   return api.post<PublishOrderResult>(`/orders/${id}/publish`)
+}
+
+export function cancelOrder(id: string) {
+  return api.post<CancelOrderResult>(`/orders/${id}/cancel`)
 }

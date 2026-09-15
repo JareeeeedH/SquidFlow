@@ -9,9 +9,16 @@ import DriverOrderDetailView from './DriverOrderDetailView.vue'
 vi.mock('../api/driver-orders', () => ({
   getDriverOrder: vi.fn(),
   acceptDriverOrder: vi.fn(),
+  startDriverOrder: vi.fn(),
+  completeDriverOrder: vi.fn(),
 }))
 
-import { acceptDriverOrder, getDriverOrder } from '../api/driver-orders'
+import {
+  acceptDriverOrder,
+  completeDriverOrder,
+  getDriverOrder,
+  startDriverOrder,
+} from '../api/driver-orders'
 
 const openOrder: DriverOrderDetail = {
   id: 'order-1',
@@ -38,6 +45,11 @@ async function mountDetail(id = 'order-1') {
       {
         path: '/driver/orders/open',
         name: 'driver-open-orders',
+        component: { template: '<div />' },
+      },
+      {
+        path: '/driver/orders',
+        name: 'driver-my-orders',
         component: { template: '<div />' },
       },
       {
@@ -85,7 +97,8 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).toContain('2件行李')
     expect(wrapper.text()).toContain('我要接單')
     expect(wrapper.text()).not.toContain('開始行程')
-    expect(wrapper.text()).not.toContain('完成')
+    expect(wrapper.text()).not.toContain('完成訂單')
+    expect(wrapper.text()).toContain('返回可搶訂單')
   })
 
   it('accepts an OPEN order from the backend response then reloads detail', async () => {
@@ -131,13 +144,56 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).toContain('此訂單已被其他司機接單')
   })
 
-  it("shows the current driver's accepted order", async () => {
+  it("shows start on the current driver's accepted order", async () => {
     vi.mocked(getDriverOrder).mockResolvedValue(ownAccepted)
     const { wrapper } = await mountDetail()
 
     expect(wrapper.text()).toContain('已接單')
     expect(wrapper.text()).toContain('李小姐')
+    expect(wrapper.text()).toContain('開始行程')
+    expect(wrapper.text()).toContain('返回我的訂單')
     expect(wrapper.text()).not.toContain('我要接單')
+    expect(wrapper.text()).not.toContain('完成訂單')
+  })
+
+  it('starts then completes from order detail', async () => {
+    vi.mocked(startDriverOrder).mockResolvedValue({
+      id: 'order-1',
+      status: 'IN_PROGRESS',
+      started_at: '2026-09-15T07:40:00.000Z',
+    })
+    vi.mocked(completeDriverOrder).mockResolvedValue({
+      id: 'order-1',
+      status: 'COMPLETED',
+      completed_at: '2026-09-15T08:20:00.000Z',
+    })
+    vi.mocked(getDriverOrder)
+      .mockResolvedValueOnce(ownAccepted)
+      .mockResolvedValueOnce({ ...ownAccepted, status: 'IN_PROGRESS' })
+      .mockResolvedValueOnce({ ...ownAccepted, status: 'COMPLETED' })
+
+    const { wrapper } = await mountDetail()
+    const start = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('開始行程'))
+    await start!.trigger('click')
+    await flushPromises()
+
+    expect(startDriverOrder).toHaveBeenCalledWith('order-1')
+    expect(wrapper.text()).toContain('行程已開始')
+    expect(wrapper.text()).toContain('完成訂單')
+
+    const complete = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('完成訂單'))
+    await complete!.trigger('click')
+    await flushPromises()
+
+    expect(completeDriverOrder).toHaveBeenCalledWith('order-1')
+    expect(wrapper.text()).toContain('訂單已完成')
+    expect(wrapper.text()).toContain('已完成')
+    expect(wrapper.text()).not.toContain('開始行程')
+    expect(wrapper.text()).not.toContain('完成訂單')
   })
 
   it('shows 404 when the order is missing or belongs to another driver', async () => {

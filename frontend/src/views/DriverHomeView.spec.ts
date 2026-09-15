@@ -60,6 +60,11 @@ async function mountHome() {
         name: 'driver-open-orders',
         component: { template: '<div />' },
       },
+      {
+        path: '/driver/orders',
+        name: 'driver-my-orders',
+        component: { template: '<div />' },
+      },
     ],
   })
   await router.push('/driver')
@@ -155,6 +160,18 @@ describe('DriverHomeView', () => {
     await entry!.trigger('click')
 
     expect(push).toHaveBeenCalledWith({ name: 'driver-open-orders' })
+  })
+
+  it('opens my orders from home', async () => {
+    const { wrapper, router } = await mountHome()
+    const push = vi.spyOn(router, 'push')
+
+    const entry = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('我的訂單'))
+    await entry!.trigger('click')
+
+    expect(push).toHaveBeenCalledWith({ name: 'driver-my-orders' })
   })
 
   it('keeps auth user after successful home load', async () => {

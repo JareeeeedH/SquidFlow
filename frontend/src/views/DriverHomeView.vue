@@ -225,6 +225,18 @@ void loadHome()
             <ChevronRight :size="18" />
           </template>
         </NButton>
+        <NButton
+          class="open-orders"
+          size="large"
+          block
+          icon-placement="right"
+          @click="router.push({ name: 'driver-my-orders' })"
+        >
+          我的訂單
+          <template #icon>
+            <ChevronRight :size="18" />
+          </template>
+        </NButton>
       </template>
     </NSpin>
   </section>

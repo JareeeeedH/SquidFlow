@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getDriverOrder, listOpenDriverOrders, acceptDriverOrder } from './driver-orders'
+import {
+  acceptDriverOrder,
+  completeDriverOrder,
+  driverMyOrdersPath,
+  getDriverOrder,
+  listDriverOrders,
+  listOpenDriverOrders,
+  startDriverOrder,
+} from './driver-orders'
 
 function ok(data: unknown) {
   return {
@@ -12,6 +20,31 @@ describe('driver orders API', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+  })
+
+  it('lists my orders without a status filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listDriverOrders()
+
+    expect(driverMyOrdersPath()).toBe('/driver/orders')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/driver/orders',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    )
+  })
+
+  it('lists my orders with a status filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listDriverOrders({ status: 'ACCEPTED' })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/driver/orders?status=ACCEPTED',
+      expect.objectContaining({ method: 'GET', credentials: 'include' }),
+    )
   })
 
   it('lists open orders', async () => {
@@ -51,6 +84,25 @@ describe('driver orders API', () => {
         credentials: 'include',
         body: undefined,
       }),
+    )
+  })
+
+  it('starts and completes an order without a request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ id: 'order-1' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await startDriverOrder('order-1')
+    await completeDriverOrder('order-1')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/driver/orders/order-1/start',
+      expect.objectContaining({ method: 'POST', body: undefined }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/driver/orders/order-1/complete',
+      expect.objectContaining({ method: 'POST', body: undefined }),
     )
   })
 })

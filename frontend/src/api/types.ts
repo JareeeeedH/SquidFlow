@@ -187,3 +187,31 @@ export type AcceptOrderResult = {
   driver_id: string
   accepted_at: string
 }
+
+export type DriverMyOrder = {
+  id: string
+  order_no: string
+  scheduled_at: string
+  pickup_location: string
+  destination: string
+  vehicle_type: string
+  price: number
+  status: OrderStatus
+}
+
+export type StartOrderResult = {
+  id: string
+  status: 'IN_PROGRESS'
+  started_at: string
+}
+
+export type CompleteOrderResult = {
+  id: string
+  status: 'COMPLETED'
+  completed_at: string
+}
+
+export type CancelOrderResult = {
+  id: string
+  status: OrderStatus
+}

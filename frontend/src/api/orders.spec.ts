@@ -7,6 +7,7 @@ import {
   ordersListPath,
   publishOrder,
   updateOrder,
+  cancelOrder,
 } from './orders'
 
 describe('ordersListPath', () => {
@@ -186,6 +187,21 @@ describe('draft lifecycle APIs', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/orders/order-1/publish',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('cancels an order with POST /orders/:id/cancel', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: async () => ({ success: true, data: { id: 'order-1', status: 'CANCELLED' } }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await cancelOrder('order-1')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/order-1/cancel',
       expect.objectContaining({ method: 'POST' }),
     )
   })

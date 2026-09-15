@@ -55,6 +55,13 @@ onMounted(() => {
       >
         可搶訂單
       </RouterLink>
+      <RouterLink
+        class="nav-item"
+        :to="{ name: 'driver-my-orders' }"
+        exact-active-class="nav-item-active"
+      >
+        我的訂單
+      </RouterLink>
     </nav>
     <main class="content">
       <RouterView />
@@ -104,7 +111,7 @@ onMounted(() => {
 
 .nav {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: var(--space-8);
   padding: var(--space-12) var(--space-16) 0;
 }

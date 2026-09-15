@@ -353,3 +353,18 @@
 - 未實作 Driver Start / Complete UI、Admin Cancel UI、`GET /notifications`、deployment（Start / Complete 以 Driver API 驗證）
 
 ---
+
+## TASK-015 — Driver My Orders + Start/Complete + Admin Cancel UI
+
+**Status:** completed
+
+### 已完成
+
+- Driver「我的訂單」：目前訂單（`ACCEPTED` / `IN_PROGRESS`）與歷史訂單（`COMPLETED` / `CANCELLED`）
+- `GET /api/v1/driver/orders`；`ACCEPTED` →「開始行程」；`IN_PROGRESS` →「完成訂單」
+- `POST /api/v1/driver/orders/:id/start`、`POST /api/v1/driver/orders/:id/complete`
+- Admin Order Detail：`OPEN` / `ACCEPTED` →「取消訂單」；`IN_PROGRESS` / `COMPLETED` / `CANCELLED` 唯讀
+- `POST /api/v1/orders/:id/cancel`
+- 未實作 `GET /notifications`、Order Events / Timeline、Dashboard、Security Hardening、deployment
+
+---

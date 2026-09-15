@@ -50,5 +50,11 @@ describe('auth redirect', () => {
         driver,
       ),
     ).toEqual({ name: 'driver-home' })
+    expect(
+      resolveAuthRedirect(
+        { name: 'driver-my-orders', meta: { requiresAuth: true, role: 'DRIVER' } },
+        admin,
+      ),
+    ).toEqual({ name: 'orders' })
   })
 })

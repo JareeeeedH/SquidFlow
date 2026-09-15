@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ArrowLeft, RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { acceptDriverOrder, getDriverOrder } from '../api/driver-orders'
+import {
+  acceptDriverOrder,
+  completeDriverOrder,
+  getDriverOrder,
+  startDriverOrder,
+} from '../api/driver-orders'
 import { ApiClientError } from '../api/types'
 import type { DriverOrderDetail } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
@@ -14,6 +19,8 @@ const router = useRouter()
 const order = ref<DriverOrderDetail | null>(null)
 const loading = ref(false)
 const accepting = ref(false)
+const starting = ref(false)
+const completing = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const actionError = ref<{ code: string; message: string } | null>(null)
 const successMessage = ref<string | null>(null)
@@ -65,8 +72,18 @@ async function loadOrder() {
   }
 }
 
+const acting = computed(
+  () => accepting.value || starting.value || completing.value,
+)
+
+const backTarget = computed(() =>
+  order.value?.status === 'OPEN'
+    ? { name: 'driver-open-orders' as const, label: '返回可搶訂單' }
+    : { name: 'driver-my-orders' as const, label: '返回我的訂單' },
+)
+
 async function acceptOrder() {
-  if (!order.value || accepting.value || order.value.status !== 'OPEN') {
+  if (!order.value || acting.value || order.value.status !== 'OPEN') {
     return
   }
 
@@ -91,6 +108,52 @@ async function acceptOrder() {
   }
 }
 
+async function startOrder() {
+  if (!order.value || acting.value || order.value.status !== 'ACCEPTED') {
+    return
+  }
+
+  starting.value = true
+  actionError.value = null
+  successMessage.value = null
+
+  try {
+    await startDriverOrder(order.value.id)
+    successMessage.value = '行程已開始'
+    await loadOrder()
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    if (actionError.value.code === 'INVALID_ORDER_STATUS') {
+      await loadOrder()
+    }
+  } finally {
+    starting.value = false
+  }
+}
+
+async function completeOrder() {
+  if (!order.value || acting.value || order.value.status !== 'IN_PROGRESS') {
+    return
+  }
+
+  completing.value = true
+  actionError.value = null
+  successMessage.value = null
+
+  try {
+    await completeDriverOrder(order.value.id)
+    successMessage.value = '訂單已完成'
+    await loadOrder()
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    if (actionError.value.code === 'INVALID_ORDER_STATUS') {
+      await loadOrder()
+    }
+  } finally {
+    completing.value = false
+  }
+}
+
 watch(
   () => route.params.id,
   () => {
@@ -109,12 +172,12 @@ watch(
       text
       type="primary"
       size="large"
-      @click="router.push({ name: 'driver-open-orders' })"
+      @click="router.push({ name: backTarget.name })"
     >
       <template #icon>
         <ArrowLeft :size="18" />
       </template>
-      返回可搶訂單
+      {{ backTarget.label }}
     </NButton>
 
     <NSpin :show="loading">
@@ -217,10 +280,34 @@ watch(
           type="primary"
           block
           :loading="accepting"
-          :disabled="accepting"
+          :disabled="acting"
           @click="acceptOrder"
         >
           {{ accepting ? '搶單中...' : '我要接單' }}
+        </NButton>
+        <NButton
+          v-else-if="order.status === 'ACCEPTED'"
+          class="accept"
+          size="large"
+          type="primary"
+          block
+          :loading="starting"
+          :disabled="acting"
+          @click="startOrder"
+        >
+          {{ starting ? '開始中...' : '開始行程' }}
+        </NButton>
+        <NButton
+          v-else-if="order.status === 'IN_PROGRESS'"
+          class="accept"
+          size="large"
+          type="primary"
+          block
+          :loading="completing"
+          :disabled="acting"
+          @click="completeOrder"
+        >
+          {{ completing ? '完成中...' : '完成訂單' }}
         </NButton>
       </article>
     </NSpin>

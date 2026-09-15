@@ -3,7 +3,7 @@ import { ArrowLeft, RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
+import { cancelOrder, deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
 import { ApiClientError } from '../api/types'
 import type { CreateOrderInput, OrderDetail, OrderStatus } from '../api/types'
 import OrderForm from '../components/OrderForm.vue'
@@ -13,8 +13,8 @@ import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form
 
 const STATUS_HINT: Record<OrderStatus, string> = {
   DRAFT: '草稿可編輯、刪除或發布',
-  OPEN: '搶單中，此訂單為唯讀',
-  ACCEPTED: '已接單，此訂單為唯讀',
+  OPEN: '搶單中，可取消此訂單',
+  ACCEPTED: '已接單，可取消此訂單',
   IN_PROGRESS: '行程進行中，此訂單為唯讀',
   COMPLETED: '已完成，此訂單為唯讀',
   CANCELLED: '已取消，此訂單為唯讀',
@@ -33,13 +33,20 @@ const editValues = ref<OrderFormValues | null>(null)
 const saving = ref(false)
 const deleting = ref(false)
 const publishing = ref(false)
+const cancelling = ref(false)
 const confirmDelete = ref(false)
 const confirmPublish = ref(false)
+const confirmCancel = ref(false)
 
 let requestSeq = 0
 
 const isDraft = computed(() => order.value?.status === 'DRAFT')
-const busy = computed(() => saving.value || deleting.value || publishing.value)
+const canCancel = computed(
+  () => order.value?.status === 'OPEN' || order.value?.status === 'ACCEPTED',
+)
+const busy = computed(
+  () => saving.value || deleting.value || publishing.value || cancelling.value,
+)
 
 const timestamps = computed(() => {
   if (!order.value) {
@@ -74,6 +81,9 @@ async function loadOrder() {
   notFound.value = false
   forbidden.value = false
   editing.value = false
+  confirmDelete.value = false
+  confirmPublish.value = false
+  confirmCancel.value = false
   order.value = null
 
   try {
@@ -185,6 +195,27 @@ async function onPublish() {
     return false
   } finally {
     publishing.value = false
+  }
+}
+
+async function onCancel() {
+  if (!order.value || cancelling.value || !canCancel.value) {
+    return false
+  }
+
+  cancelling.value = true
+  actionError.value = null
+
+  try {
+    await cancelOrder(order.value.id)
+    confirmCancel.value = false
+    await refreshOrder()
+    return true
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    return false
+  } finally {
+    cancelling.value = false
   }
 }
 
@@ -367,6 +398,33 @@ watch(
                   刪除
                 </NButton>
               </template>
+            </div>
+            <div v-else-if="canCancel && !editing" class="draft-actions">
+              <template v-if="confirmCancel">
+                <p class="confirm-copy">確定取消此訂單？取消後無法再搶單或接單。</p>
+                <NButton block :disabled="cancelling" @click="confirmCancel = false">
+                  返回
+                </NButton>
+                <NButton
+                  type="error"
+                  block
+                  :loading="cancelling"
+                  :disabled="cancelling"
+                  @click="onCancel"
+                >
+                  確認取消
+                </NButton>
+              </template>
+              <NButton
+                v-else
+                type="error"
+                ghost
+                block
+                :disabled="busy"
+                @click="confirmCancel = true"
+              >
+                取消訂單
+              </NButton>
             </div>
             <dl v-if="timestamps.length" class="meta">
               <div v-for="row in timestamps" :key="row.label">

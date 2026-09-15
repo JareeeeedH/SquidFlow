@@ -12,6 +12,7 @@ import { useAuthStore } from '../stores/auth'
 import DriverCreateView from '../views/DriverCreateView.vue'
 import DriverDetailView from '../views/DriverDetailView.vue'
 import DriverHomeView from '../views/DriverHomeView.vue'
+import DriverMyOrdersView from '../views/DriverMyOrdersView.vue'
 import DriverOpenOrdersView from '../views/DriverOpenOrdersView.vue'
 import DriverOrderDetailView from '../views/DriverOrderDetailView.vue'
 import DriversView from '../views/DriversView.vue'
@@ -92,6 +93,11 @@ const router = createRouter({
           path: 'orders/open',
           name: 'driver-open-orders',
           component: DriverOpenOrdersView,
+        },
+        {
+          path: 'orders',
+          name: 'driver-my-orders',
+          component: DriverMyOrdersView,
         },
         {
           path: 'orders/:id',
