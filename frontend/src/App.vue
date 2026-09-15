@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { GlobalThemeOverrides } from 'naive-ui'
 import { NConfigProvider, NMessageProvider } from 'naive-ui'
+import { useRouter } from 'vue-router'
+import { usePushNotificationClicks } from './lib/push-clicks'
+
+const router = useRouter()
+usePushNotificationClicks(router)
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {

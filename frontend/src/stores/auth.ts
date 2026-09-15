@@ -4,6 +4,7 @@ import { fetchCurrentUser, login as loginRequest, logout as logoutRequest } from
 import { ApiClientError } from '../api/types'
 import type { CurrentUser } from '../api/types'
 import { useDriverStatusStore } from './driver-status'
+import { usePushNotificationStore } from './push-notification'
 
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref<CurrentUser | null>(null)
@@ -16,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearAuthState() {
     currentUser.value = null
     useDriverStatusStore().reset()
+    usePushNotificationStore().reset()
   }
 
   async function refresh() {
@@ -66,6 +68,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    try {
+      await usePushNotificationStore().teardownOnLogout()
+    } catch {
+      // Push cleanup must not block logout.
+    }
     try {
       await logoutRequest()
     } catch {

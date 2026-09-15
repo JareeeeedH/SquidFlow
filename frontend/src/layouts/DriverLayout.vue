@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { LogOut } from 'lucide-vue-next'
 import { NButton } from 'naive-ui'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import OnlineStatusTag from '../components/OnlineStatusTag.vue'
 import { useAuthStore } from '../stores/auth'
 import { useDriverStatusStore } from '../stores/driver-status'
+import { usePushNotificationStore } from '../stores/push-notification'
 
 const auth = useAuthStore()
 const driverStatus = useDriverStatusStore()
+const pushNotification = usePushNotificationStore()
 const router = useRouter()
 
 const knownOnlineStatus = computed(() => driverStatus.onlineStatus)
@@ -17,6 +19,10 @@ async function onLogout() {
   await auth.logout()
   await router.push({ name: 'login' })
 }
+
+onMounted(() => {
+  void pushNotification.sync()
+})
 </script>
 
 <template>

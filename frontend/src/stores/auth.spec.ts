@@ -1,7 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiClientError } from '../api/types'
-import { useAuthStore } from './auth'
 
 vi.mock('../api/auth', () => ({
   fetchCurrentUser: vi.fn(),
@@ -10,6 +9,8 @@ vi.mock('../api/auth', () => ({
 }))
 
 import { fetchCurrentUser, login, logout } from '../api/auth'
+import { useAuthStore } from './auth'
+import { usePushNotificationStore } from './push-notification'
 
 describe('auth store', () => {
   beforeEach(() => {
@@ -75,6 +76,25 @@ describe('auth store', () => {
     await auth.logout()
 
     expect(auth.authenticated).toBe(false)
+    expect(auth.currentUser).toBeNull()
+  })
+
+  it('removes the push subscription before logging out', async () => {
+    vi.mocked(logout).mockResolvedValue(null)
+    const auth = useAuthStore()
+    const push = usePushNotificationStore()
+    const teardown = vi.spyOn(push, 'teardownOnLogout').mockResolvedValue()
+    auth.currentUser = {
+      id: '1',
+      username: 'driver01',
+      role: 'DRIVER',
+      status: 'ACTIVE',
+    }
+
+    await auth.logout()
+
+    expect(teardown).toHaveBeenCalled()
+    expect(logout).toHaveBeenCalled()
     expect(auth.currentUser).toBeNull()
   })
 })

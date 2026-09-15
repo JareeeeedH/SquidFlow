@@ -17,11 +17,12 @@
 
 ```text
 1. 複製 backend/.env.example 為 backend/.env
-2. npm run db:up
-3. cd backend && npm install && npm run prisma:generate
-4. cd frontend && npm install
-5. npm run dev:backend
-6. npm run dev:frontend
+2. 複製 frontend/.env.example 為 frontend/.env，並填入與 Backend 相同的 VAPID public key
+3. npm run db:up
+4. cd backend && npm install && npm run prisma:generate
+5. cd frontend && npm install
+6. npm run dev:backend
+7. npm run dev:frontend
 ```
 
 本機驗證時，host `5432` 與 `3000` 已被占用，因此 Docker PostgreSQL 對應 `localhost:5433`，Backend 使用 `PORT=3001`。
@@ -317,5 +318,23 @@
 - Push failure 不影響 Publish / Order state；不做 retry / queue
 - Web Push title / body 不存入 Notification；VAPID 由 env 提供
 - 未實作 Frontend integration、`GET /notifications`、deployment
+
+---
+
+## TASK-013 — Frontend Web Push Integration
+
+**Status:** completed
+
+### 已完成
+
+- Driver Home「開啟通知 / 關閉通知」；Permission 被拒絕只顯示「通知未開啟」
+- 請求 Notification Permission、註冊 Service Worker、建立 PushSubscription
+- `POST / DELETE /api/v1/notifications/subscription`
+- 登入後依瀏覽器 Permission + 既有 subscription 恢復通知狀態（並重新 POST 給 Backend）
+- Logout 先移除目前 browser / Backend subscription
+- 收到 Push 顯示通知；點擊進入 `/driver/orders/:id`
+- Permission 失敗不影響登入、Online/Offline、接單
+- VAPID public key 使用 `VITE_VAPID_PUBLIC_KEY`（與 Backend 同一組 public key）
+- 未實作 `GET /notifications`、deployment
 
 ---

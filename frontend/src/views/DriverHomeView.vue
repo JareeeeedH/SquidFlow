@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronRight, RotateCcw } from 'lucide-vue-next'
+import { Bell, BellOff, ChevronRight, RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -9,9 +9,11 @@ import AccountStatusTag from '../components/AccountStatusTag.vue'
 import OnlineStatusTag from '../components/OnlineStatusTag.vue'
 import { useAuthStore } from '../stores/auth'
 import { useDriverStatusStore } from '../stores/driver-status'
+import { usePushNotificationStore } from '../stores/push-notification'
 
 const auth = useAuthStore()
 const driverStatus = useDriverStatusStore()
+const pushNotification = usePushNotificationStore()
 const router = useRouter()
 const loading = ref(false)
 const updating = ref(false)
@@ -38,6 +40,7 @@ async function loadHome() {
 
   try {
     await auth.refresh()
+    await pushNotification.sync()
   } catch (caught) {
     error.value = captureError(caught)
   } finally {
@@ -163,6 +166,52 @@ void loadHome()
           </div>
         </article>
 
+        <article class="card">
+          <div class="notify-row">
+            <div>
+              <p class="label">通知</p>
+              <p class="notify-status">{{ pushNotification.label }}</p>
+            </div>
+          </div>
+
+          <p v-if="pushNotification.error" class="action-error">
+            {{ pushNotification.error.code }} · {{ pushNotification.error.message }}
+          </p>
+
+          <div
+            v-if="pushNotification.canEnable || pushNotification.canDisable"
+            class="actions"
+          >
+            <NButton
+              v-if="pushNotification.canEnable"
+              size="large"
+              block
+              :loading="pushNotification.updating"
+              :disabled="pushNotification.updating"
+              @click="pushNotification.enable()"
+            >
+              <template #icon>
+                <Bell :size="18" />
+              </template>
+              開啟通知
+            </NButton>
+            <NButton
+              v-else-if="pushNotification.canDisable"
+              size="large"
+              ghost
+              block
+              :loading="pushNotification.updating"
+              :disabled="pushNotification.updating"
+              @click="pushNotification.disable()"
+            >
+              <template #icon>
+                <BellOff :size="18" />
+              </template>
+              關閉通知
+            </NButton>
+          </div>
+        </article>
+
         <NButton
           class="open-orders"
           size="large"
@@ -227,6 +276,17 @@ void loadHome()
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-8);
+}
+
+.notify-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: var(--space-16);
+}
+
+.notify-status {
+  margin: var(--space-8) 0 0;
+  font: var(--font-label);
 }
 
 .action-error {
