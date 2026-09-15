@@ -29,6 +29,7 @@ const draft: OrderDetail = {
   status: 'DRAFT',
   dispatch_mode: 'OPEN',
   driver_id: null,
+  driver: null,
   created_by: 'admin-1',
   accepted_at: null,
   started_at: null,
@@ -97,6 +98,33 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).toContain('刪除')
     expect(wrapper.text()).toContain('草稿可編輯、刪除或發布')
     expect(wrapper.text()).not.toContain('取消訂單')
+    expect(wrapper.text()).toContain('尚無')
+  })
+
+  it('shows assigned driver vehicle information from the order detail payload', async () => {
+    vi.mocked(getOrder).mockResolvedValue({
+      ...openOrder,
+      status: 'ACCEPTED',
+      driver_id: 'driver-1',
+      driver: {
+        username: 'driver01',
+        vehicle_type: '7人座',
+        license_plate: 'ABC-1234',
+        vehicle_brand: 'Toyota',
+        vehicle_model: 'Sienta',
+        vehicle_color: '白色',
+      },
+    })
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain('driver01')
+    expect(wrapper.text()).toContain('7人座')
+    expect(wrapper.text()).toContain('ABC-1234')
+    expect(wrapper.text()).toContain('Toyota')
+    expect(wrapper.text()).toContain('Sienta')
+    expect(wrapper.text()).toContain('白色')
+    expect(wrapper.text()).not.toContain('尚無')
+    expect(wrapper.text()).not.toContain('已指派')
   })
 
   it('hides draft actions after the order is OPEN', async () => {

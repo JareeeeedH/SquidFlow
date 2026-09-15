@@ -21,6 +21,15 @@ export type OrderListItem = {
   driver_id: string | null;
 };
 
+export type AssignedDriver = {
+  username: string;
+  vehicle_type: string;
+  license_plate: string;
+  vehicle_brand: string;
+  vehicle_model: string;
+  vehicle_color: string;
+};
+
 export type OrderDetail = {
   id: string;
   order_no: string;
@@ -34,6 +43,7 @@ export type OrderDetail = {
   status: OrderStatus;
   dispatch_mode: DispatchMode;
   driver_id: string | null;
+  driver: AssignedDriver | null;
   created_by: string;
   accepted_at: string | null;
   started_at: string | null;
@@ -41,6 +51,19 @@ export type OrderDetail = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type OrderWithAssignedDriver = Order & {
+  driver: {
+    vehicleType: string;
+    licensePlate: string;
+    vehicleBrand: string;
+    vehicleModel: string;
+    vehicleColor: string;
+    user: {
+      username: string;
+    };
+  } | null;
 };
 
 export type DriverMyOrder = {
@@ -149,7 +172,23 @@ export function toListItem(order: Order): OrderListItem {
   };
 }
 
-export function toDetail(order: Order): OrderDetail {
+export function toAssignedDriver(
+  driver: OrderWithAssignedDriver['driver'],
+): AssignedDriver | null {
+  if (!driver) {
+    return null;
+  }
+  return {
+    username: driver.user.username,
+    vehicle_type: driver.vehicleType,
+    license_plate: driver.licensePlate,
+    vehicle_brand: driver.vehicleBrand,
+    vehicle_model: driver.vehicleModel,
+    vehicle_color: driver.vehicleColor,
+  };
+}
+
+export function toDetail(order: OrderWithAssignedDriver): OrderDetail {
   return {
     id: order.id,
     order_no: order.orderNo,
@@ -163,6 +202,7 @@ export function toDetail(order: Order): OrderDetail {
     status: order.status,
     dispatch_mode: order.dispatchMode,
     driver_id: order.driverId,
+    driver: toAssignedDriver(order.driver),
     created_by: order.createdBy,
     accepted_at: iso(order.acceptedAt),
     started_at: iso(order.startedAt),

@@ -382,6 +382,21 @@
 - Production Cookie 維持 HttpOnly / Secure / SameSite=Lax；`TRUST_PROXY` 供反代後取得真實 client IP
 - 明確 JSON body 上限 100kb
 - 未修改 Order business rules、Database Schema、API contract
-- 未實作 `GET /notifications`、Dashboard、deployment
+- 未實作 `GET /notifications`、Order Events / Timeline、Dashboard、deployment
+
+---
+
+## TASK-015B — Admin Order Detail Driver 資訊
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/orders/:id`（含 PUT 成功回傳）增加 `driver`
+- 未指派：`driver: null`
+- 已指派：`username`、`vehicle_type`、`license_plate`、`vehicle_brand`、`vehicle_model`、`vehicle_color`
+- Admin Order Detail 顯示接單司機與車輛資訊；Frontend 不另打 Driver API
+- 已同步 `API-SPEC`；未改 Schema
+- Dashboard / Dispatch Console 暫緩獨立 TASK，未縮減 UI-UX-SPEC
 
 ---

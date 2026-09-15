@@ -19,6 +19,7 @@ const sample: OrderDetail = {
   status: 'DRAFT',
   dispatch_mode: 'OPEN',
   driver_id: null,
+  driver: null,
   created_by: 'admin-1',
   accepted_at: null,
   started_at: null,

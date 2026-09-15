@@ -27,12 +27,25 @@ import {
   toDriverOpenOrder,
   toDriverOrderDetail,
   toListItem,
+  type OrderWithAssignedDriver,
 } from './orders.mapper';
 import {
   DriverMyOrdersQuery,
   OrderInput,
   OrderListQuery,
 } from './orders.validation';
+
+const assignedDriverInclude = {
+  driver: {
+    include: {
+      user: {
+        select: {
+          username: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.OrderInclude;
 
 @Injectable()
 export class OrdersService {
@@ -552,6 +565,7 @@ export class OrdersService {
         price: input.price,
         note: input.note,
       },
+      include: assignedDriverInclude,
     });
 
     return toDetail(order);
@@ -570,8 +584,11 @@ export class OrdersService {
     });
   }
 
-  private async findOrderOrThrow(id: string) {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+  private async findOrderOrThrow(id: string): Promise<OrderWithAssignedDriver> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: assignedDriverInclude,
+    });
     if (!order) {
       throw AppErrors.notFound('找不到訂單');
     }

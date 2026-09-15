@@ -66,6 +66,15 @@ export type OrderListQuery = {
   date?: string
 }
 
+export type AssignedDriver = {
+  username: string
+  vehicle_type: string
+  license_plate: string
+  vehicle_brand: string
+  vehicle_model: string
+  vehicle_color: string
+}
+
 export type OrderDetail = {
   id: string
   order_no: string
@@ -79,6 +88,7 @@ export type OrderDetail = {
   status: OrderStatus
   dispatch_mode: 'OPEN' | 'DIRECT' | 'PRIORITY' | 'AUTO'
   driver_id: string | null
+  driver: AssignedDriver | null
   created_by: string
   accepted_at: string | null
   started_at: string | null

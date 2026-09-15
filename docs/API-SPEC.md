@@ -361,6 +361,14 @@ GET /api/v1/orders/:id
     "status": "ACCEPTED",
     "dispatch_mode": "OPEN",
     "driver_id": "driver-uuid",
+    "driver": {
+      "username": "driver001",
+      "vehicle_type": "5人座",
+      "license_plate": "ABC-1234",
+      "vehicle_brand": "Toyota",
+      "vehicle_model": "Camry",
+      "vehicle_color": "黑色"
+    },
     "created_by": "admin-uuid",
     "accepted_at": "2026-09-15T07:05:00Z",
     "started_at": null,
@@ -371,6 +379,8 @@ GET /api/v1/orders/:id
   }
 }
 ```
+
+未指派司機時 `driver` 為 `null`。`driver` 只包含上述欄位，不含 `id`、`vehicle_year`、`online_status`、帳號 `status`。
 
 ---
 

@@ -343,7 +343,31 @@ watch(
             <div class="status-block">
               <OrderStatusTag :status="order.status" />
               <p class="driver-label">接單司機</p>
-              <p class="driver-value">{{ order.driver_id ? '已指派' : '尚無' }}</p>
+              <template v-if="order.driver">
+                <p class="driver-value">{{ order.driver.username }}</p>
+                <dl class="driver-fields">
+                  <div>
+                    <dt>車型</dt>
+                    <dd>{{ order.driver.vehicle_type }}</dd>
+                  </div>
+                  <div>
+                    <dt>車牌</dt>
+                    <dd>{{ order.driver.license_plate }}</dd>
+                  </div>
+                  <div>
+                    <dt>車輛</dt>
+                    <dd>
+                      {{ order.driver.vehicle_brand }}
+                      {{ order.driver.vehicle_model }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>顏色</dt>
+                    <dd>{{ order.driver.vehicle_color }}</dd>
+                  </div>
+                </dl>
+              </template>
+              <p v-else class="driver-value">尚無</p>
             </div>
             <div v-if="isDraft && !editing" class="draft-actions">
               <template v-if="confirmDelete">
@@ -535,6 +559,18 @@ dd {
 
 .driver-value {
   margin: 0;
+}
+
+.driver-fields {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  width: 100%;
+}
+
+.driver-fields > div {
+  display: grid;
+  gap: var(--space-4);
 }
 
 .draft-actions {

@@ -352,7 +352,65 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       created_by: users.admin.id,
       dispatch_mode: 'OPEN',
       scheduled_at: scheduledAtUtc,
+      driver_id: null,
+      driver: null,
     });
+    assertNoSecrets(detailBody);
+  });
+
+  it('returns assigned driver vehicle fields on order detail without extra driver payload', async () => {
+    const cookie = await adminCookie();
+    const created = await createDraft(cookie);
+    await prisma.order.update({
+      where: { id: created.id },
+      data: {
+        status: 'ACCEPTED',
+        driverId: users.driver.driverId,
+        acceptedAt: new Date('2026-09-15T07:05:00Z'),
+      },
+    });
+
+    const detail = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${created.id}`)
+      .set('Cookie', cookie)
+      .expect(200);
+    const detailBody = asBody<
+      ApiSuccessBody<{
+        driver_id: string;
+        driver: {
+          username: string;
+          vehicle_type: string;
+          license_plate: string;
+          vehicle_brand: string;
+          vehicle_model: string;
+          vehicle_color: string;
+        };
+      }>
+    >(detail);
+
+    expect(detailBody.data.driver_id).toBe(users.driver.driverId);
+    expect(detailBody.data.driver).toEqual({
+      username: users.driver.username,
+      vehicle_type: '5人座',
+      license_plate: users.driver.licensePlate,
+      vehicle_brand: 'Toyota',
+      vehicle_model: 'Camry',
+      vehicle_color: '黑色',
+    });
+    expect(Object.keys(detailBody.data.driver).sort()).toEqual([
+      'license_plate',
+      'username',
+      'vehicle_brand',
+      'vehicle_color',
+      'vehicle_model',
+      'vehicle_type',
+    ]);
+    expect(JSON.stringify(detailBody.data.driver)).not.toContain(
+      'vehicle_year',
+    );
+    expect(JSON.stringify(detailBody.data.driver)).not.toContain(
+      'online_status',
+    );
     assertNoSecrets(detailBody);
   });
 
