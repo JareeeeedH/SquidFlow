@@ -229,7 +229,7 @@ watch(
 
 <template>
   <section class="page">
-    <NButton text type="primary" @click="router.push({ name: 'orders' })">
+    <NButton class="back" text type="primary" @click="router.push({ name: 'orders' })">
       <template #icon>
         <ArrowLeft :size="16" />
       </template>
@@ -295,68 +295,60 @@ watch(
         </p>
 
         <div class="grid">
-          <article class="panel">
-            <h2>{{ editing ? '編輯草稿' : '訂單資訊' }}</h2>
-            <OrderForm
-              v-if="editing && editValues"
-              submit-label="儲存變更"
-              :initial-values="editValues"
-              :submitting="saving"
-              :error="actionError"
-              show-cancel
-              @submit="onSave"
-              @cancel="cancelEdit"
-            />
-            <dl v-else class="fields">
-              <div>
-                <dt>客戶</dt>
-                <dd>{{ formatOptionalText(order.customer_name) }}</dd>
-              </div>
-              <div class="route">
-                <dt>行程</dt>
-                <dd>
-                  <span>{{ order.pickup_location }}</span>
-                  <span class="route-arrow">↓</span>
-                  <span>{{ formatOptionalText(order.destination) }}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>價格</dt>
-                <dd class="price">{{ formatPrice(order.price) }}</dd>
-              </div>
-              <div>
-                <dt>備註</dt>
-                <dd>{{ formatOptionalText(order.note) }}</dd>
-              </div>
-            </dl>
-          </article>
+          <div class="main">
+            <article class="panel">
+              <h2>{{ editing ? '編輯草稿' : '訂單資訊' }}</h2>
+              <OrderForm
+                v-if="editing && editValues"
+                submit-label="儲存變更"
+                :initial-values="editValues"
+                :submitting="saving"
+                :error="actionError"
+                show-cancel
+                @submit="onSave"
+                @cancel="cancelEdit"
+              />
+              <dl v-else class="fields">
+                <div>
+                  <dt>客戶</dt>
+                  <dd>{{ formatOptionalText(order.customer_name) }}</dd>
+                </div>
+                <div class="emphasis">
+                  <dt>行程</dt>
+                  <dd class="route">
+                    <span>{{ order.pickup_location }}</span>
+                    <span class="route-arrow">→</span>
+                    <span>{{ formatOptionalText(order.destination) }}</span>
+                  </dd>
+                </div>
+                <div class="emphasis">
+                  <dt>價格</dt>
+                  <dd class="price">{{ formatPrice(order.price) }}</dd>
+                </div>
+                <div>
+                  <dt>備註</dt>
+                  <dd>{{ formatOptionalText(order.note) }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="panel">
+              <h2>接單司機</h2>
+              <RouterLink
+                v-if="order.driver && order.driver_id"
+                class="driver-link"
+                :to="{ name: 'driver-detail', params: { id: order.driver_id } }"
+              >
+                {{ order.driver.username }}
+              </RouterLink>
+              <p v-else class="driver-empty">尚無</p>
+            </article>
+          </div>
 
           <aside class="panel status-panel">
             <h2>訂單狀態</h2>
             <div class="status-block">
               <OrderStatusTag :status="order.status" />
-              <p class="driver-label">接單司機</p>
-              <template v-if="order.driver">
-                <p class="driver-value">{{ order.driver.username }}</p>
-                <dl class="driver-fields">
-                  <div>
-                    <dt>車牌</dt>
-                    <dd>{{ order.driver.license_plate }}</dd>
-                  </div>
-                  <div>
-                    <dt>車輛</dt>
-                    <dd>
-                      {{ order.driver.vehicle_brand }}
-                      {{ order.driver.vehicle_model }}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>顏色</dt>
-                    <dd>{{ order.driver.vehicle_color }}</dd>
-                  </div>
-                </dl>
-              </template>
-              <p v-else class="driver-value">尚無</p>
             </div>
             <div v-if="isDraft && !editing" class="draft-actions">
               <template v-if="confirmDelete">
@@ -457,7 +449,14 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
   min-width: 0;
+}
+
+.back {
+  align-self: flex-start;
 }
 
 .page-header {
@@ -469,8 +468,7 @@ watch(
 
 .kicker,
 .readonly-hint,
-.error-detail,
-.driver-label {
+.error-detail {
   margin: 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
@@ -483,14 +481,26 @@ watch(
 }
 
 h1 {
-  margin: var(--space-4) 0;
+  margin: var(--space-4) 0 0;
   font: var(--font-page-title);
+}
+
+.readonly-hint {
+  margin-top: var(--space-4);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr);
   gap: var(--space-16);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
 }
 
 .panel {
@@ -501,7 +511,9 @@ h1 {
 }
 
 h2 {
-  margin: 0 0 var(--space-16);
+  margin: 0 0 var(--space-12);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--color-border);
   font: var(--font-section-title);
 }
 
@@ -518,8 +530,7 @@ h2 {
   gap: var(--space-4);
 }
 
-dt,
-.driver-label {
+dt {
   font: var(--font-label);
   color: var(--color-muted-text);
 }
@@ -528,44 +539,59 @@ dd {
   margin: 0;
 }
 
+.emphasis .route,
+.emphasis .price {
+  color: var(--color-text);
+}
+
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+  font: var(--font-section-title);
+}
+
 .route-arrow {
-  display: block;
   color: var(--color-muted-text);
-  margin: var(--space-4) 0;
+  font: var(--font-label);
 }
 
 .price {
   font: var(--font-price);
 }
 
+.driver-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--color-primary);
+  font: var(--font-label);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.driver-link:hover,
+.driver-link:focus-visible {
+  text-decoration: underline;
+}
+
+.driver-empty {
+  margin: 0;
+  color: var(--color-muted-text);
+}
+
 .status-block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-8);
-  margin-bottom: var(--space-24);
-}
-
-.driver-value {
-  margin: 0;
-}
-
-.driver-fields {
-  display: grid;
-  gap: var(--space-8);
-  margin: 0;
-  width: 100%;
-}
-
-.driver-fields > div {
-  display: grid;
-  gap: var(--space-4);
+  margin-bottom: var(--space-16);
 }
 
 .draft-actions {
   display: grid;
   gap: var(--space-8);
-  margin-bottom: var(--space-24);
+  margin-bottom: var(--space-16);
 }
 
 .confirm-copy {
@@ -583,13 +609,23 @@ dd {
   padding: var(--space-32) 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
   }
 
   h1 {
     font-size: 24px;
+  }
+
+  .draft-actions :deep(.n-button) {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--space-16);
   }
 }
 </style>

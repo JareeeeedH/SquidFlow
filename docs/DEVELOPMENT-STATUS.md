@@ -547,3 +547,16 @@
 - 未改 API / Schema / business rules
 
 ---
+
+## TASK — Polish Admin Order Detail UI
+
+**Status:** completed
+
+### 已完成
+
+- Admin 訂單詳情改為置中 7:3 雙欄；左側訂單資訊 + 接單司機，右側狀態 / 操作 / 時間
+- 行程改為 `上車地點 → 目的地`，提高行程與價格層級
+- 未指派顯示尚無；已指派只顯示可點擊 username，進入既有 Driver Detail
+- 不顯示車牌 / 車輛 / 車色；未新增 Timeline、API、Schema 或 business action
+
+---

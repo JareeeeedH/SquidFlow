@@ -48,6 +48,11 @@ async function mountDetail(id = 'order-1') {
     routes: [
       { path: '/orders', name: 'orders', component: { template: '<div />' } },
       { path: '/orders/:id', name: 'order-detail', component: OrderDetailView },
+      {
+        path: '/drivers/:id',
+        name: 'driver-detail',
+        component: { template: '<div />' },
+      },
     ],
   })
   await router.push(`/orders/${id}`)
@@ -96,10 +101,14 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).toContain('刪除')
     expect(wrapper.text()).not.toContain('草稿可編輯、刪除或發布')
     expect(wrapper.text()).not.toContain('取消訂單')
+    expect(wrapper.text()).toContain('接單司機')
     expect(wrapper.text()).toContain('尚無')
+    expect(wrapper.get('.route').text()).toContain('左營高鐵站')
+    expect(wrapper.get('.route').text()).toContain('→')
+    expect(wrapper.get('.route').text()).toContain('高雄小港機場')
   })
 
-  it('shows assigned driver vehicle information from the order detail payload', async () => {
+  it('links assigned driver username to driver detail and hides vehicle fields', async () => {
     vi.mocked(getOrder).mockResolvedValue({
       ...openOrder,
       status: 'ACCEPTED',
@@ -112,15 +121,27 @@ describe('OrderDetailView', () => {
         vehicle_color: '白色',
       },
     })
-    const { wrapper } = await mountDetail()
+    const { wrapper, router } = await mountDetail()
+    const push = vi.spyOn(router, 'push')
 
+    expect(wrapper.text()).toContain('接單司機')
     expect(wrapper.text()).toContain('driver01')
-    expect(wrapper.text()).toContain('ABC-1234')
-    expect(wrapper.text()).toContain('Toyota')
-    expect(wrapper.text()).toContain('Sienta')
-    expect(wrapper.text()).toContain('白色')
+    expect(wrapper.text()).not.toContain('車牌')
+    expect(wrapper.text()).not.toContain('ABC-1234')
+    expect(wrapper.text()).not.toContain('Toyota')
+    expect(wrapper.text()).not.toContain('Sienta')
+    expect(wrapper.text()).not.toContain('白色')
     expect(wrapper.text()).not.toContain('尚無')
     expect(wrapper.text()).not.toContain('已指派')
+
+    const link = wrapper.get('.driver-link')
+    expect(link.text()).toBe('driver01')
+    await link.trigger('click')
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'driver-detail',
+      params: { id: 'driver-1' },
+    })
   })
 
   it('hides draft actions after the order is OPEN', async () => {
