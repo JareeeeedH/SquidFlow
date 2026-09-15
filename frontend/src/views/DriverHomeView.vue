@@ -168,6 +168,7 @@ void loadHome()
           size="large"
           type="primary"
           block
+          icon-placement="right"
           @click="router.push({ name: 'driver-open-orders' })"
         >
           可搶訂單
@@ -184,7 +185,12 @@ void loadHome()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
+}
+
+.page :deep(.n-spin-container),
+.page :deep(.n-spin-content) {
+  overflow: visible;
 }
 
 .identity h1 {
@@ -206,14 +212,14 @@ void loadHome()
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
-  padding: var(--space-24);
+  padding: var(--space-16);
 }
 
 .status-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-16);
-  margin-bottom: var(--space-24);
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
 }
 
 .status-row > div {
@@ -224,13 +230,12 @@ void loadHome()
 }
 
 .action-error {
-  margin: 0 0 var(--space-16);
+  margin: 0 0 var(--space-12);
   color: var(--color-danger);
   font: var(--font-caption);
 }
 
-.actions,
-.open-orders {
+.actions {
   display: grid;
   gap: var(--space-8);
 }
@@ -238,6 +243,16 @@ void loadHome()
 .actions :deep(.n-button),
 .open-orders {
   min-height: 48px;
+}
+
+.open-orders {
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.open-orders :deep(.n-button__content) {
+  overflow: visible;
+  flex: 1 1 auto;
 }
 
 .confirm-copy {

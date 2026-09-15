@@ -113,15 +113,17 @@ void loadOrders()
               <OrderStatusTag status="OPEN" />
             </div>
             <p class="order-no">{{ order.order_no }}</p>
-            <p class="place">{{ order.pickup_location }}</p>
-            <p class="arrow">↓</p>
-            <p class="place">{{ order.destination }}</p>
+            <div class="route">
+              <p class="place">{{ order.pickup_location }}</p>
+              <p class="arrow" aria-hidden="true">↓</p>
+              <p class="place">{{ order.destination }}</p>
+            </div>
             <div class="meta">
               <span>{{ order.vehicle_type }}</span>
               <span class="price">{{ formatPrice(order.price) }}</span>
             </div>
             <p v-if="order.note" class="note">{{ order.note }}</p>
-            <span class="view">查看訂單</span>
+            <span class="view">查看訂單 →</span>
           </button>
         </li>
       </ul>
@@ -133,7 +135,18 @@ void loadOrders()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
+}
+
+.page :deep(.n-spin-container),
+.page :deep(.n-spin-content) {
+  overflow: visible;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 h1 {
@@ -156,16 +169,16 @@ h1 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-8);
 }
 
 .card {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-8);
-  padding: var(--space-16);
+  align-items: stretch;
+  gap: var(--space-4);
+  padding: var(--space-12);
   min-height: 48px;
   text-align: left;
   background: var(--color-surface);
@@ -180,7 +193,6 @@ h1 {
 }
 
 .card-top {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -189,35 +201,63 @@ h1 {
 
 .time {
   margin: 0;
-  font: var(--font-section-title);
+  font: var(--font-label);
+  font-weight: 600;
+}
+
+.order-no {
+  line-height: 1.3;
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
 }
 
 .place {
   margin: 0;
   font: var(--font-body);
+  font-weight: 500;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  line-height: 1.1;
 }
 
 .meta {
-  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-8);
+  margin-top: var(--space-4);
   font: var(--font-label);
+  color: var(--color-muted-text);
 }
 
 .price {
-  font: var(--font-price);
+  font: var(--font-section-title);
+  color: var(--color-text);
+}
+
+.note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .view {
-  margin-top: var(--space-4);
   color: var(--color-primary);
   font: var(--font-label);
 }
 
 .state {
-  padding: var(--space-32) 0;
+  padding: var(--space-24) 0;
 }
 
 .state :deep(.n-button) {
