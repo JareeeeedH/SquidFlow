@@ -37,7 +37,12 @@ async function onSubmit(input: CreateOrderInput) {
 
 <template>
   <section class="page">
-    <NButton text type="primary" @click="router.push({ name: 'orders' })">
+    <NButton
+      class="back"
+      text
+      type="primary"
+      @click="router.push({ name: 'orders' })"
+    >
       <template #icon>
         <ArrowLeft :size="16" />
       </template>
@@ -52,6 +57,7 @@ async function onSubmit(input: CreateOrderInput) {
     <div class="panel">
       <OrderForm
         submit-label="儲存草稿"
+        grouped
         :submitting="submitting"
         :error="error"
         @submit="onSubmit"
@@ -65,7 +71,18 @@ async function onSubmit(input: CreateOrderInput) {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
-  max-width: 640px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-header,
+.panel {
+  width: 100%;
+}
+
+.back {
+  align-self: flex-start;
 }
 
 .page-header h1 {
@@ -83,6 +100,12 @@ async function onSubmit(input: CreateOrderInput) {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
-  padding: var(--space-24);
+  padding: var(--space-32);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--space-16);
+  }
 }
 </style>

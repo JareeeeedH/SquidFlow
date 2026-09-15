@@ -508,3 +508,16 @@
 - 已同步 MVP / DATABASE / API / UI-UX Spec
 
 ---
+
+## TASK — Polish Admin Create Order UI
+
+**Status:** completed
+
+### 已完成
+
+- 建立派車單頁改為置中、最大寬度 800px；Header 與 Form Card 同寬
+- 表單分成「行程資訊」「費用與備註」，上車地點維持必填強調
+- 「儲存草稿」維持右下 Primary CTA
+- 未改欄位、API、Schema、validation、routing 或 business rules
+
+---
