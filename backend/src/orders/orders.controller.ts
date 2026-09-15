@@ -64,6 +64,19 @@ export class OrdersController {
     };
   }
 
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  async cancel(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.ordersService.cancel(id, user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
   @Get(':id')
   async getById(@Param('id', parseOrderId) id: string) {
     const data = await this.ordersService.getById(id);

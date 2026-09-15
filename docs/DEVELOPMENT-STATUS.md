@@ -279,3 +279,21 @@
 - 未實作 Cancel、My Orders Frontend、Web Push
 
 ---
+
+## TASK-011 — Admin Cancel Order
+
+**Status:** completed
+
+### 已完成
+
+- `POST /api/v1/orders/:id/cancel`
+- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
+- Atomic `UPDATE ... WHERE id AND status IN ('OPEN', 'ACCEPTED')` → `CANCELLED` + `cancelled_at`
+- 同一 transaction 寫入 `ORDER_CANCELLED`
+- `ACCEPTED` 取消保留 `driver_id` / `accepted_at`；該 Driver 可再接其他 OPEN 訂單
+- 非法 / 重複 cancel → `INVALID_ORDER_STATUS`；不存在 → `NOT_FOUND`；Driver → `403`
+- 不接受 client `driver_id` / `cancelled_at` / 狀態欄位
+- 不發送 Web Push / Notification
+- 未實作 Cancel Frontend、Web Push
+
+---

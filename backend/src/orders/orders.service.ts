@@ -485,6 +485,53 @@ export class OrdersService {
     });
   }
 
+  async cancel(id: string, user: AuthenticatedUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const cancelledAt = new Date();
+      const updated = await tx.order.updateMany({
+        where: {
+          id,
+          status: {
+            in: [OrderStatus.OPEN, OrderStatus.ACCEPTED],
+          },
+        },
+        data: {
+          status: OrderStatus.CANCELLED,
+          cancelledAt,
+        },
+      });
+
+      if (updated.count !== 1) {
+        const existing = await tx.order.findUnique({ where: { id } });
+        if (!existing) {
+          throw AppErrors.notFound('找不到訂單');
+        }
+        throw AppErrors.invalidOrderStatus();
+      }
+
+      await tx.orderEvent.create({
+        data: {
+          orderId: id,
+          eventType: OrderEventType.ORDER_CANCELLED,
+          actorUserId: user.id,
+        },
+      });
+
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      return {
+        id: order.id,
+        status: order.status,
+      };
+    });
+  }
+
   async update(id: string, input: OrderInput) {
     const existing = await this.findOrderOrThrow(id);
     if (existing.status !== OrderStatus.DRAFT) {
