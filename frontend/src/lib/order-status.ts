@@ -27,6 +27,16 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: '已取消',
 }
 
+export const OPERATIONAL_ORDER_STATUSES = [
+  'OPEN',
+  'ACCEPTED',
+  'IN_PROGRESS',
+] as const satisfies readonly OrderStatus[]
+
+export function isOperationalStatus(status: OrderStatus) {
+  return (OPERATIONAL_ORDER_STATUSES as readonly OrderStatus[]).includes(status)
+}
+
 export function parseOrderStatus(raw: unknown): OrderStatus | null {
   const value = Array.isArray(raw) ? raw[0] : raw
   if (typeof value !== 'string') {

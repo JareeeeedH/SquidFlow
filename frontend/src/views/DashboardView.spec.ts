@@ -125,6 +125,27 @@ describe('DashboardView', () => {
     expect(wrapper.text()).not.toContain('ORD-COMPLETED')
   })
 
+  it('emphasizes operational statuses in the summary', async () => {
+    const { wrapper } = await mountDashboard()
+    const cards = wrapper.findAll('.summary-card')
+    const open = cards.find((button) => button.text().includes('搶單中'))
+    const accepted = cards.find((button) => button.text().includes('已接單'))
+    const inProgress = cards.find((button) => button.text().includes('行程中'))
+    const draft = cards.find((button) => button.text().includes('草稿'))
+
+    expect(open?.classes()).toContain('is-operational')
+    expect(accepted?.classes()).toContain('is-operational')
+    expect(inProgress?.classes()).toContain('is-operational')
+    expect(draft?.classes()).not.toContain('is-operational')
+  })
+
+  it('shows a compact empty state for board columns without orders', async () => {
+    const { wrapper } = await mountDashboard()
+
+    expect(wrapper.text()).toContain('目前沒有訂單')
+    expect(wrapper.find('.column-empty').exists()).toBe(true)
+  })
+
   it('opens order detail from a board card', async () => {
     const { wrapper, router } = await mountDashboard()
     const push = vi.spyOn(router, 'push')

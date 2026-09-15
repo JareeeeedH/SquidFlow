@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { RotateCcw } from 'lucide-vue-next'
-import { NButton, NEmpty, NResult } from 'naive-ui'
+import { Clock, RotateCcw, User, UserX } from 'lucide-vue-next'
+import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAdminDashboard } from '../api/dashboard'
 import { ApiClientError } from '../api/types'
 import type { AdminDashboard, DashboardBoardOrder, OrderStatus } from '../api/types'
+import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { groupBoardOrders } from '../lib/dashboard'
 import { formatPrice, formatScheduledAt } from '../lib/format'
 import {
   DASHBOARD_BOARD_STATUSES,
-  ORDER_STATUS_LABELS,
   ORDER_STATUSES,
+  isOperationalStatus,
 } from '../lib/order-status'
 
 const router = useRouter()
@@ -29,7 +30,6 @@ const groupedBoardOrders = computed(() =>
 const boardColumns = computed(() =>
   DASHBOARD_BOARD_STATUSES.map((status) => ({
     status,
-    label: ORDER_STATUS_LABELS[status],
     count: dashboard.value?.summary[status] ?? 0,
     orders: groupedBoardOrders.value[status],
   })),
@@ -37,6 +37,17 @@ const boardColumns = computed(() =>
 
 function driverLabel(order: DashboardBoardOrder) {
   return order.driver?.username ?? '未指派'
+}
+
+function isAssigned(order: DashboardBoardOrder) {
+  return Boolean(order.driver?.username)
+}
+
+function summaryCount(status: OrderStatus) {
+  if (!dashboard.value) {
+    return loading.value ? '—' : 0
+  }
+  return dashboard.value.summary[status]
 }
 
 function openOrders(status: OrderStatus) {
@@ -121,61 +132,86 @@ void loadDashboard()
       </template>
     </NResult>
 
-    <template v-else>
+    <NSpin v-else :show="loading">
       <section class="summary" aria-label="訂單狀態統計">
-        <button
-          v-for="status in ORDER_STATUSES"
-          :key="status"
-          class="summary-card"
-          type="button"
-          @click="openOrders(status)"
-        >
-          <span class="summary-label">{{ ORDER_STATUS_LABELS[status] }}</span>
-          <span class="summary-count">{{ dashboard?.summary[status] ?? (loading ? '—' : 0) }}</span>
-        </button>
+        <h2 class="section-title">狀態總覽</h2>
+        <div class="summary-grid">
+          <button
+            v-for="status in ORDER_STATUSES"
+            :key="status"
+            class="summary-card"
+            :class="{ 'is-operational': isOperationalStatus(status) }"
+            :data-status="status"
+            type="button"
+            @click="openOrders(status)"
+          >
+            <span class="summary-top">
+              <OrderStatusTag :status="status" />
+            </span>
+            <span class="summary-count">{{ summaryCount(status) }}</span>
+          </button>
+        </div>
       </section>
 
       <section class="board" aria-label="派車看板">
-        <div
-          v-for="column in boardColumns"
-          :key="column.status"
-          class="column"
-        >
-          <header class="column-header">
-            <h2>{{ column.label }}</h2>
-            <span>{{ column.count }}</span>
-          </header>
-          <div class="column-body">
-            <NEmpty
-              v-if="!loading && column.orders.length === 0"
-              description="目前沒有訂單"
-            />
-            <button
-              v-for="order in column.orders"
-              :key="order.id"
-              class="order-card"
-              type="button"
-              @click="openOrder(order.id)"
-            >
-              <div class="card-row">
-                <span class="order-no">{{ order.order_no }}</span>
-                <span class="price">{{ formatPrice(order.price) }}</span>
+        <h2 class="section-title">派車看板</h2>
+        <div class="board-grid">
+          <div
+            v-for="column in boardColumns"
+            :key="column.status"
+            class="column"
+            :data-status="column.status"
+          >
+            <header class="column-header">
+              <div class="column-title">
+                <OrderStatusTag :status="column.status" />
               </div>
-              <p class="customer">{{ order.customer_name }}</p>
-              <p class="route">
-                {{ order.pickup_location }}
-                <span class="arrow">→</span>
-                {{ order.destination }}
+              <span class="column-count">{{ column.count }}</span>
+            </header>
+            <div class="column-body">
+              <p
+                v-if="!loading && column.orders.length === 0"
+                class="column-empty"
+              >
+                目前沒有訂單
               </p>
-              <div class="card-row meta">
-                <span>{{ formatScheduledAt(order.scheduled_at) }}</span>
-                <span>{{ driverLabel(order) }}</span>
-              </div>
-            </button>
+              <button
+                v-for="order in column.orders"
+                :key="order.id"
+                class="order-card"
+                type="button"
+                @click="openOrder(order.id)"
+              >
+                <div class="card-row">
+                  <span class="order-no">{{ order.order_no }}</span>
+                  <span class="price">{{ formatPrice(order.price) }}</span>
+                </div>
+                <p class="customer">{{ order.customer_name }}</p>
+                <p class="route">
+                  {{ order.pickup_location }}
+                  <span class="arrow">→</span>
+                  {{ order.destination }}
+                </p>
+                <div class="card-row meta">
+                  <span class="time">
+                    <Clock :size="12" />
+                    {{ formatScheduledAt(order.scheduled_at) }}
+                  </span>
+                  <span
+                    class="driver"
+                    :class="isAssigned(order) ? 'is-assigned' : 'is-unassigned'"
+                  >
+                    <User v-if="isAssigned(order)" :size="12" />
+                    <UserX v-else :size="12" />
+                    {{ driverLabel(order) }}
+                  </span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </section>
-    </template>
+    </NSpin>
   </section>
 </template>
 
@@ -183,7 +219,7 @@ void loadDashboard()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-24);
   min-width: 0;
 }
 
@@ -205,6 +241,11 @@ h1 {
   font: var(--font-caption);
 }
 
+.section-title {
+  margin: 0 0 var(--space-12);
+  font: var(--font-section-title);
+}
+
 .state {
   padding: var(--space-32) var(--space-16);
 }
@@ -215,77 +256,152 @@ h1 {
   font: var(--font-caption);
 }
 
-.summary {
+.summary-grid,
+.board-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--space-12);
+}
+
+.summary-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.board-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.summary-card,
+.column,
+.order-card {
+  --status-color: var(--color-muted-text);
+}
+
+.summary-card[data-status='OPEN'],
+.column[data-status='OPEN'] {
+  --status-color: var(--color-warning);
+}
+
+.summary-card[data-status='ACCEPTED'],
+.column[data-status='ACCEPTED'] {
+  --status-color: var(--color-info);
+}
+
+.summary-card[data-status='IN_PROGRESS'],
+.column[data-status='IN_PROGRESS'] {
+  --status-color: var(--color-primary);
+}
+
+.summary-card[data-status='COMPLETED'] {
+  --status-color: var(--color-success);
+}
+
+.summary-card[data-status='CANCELLED'] {
+  --status-color: var(--color-danger);
 }
 
 .summary-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-12);
   align-items: flex-start;
+  min-height: 96px;
   padding: var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
+  box-shadow: inset 0 3px 0 var(--status-color);
   cursor: pointer;
   text-align: left;
+  color: var(--color-text);
 }
 
-.summary-card:hover {
-  border-color: var(--color-primary);
+.summary-card.is-operational {
+  background: color-mix(in srgb, var(--status-color) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--status-color) 35%, var(--color-border));
 }
 
-.summary-label {
-  color: var(--color-muted-text);
-  font: var(--font-caption);
+.summary-card:hover,
+.summary-card:focus-visible {
+  border-color: var(--status-color);
+}
+
+.summary-card:focus-visible,
+.order-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.summary-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
 }
 
 .summary-count {
-  font: var(--font-section-title);
+  font: var(--font-price);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
-.board {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-12);
-  align-items: start;
+.summary-card.is-operational .summary-count {
+  color: var(--status-color);
 }
 
 .column {
   min-width: 0;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
-  padding: var(--space-12);
+  overflow: hidden;
 }
 
 .column-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-8);
-  margin-bottom: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  background: color-mix(in srgb, var(--status-color) 8%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
 }
 
-.column-header h2 {
-  margin: 0;
+.column-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.column-count {
+  flex-shrink: 0;
+  min-width: 24px;
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-8);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: var(--font-label);
-}
-
-.column-header span {
-  color: var(--color-muted-text);
-  font: var(--font-caption);
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .column-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+  padding: var(--space-12);
+  flex: 1;
+}
+
+.column-empty {
+  margin: auto 0;
+  padding: var(--space-24) var(--space-8);
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+  text-align: center;
 }
 
 .order-card {
@@ -296,13 +412,17 @@ h1 {
   padding: var(--space-12);
   background: var(--color-background);
   border: 1px solid var(--color-border);
+  border-left: 3px solid var(--status-color);
   border-radius: var(--radius-8);
   cursor: pointer;
   text-align: left;
+  color: var(--color-text);
 }
 
-.order-card:hover {
-  border-color: var(--color-primary);
+.order-card:hover,
+.order-card:focus-visible {
+  border-color: var(--status-color);
+  background: var(--color-surface);
 }
 
 .card-row {
@@ -314,9 +434,13 @@ h1 {
 
 .order-no {
   font: var(--font-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .price {
+  flex-shrink: 0;
   font: var(--font-label);
   font-variant-numeric: tabular-nums;
 }
@@ -324,11 +448,17 @@ h1 {
 .customer,
 .route {
   margin: 0;
-  font: var(--font-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customer {
+  font: var(--font-body);
 }
 
 .route {
   color: var(--color-muted-text);
+  font: var(--font-caption);
 }
 
 .arrow {
@@ -338,11 +468,41 @@ h1 {
 .meta {
   color: var(--color-muted-text);
   font: var(--font-caption);
+  align-items: center;
 }
 
-@media (max-width: 1100px) {
-  .summary,
-  .board {
+.time,
+.driver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.driver {
+  flex-shrink: 0;
+  max-width: 46%;
+  overflow: hidden;
+  padding: 2px var(--space-8);
+  border-radius: var(--radius-4);
+}
+
+.driver.is-assigned {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.driver.is-unassigned {
+  color: var(--color-muted-text);
+  background: color-mix(in srgb, var(--color-muted-text) 8%, transparent);
+}
+
+@media (max-width: 1280px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .board-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -352,8 +512,19 @@ h1 {
     font-size: 24px;
   }
 
-  .summary,
-  .board {
+  .page {
+    gap: var(--space-16);
+  }
+
+  .summary-grid,
+  .board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .summary-grid,
+  .board-grid {
     grid-template-columns: 1fr;
   }
 }

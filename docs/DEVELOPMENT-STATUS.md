@@ -433,5 +433,19 @@
 - Dashboard 不含完整 Order List、搜尋 / 日期篩選、BI / 報表、Realtime
 - 未改 Backend / Frontend / Schema / API contract
 
+---
+
+## TASK-016C — Admin Dashboard UI Polish
+
+**Status:** completed
+
+### 已完成
+
+- Status Summary：數字層級、OrderStatusTag、可點擊 hover / focus、OPEN / ACCEPTED / IN_PROGRESS 較高辨識度
+- Dispatch Board：欄位 header、卡片資訊分層、司機 / 未指派、compact empty state
+- Desktop / Laptop / Tablet 欄位切分調整
+- 未改 API / Schema / business rules / routing
+
+
 
 ---
