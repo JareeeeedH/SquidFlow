@@ -1,6 +1,11 @@
 import { DispatchMode, OrderStatus } from '@prisma/client';
 import { Prisma } from '@prisma/client';
-import { toDetail, type OrderWithAssignedDriver } from './orders.mapper';
+import {
+  toDashboardBoardOrder,
+  toDashboardSummary,
+  toDetail,
+  type OrderWithAssignedDriver,
+} from './orders.mapper';
 
 function orderRow(
   overrides: Partial<OrderWithAssignedDriver> = {},
@@ -70,5 +75,59 @@ describe('toDetail', () => {
       'vehicle_model',
       'vehicle_type',
     ]);
+  });
+});
+
+describe('toDashboardSummary', () => {
+  it('fills all six statuses and defaults missing counts to zero', () => {
+    expect(
+      toDashboardSummary([
+        { status: OrderStatus.OPEN, count: 4 },
+        { status: OrderStatus.ACCEPTED, count: 3 },
+      ]),
+    ).toEqual({
+      DRAFT: 0,
+      OPEN: 4,
+      ACCEPTED: 3,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+    });
+  });
+});
+
+describe('toDashboardBoardOrder', () => {
+  it('returns driver null when the order is unassigned', () => {
+    expect(toDashboardBoardOrder(orderRow()).driver).toBeNull();
+  });
+
+  it('maps only username for an assigned driver', () => {
+    const item = toDashboardBoardOrder(
+      orderRow({
+        status: OrderStatus.ACCEPTED,
+        driverId: 'driver-1',
+        driver: {
+          vehicleType: '7人座',
+          licensePlate: 'ABC-1234',
+          vehicleBrand: 'Toyota',
+          vehicleModel: 'Sienta',
+          vehicleColor: '白色',
+          user: { username: 'driver01' },
+        },
+      }),
+    );
+
+    expect(item).toEqual({
+      id: 'order-1',
+      order_no: 'ORD-20260915-001',
+      customer_name: '王先生',
+      pickup_location: '左營高鐵站',
+      destination: '高雄小港機場',
+      scheduled_at: '2026-09-15T07:30:00.000Z',
+      price: 1200,
+      status: OrderStatus.ACCEPTED,
+      driver: { username: 'driver01' },
+    });
+    expect(Object.keys(item.driver ?? {})).toEqual(['username']);
   });
 });

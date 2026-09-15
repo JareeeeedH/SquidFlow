@@ -10,7 +10,7 @@ export type AuthRedirectTarget = {
 }
 
 export function homeRouteName(role: CurrentUser['role']) {
-  return role === 'DRIVER' ? 'driver-home' : 'orders'
+  return role === 'DRIVER' ? 'driver-home' : 'dashboard'
 }
 
 export function resolveAuthRedirect(

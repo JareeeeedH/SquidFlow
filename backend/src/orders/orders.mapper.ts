@@ -66,6 +66,43 @@ export type OrderWithAssignedDriver = Order & {
   } | null;
 };
 
+export type DashboardBoardDriver = {
+  username: string;
+};
+
+export type DashboardBoardOrder = {
+  id: string;
+  order_no: string;
+  customer_name: string;
+  pickup_location: string;
+  destination: string;
+  scheduled_at: string;
+  price: number;
+  status: OrderStatus;
+  driver: DashboardBoardDriver | null;
+};
+
+export type DashboardSummary = {
+  DRAFT: number;
+  OPEN: number;
+  ACCEPTED: number;
+  IN_PROGRESS: number;
+  COMPLETED: number;
+  CANCELLED: number;
+};
+
+export type AdminDashboard = {
+  summary: DashboardSummary;
+  board_orders: DashboardBoardOrder[];
+};
+
+export const DASHBOARD_BOARD_STATUSES: OrderStatus[] = [
+  OrderStatus.DRAFT,
+  OrderStatus.OPEN,
+  OrderStatus.ACCEPTED,
+  OrderStatus.IN_PROGRESS,
+];
+
 export type DriverMyOrder = {
   id: string;
   order_no: string;
@@ -169,6 +206,43 @@ export function toListItem(order: Order): OrderListItem {
     note: order.note,
     status: order.status,
     driver_id: order.driverId,
+  };
+}
+
+export function emptyDashboardSummary(): DashboardSummary {
+  return {
+    DRAFT: 0,
+    OPEN: 0,
+    ACCEPTED: 0,
+    IN_PROGRESS: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+  };
+}
+
+export function toDashboardSummary(
+  counts: Array<{ status: OrderStatus; count: number }>,
+): DashboardSummary {
+  const summary = emptyDashboardSummary();
+  for (const row of counts) {
+    summary[row.status] = row.count;
+  }
+  return summary;
+}
+
+export function toDashboardBoardOrder(
+  order: OrderWithAssignedDriver,
+): DashboardBoardOrder {
+  return {
+    id: order.id,
+    order_no: order.orderNo,
+    customer_name: order.customerName,
+    pickup_location: order.pickupLocation,
+    destination: order.destination,
+    scheduled_at: order.scheduledAt.toISOString(),
+    price: priceNumber(order.price),
+    status: order.status,
+    driver: order.driver ? { username: order.driver.user.username } : null,
   };
 }
 

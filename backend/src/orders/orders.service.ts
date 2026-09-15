@@ -21,7 +21,10 @@ import {
   taipeiDateStamp,
 } from './order-number';
 import {
+  DASHBOARD_BOARD_STATUSES,
   toCreateResponse,
+  toDashboardBoardOrder,
+  toDashboardSummary,
   toDetail,
   toDriverMyOrder,
   toDriverOpenOrder,
@@ -87,6 +90,34 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
     return orders.map((order) => toListItem(order));
+  }
+
+  async getDashboard() {
+    const [groups, boardOrders] = await Promise.all([
+      this.prisma.order.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+      this.prisma.order.findMany({
+        where: {
+          status: {
+            in: DASHBOARD_BOARD_STATUSES,
+          },
+        },
+        include: assignedDriverInclude,
+        orderBy: { scheduledAt: 'asc' },
+      }),
+    ]);
+
+    return {
+      summary: toDashboardSummary(
+        groups.map((group) => ({
+          status: group.status,
+          count: group._count._all,
+        })),
+      ),
+      board_orders: boardOrders.map((order) => toDashboardBoardOrder(order)),
+    };
   }
 
   async getById(id: string) {

@@ -11,26 +11,26 @@ import {
   type DataTableColumns,
 } from 'naive-ui'
 import { computed, h, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { listOrders } from '../api/orders'
 import { ApiClientError } from '../api/types'
 import type { OrderListItem, OrderListQuery, OrderStatus } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { ORDER_STATUS_LABELS, ORDER_STATUSES, parseOrderStatus } from '../lib/order-status'
 
-const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
-  { label: '草稿', value: 'DRAFT' },
-  { label: '搶單中', value: 'OPEN' },
-  { label: '已接單', value: 'ACCEPTED' },
-  { label: '行程中', value: 'IN_PROGRESS' },
-  { label: '已完成', value: 'COMPLETED' },
-  { label: '已取消', value: 'CANCELLED' },
-]
+const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = ORDER_STATUSES.map(
+  (value) => ({
+    label: ORDER_STATUS_LABELS[value],
+    value,
+  }),
+)
 
+const route = useRoute()
 const router = useRouter()
 const searchInput = ref('')
 const appliedSearch = ref('')
-const status = ref<OrderStatus | null>(null)
+const status = ref<OrderStatus | null>(parseOrderStatus(route.query.status))
 const dateValue = ref<number | null>(null)
 const orders = ref<OrderListItem[]>([])
 const loading = ref(false)
@@ -141,6 +141,30 @@ function clearFilters() {
   status.value = null
   dateValue.value = null
 }
+
+watch(
+  () => route.query.status,
+  (raw) => {
+    const next = parseOrderStatus(raw)
+    if (next !== status.value) {
+      status.value = next
+    }
+  },
+)
+
+watch(status, (value) => {
+  const current = parseOrderStatus(route.query.status)
+  if (current === value) {
+    return
+  }
+  const nextQuery = { ...route.query }
+  if (value) {
+    nextQuery.status = value
+  } else {
+    delete nextQuery.status
+  }
+  void router.replace({ query: nextQuery })
+})
 
 async function loadOrders() {
   const seq = ++requestSeq

@@ -478,6 +478,57 @@ ACCEPTED
 
 ---
 
+# 3.1 Admin — Dashboard
+
+```http
+GET /api/v1/admin/dashboard
+```
+
+Admin-only。Driver 回 `403 FORBIDDEN`。
+
+`summary` 由 Backend 聚合六種 Order Status 數量。  
+`board_orders` 只包含 `DRAFT`、`OPEN`、`ACCEPTED`、`IN_PROGRESS`，供 Dispatch Board 使用。  
+`COMPLETED` / `CANCELLED` 只出現在 `summary`，不進入 `board_orders`。
+
+未指派司機時 `driver` 為 `null`。已指派時 `driver` 只含 `username`。
+
+`board_orders` 依 `scheduled_at` 升序。
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "DRAFT": 2,
+      "OPEN": 4,
+      "ACCEPTED": 3,
+      "IN_PROGRESS": 2,
+      "COMPLETED": 1,
+      "CANCELLED": 0
+    },
+    "board_orders": [
+      {
+        "id": "uuid",
+        "order_no": "ORD-20260915-001",
+        "customer_name": "王先生",
+        "pickup_location": "左營高鐵站",
+        "destination": "高雄小港機場",
+        "scheduled_at": "2026-09-15T15:30:00+08:00",
+        "price": 1200,
+        "status": "ACCEPTED",
+        "driver": {
+          "username": "driver001"
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
 ## Get Order Events
 
 ```http
@@ -855,6 +906,7 @@ DELETE /api/v1/notifications/subscription
 ```text
 Driver Management
 Order Management
+Dashboard
 Order Events
 ```
 

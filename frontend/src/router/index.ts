@@ -9,6 +9,7 @@ import AppLayout from '../layouts/AppLayout.vue'
 import DriverLayout from '../layouts/DriverLayout.vue'
 import { resolveAuthRedirect } from '../lib/auth-redirect'
 import { useAuthStore } from '../stores/auth'
+import DashboardView from '../views/DashboardView.vue'
 import DriverCreateView from '../views/DriverCreateView.vue'
 import DriverDetailView from '../views/DriverDetailView.vue'
 import DriverHomeView from '../views/DriverHomeView.vue'
@@ -45,7 +46,8 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: { name: 'orders' },
+          name: 'dashboard',
+          component: DashboardView,
         },
         {
           path: 'orders',

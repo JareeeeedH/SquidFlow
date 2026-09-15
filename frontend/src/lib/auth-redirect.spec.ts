@@ -18,7 +18,7 @@ const driver: CurrentUser = {
 
 describe('auth redirect', () => {
   it('sends each role to its own home', () => {
-    expect(homeRouteName('ADMIN')).toBe('orders')
+    expect(homeRouteName('ADMIN')).toBe('dashboard')
     expect(homeRouteName('DRIVER')).toBe('driver-home')
   })
 
@@ -31,7 +31,7 @@ describe('auth redirect', () => {
   it('sends authenticated users away from login by role', () => {
     expect(
       resolveAuthRedirect({ name: 'login', meta: { public: true } }, admin),
-    ).toEqual({ name: 'orders' })
+    ).toEqual({ name: 'dashboard' })
     expect(
       resolveAuthRedirect({ name: 'login', meta: { public: true } }, driver),
     ).toEqual({ name: 'driver-home' })
@@ -43,7 +43,7 @@ describe('auth redirect', () => {
         { name: 'driver-home', meta: { requiresAuth: true, role: 'DRIVER' } },
         admin,
       ),
-    ).toEqual({ name: 'orders' })
+    ).toEqual({ name: 'dashboard' })
     expect(
       resolveAuthRedirect(
         { name: 'orders', meta: { requiresAuth: true, role: 'ADMIN' } },
@@ -55,6 +55,6 @@ describe('auth redirect', () => {
         { name: 'driver-my-orders', meta: { requiresAuth: true, role: 'DRIVER' } },
         admin,
       ),
-    ).toEqual({ name: 'orders' })
+    ).toEqual({ name: 'dashboard' })
   })
 })

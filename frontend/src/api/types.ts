@@ -66,6 +66,32 @@ export type OrderListQuery = {
   date?: string
 }
 
+export type DashboardSummary = {
+  DRAFT: number
+  OPEN: number
+  ACCEPTED: number
+  IN_PROGRESS: number
+  COMPLETED: number
+  CANCELLED: number
+}
+
+export type DashboardBoardOrder = {
+  id: string
+  order_no: string
+  customer_name: string
+  pickup_location: string
+  destination: string
+  scheduled_at: string
+  price: number
+  status: OrderStatus
+  driver: { username: string } | null
+}
+
+export type AdminDashboard = {
+  summary: DashboardSummary
+  board_orders: DashboardBoardOrder[]
+}
+
 export type AssignedDriver = {
   username: string
   vehicle_type: string

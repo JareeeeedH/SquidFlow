@@ -155,4 +155,30 @@ describe('OrdersView', () => {
     expect(wrapper.text()).toContain('沒有權限')
     expect(wrapper.text()).toContain('FORBIDDEN')
   })
+
+  it('applies status from the route query on mount', async () => {
+    const router = makeRouter()
+    await router.push('/orders?status=OPEN')
+    await router.isReady()
+    const wrapper = mount(OrdersView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(listOrders).toHaveBeenCalledWith({ status: 'OPEN' })
+    wrapper.unmount()
+  })
+
+  it('writes the selected status into the route query', async () => {
+    const { wrapper, router } = await mountOrders()
+    vi.mocked(listOrders).mockClear()
+
+    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:value', 'COMPLETED')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.status).toBe('COMPLETED')
+    expect(listOrders).toHaveBeenLastCalledWith({ status: 'COMPLETED' })
+  })
 })

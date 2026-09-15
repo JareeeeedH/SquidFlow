@@ -400,3 +400,23 @@
 - Dashboard / Dispatch Console 暫緩獨立 TASK，未縮減 UI-UX-SPEC
 
 ---
+
+## TASK-016A — Admin Dashboard / Dispatch Console
+
+**Status:** completed
+
+### 已完成
+
+- `GET /api/v1/admin/dashboard`：Admin-only
+- `summary`：Backend 聚合六種 Order Status 數量
+- `board_orders`：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`，依 `scheduled_at` 升序
+- 未指派 `driver: null`；已指派 `driver: { username }`，不另打 Driver API
+- 不使用 `active_orders`
+- Admin 登入後進入 Dashboard；Status Summary 點擊 → `/orders?status=<status>`
+- Dispatch Board 四欄卡片；點擊進入 Order Detail
+- 完整訂單列表仍在 `/orders`，含既有搜尋／篩選
+- 已同步 `API-SPEC`；未改 Schema、未做 WebSocket / SSE / 拖拉看板
+- 未實作 `GET /notifications`、Order Events / Timeline、deployment
+
+
+---
