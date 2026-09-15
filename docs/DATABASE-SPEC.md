@@ -275,6 +275,7 @@ Session
 - 儲存使用者登入 Session
 - `revoked_at` 用於讓既有 Session 失效
 - 新登入成功時，先撤銷既有有效 Session，再建立新的 Session
+- Admin 將 Driver 設為 `SUSPENDED` 時，立即撤銷該 user 的有效 Session
 
 一個 User 可以有多筆歷史 Session，但同時間只能有一筆有效 Session。
 
@@ -314,9 +315,10 @@ ACTIVE
 SUSPENDED
 → 不可登入
 → 不可搶新單
+→ 現有 active session 立即失效
 ```
 
-既有訂單不因 `SUSPENDED` 自動取消。
+既有訂單不因 `SUSPENDED` 自動取消。恢復 `ACTIVE` 時不建立新 session，需重新登入。
 
 ### Driver
 
@@ -471,6 +473,8 @@ MVP 採用 Single Active Session：
 
 - 同一 User 同時間只允許一個有效 Session。
 - 新登入成功後，舊 Session 設為 revoked。
+- Admin 將 Driver 設為 `SUSPENDED` 時，該 user 的現有 active session 立即撤銷。
+- 恢復 `ACTIVE` 時不建立新 session；Driver 需重新登入。
 - 舊 Session 不直接刪除，以保留 Session 歷史紀錄。
 - `revoked_at IS NULL` 代表目前有效 Session。
 

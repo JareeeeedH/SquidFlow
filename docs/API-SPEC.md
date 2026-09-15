@@ -227,9 +227,9 @@ PATCH /api/v1/drivers/:id/status
 
 將 Driver 帳號狀態設為 `ACTIVE` 或 `SUSPENDED`。
 
-`SUSPENDED`：不可登入、不可搶新單。
+`SUSPENDED`：不可登入、不可搶新單。設為 `SUSPENDED` 時，該 user 的現有 active session 立即失效。
 
-既有訂單不因 `SUSPENDED` 自動取消。
+既有訂單不因 `SUSPENDED` 自動取消。恢復 `ACTIVE` 時不建立新 session，需重新登入。
 
 ### Request
 

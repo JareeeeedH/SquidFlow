@@ -8,6 +8,7 @@ import {
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PasswordService } from '../auth/password.service';
+import { SessionService } from '../auth/session.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DriverWithUser, toDriverResponse } from './drivers.mapper';
 import { CreateDriverInput, UpdateDriverInput } from './drivers.validation';
@@ -22,6 +23,7 @@ export class DriversService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async list() {
@@ -127,9 +129,15 @@ export class DriversService {
     const driver = await this.findDriverOrThrow(id);
 
     if (driver.user.status !== status) {
-      await this.prisma.user.update({
-        where: { id: driver.userId },
-        data: { status },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: driver.userId },
+          data: { status },
+        });
+
+        if (status === UserStatus.SUSPENDED) {
+          await this.sessionService.revokeActiveSessions(driver.userId, tx);
+        }
       });
     }
 

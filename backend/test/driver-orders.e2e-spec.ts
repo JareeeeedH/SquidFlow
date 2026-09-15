@@ -9,6 +9,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
 import { setupApp } from '../src/setup-app';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -269,35 +270,10 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       where: { username: { contains: suffix } },
       select: { id: true },
     });
-    const userIds = testUsers.map((user) => user.id);
-    const driverIds = [
-      users.viewer.driverId,
-      users.offline.driverId,
-      users.suspended.driverId,
-      users.acceptedBusy.driverId,
-      users.inProgressBusy.driverId,
-      users.other.driverId,
-    ];
-    const seededOrders = await prisma.order.findMany({
-      where: {
-        OR: [{ createdBy: { in: userIds } }, { driverId: { in: driverIds } }],
-      },
-      select: { id: true },
-    });
-    const orderIds = seededOrders.map((order) => order.id);
-
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [{ orderId: { in: orderIds } }, { userId: { in: userIds } }],
-      },
-    });
-    await prisma.orderEvent.deleteMany({
-      where: { orderId: { in: orderIds } },
-    });
-    await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
-    await prisma.session.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.driver.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    await cleanupTestUsers(
+      prisma,
+      testUsers.map((user) => user.id),
+    );
     await app.close();
     await prisma.$disconnect();
   });

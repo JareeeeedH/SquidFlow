@@ -326,6 +326,8 @@ SameSite=Lax
 
 Driver 帳號狀態為 `SUSPENDED` 時，Login 失敗，回傳 `ACCOUNT_SUSPENDED`。
 
+Admin 將 Driver 設為 `SUSPENDED` 時，該 user 的現有 active session 立即撤銷；後續 API 依既有 Session Validation 回 `401`。恢復 `ACTIVE` 時不建立新 session，需重新登入。
+
 ---
 
 ### 4.2 Password
@@ -776,9 +778,10 @@ ACTIVE
 SUSPENDED
 → 不可登入
 → 不可搶新單
+→ 現有 active session 立即失效
 ```
 
-既有訂單不因 `SUSPENDED` 自動取消。
+既有訂單不因 `SUSPENDED` 自動取消。恢復 `ACTIVE` 時不建立新 session，需重新登入。
 
 ---
 

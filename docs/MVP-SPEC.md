@@ -98,9 +98,9 @@ SUSPENDED
 
 `ACTIVE`：正常使用。
 
-`SUSPENDED`：不可登入、不可搶新單。
+`SUSPENDED`：不可登入、不可搶新單。現有 active session 立即失效。
 
-既有訂單不因 `SUSPENDED` 自動取消。
+既有訂單不因 `SUSPENDED` 自動取消。恢復 `ACTIVE` 時不建立新 session，需重新登入。
 
 ---
 

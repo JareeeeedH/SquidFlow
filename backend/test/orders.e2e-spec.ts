@@ -14,6 +14,7 @@ import {
   taipeiDateStamp,
 } from '../src/orders/order-number';
 import { setupApp } from '../src/setup-app';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -167,25 +168,10 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
       where: { username: { contains: suffix } },
       select: { id: true },
     });
-    const userIds = testUsers.map((user) => user.id);
-    const orders = await prisma.order.findMany({
-      where: { createdBy: { in: userIds } },
-      select: { id: true },
-    });
-    const orderIds = orders.map((order) => order.id);
-
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [{ orderId: { in: orderIds } }, { userId: { in: userIds } }],
-      },
-    });
-    await prisma.orderEvent.deleteMany({
-      where: { orderId: { in: orderIds } },
-    });
-    await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
-    await prisma.session.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.driver.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    await cleanupTestUsers(
+      prisma,
+      testUsers.map((user) => user.id),
+    );
     await app.close();
     await prisma.$disconnect();
   });

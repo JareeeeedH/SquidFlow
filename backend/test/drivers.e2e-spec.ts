@@ -9,6 +9,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
 import { setupApp } from '../src/setup-app';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -89,6 +90,12 @@ describe('Admin Driver Management (e2e)', () => {
       username: `d4-status-${suffix}`,
       driverId: randomUUID(),
       licensePlate: `D4C-${suffix}`,
+    },
+    sessionTarget: {
+      id: randomUUID(),
+      username: `d4-session-${suffix}`,
+      driverId: randomUUID(),
+      licensePlate: `D4D-${suffix}`,
     },
   };
 
@@ -195,6 +202,28 @@ describe('Admin Driver Management (e2e)', () => {
       },
     });
 
+    await prisma.user.create({
+      data: {
+        id: users.sessionTarget.id,
+        username: users.sessionTarget.username,
+        passwordHash,
+        role: 'DRIVER',
+        status: 'ACTIVE',
+        driver: {
+          create: {
+            id: users.sessionTarget.driverId,
+            vehicleType: '5人座',
+            licensePlate: users.sessionTarget.licensePlate,
+            vehicleBrand: 'Toyota',
+            vehicleModel: 'Camry',
+            vehicleColor: '黑色',
+            vehicleYear: 2024,
+            onlineStatus: 'OFFLINE',
+          },
+        },
+      },
+    });
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -213,20 +242,10 @@ describe('Admin Driver Management (e2e)', () => {
       },
       select: { id: true },
     });
-    const userIds = testUsers.map((user) => user.id);
-
-    await prisma.notification.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.session.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.driver.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: userIds } },
-    });
+    await cleanupTestUsers(
+      prisma,
+      testUsers.map((user) => user.id),
+    );
     await app.close();
     await prisma.$disconnect();
   });
@@ -684,5 +703,80 @@ describe('Admin Driver Management (e2e)', () => {
     });
     expect(driver?.user.status).toBe('ACTIVE');
     expect(driver?.onlineStatus).toBe('ONLINE');
+  });
+
+  it('revokes the existing session when ACTIVE becomes SUSPENDED', async () => {
+    const driverCookie = await loginAs(users.sessionTarget.username);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Cookie', driverCookie)
+      .expect(200);
+
+    const admin = await adminCookie();
+    await request(app.getHttpServer())
+      .patch(`/api/v1/drivers/${users.sessionTarget.driverId}/status`)
+      .set('Cookie', admin)
+      .send({ status: 'SUSPENDED' })
+      .expect(200);
+
+    const meAfterSuspend = await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Cookie', driverCookie)
+      .expect(401);
+    expect(asBody<ApiErrorBody>(meAfterSuspend).error.code).toBe(
+      'UNAUTHORIZED',
+    );
+
+    const driverApiAfterSuspend = await request(app.getHttpServer())
+      .get('/api/v1/driver/orders/open')
+      .set('Cookie', driverCookie)
+      .expect(401);
+    expect(asBody<ApiErrorBody>(driverApiAfterSuspend).error.code).toBe(
+      'UNAUTHORIZED',
+    );
+
+    const loginWhileSuspended = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({
+        username: users.sessionTarget.username,
+        password,
+      })
+      .expect(403);
+    expect(asBody<ApiErrorBody>(loginWhileSuspended).error.code).toBe(
+      'ACCOUNT_SUSPENDED',
+    );
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/drivers/${users.sessionTarget.driverId}/status`)
+      .set('Cookie', admin)
+      .send({ status: 'ACTIVE' })
+      .expect(200);
+
+    const activeSessions = await prisma.session.findMany({
+      where: {
+        userId: users.sessionTarget.id,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    expect(activeSessions).toHaveLength(0);
+
+    const meAfterReactivate = await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Cookie', driverCookie)
+      .expect(401);
+    expect(asBody<ApiErrorBody>(meAfterReactivate).error.code).toBe(
+      'UNAUTHORIZED',
+    );
+
+    const newCookie = await loginAs(users.sessionTarget.username);
+    const meAfterRelogin = await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Cookie', newCookie)
+      .expect(200);
+    expect(asBody<ApiSuccessBody<{ id: string }>>(meAfterRelogin).data.id).toBe(
+      users.sessionTarget.id,
+    );
   });
 });

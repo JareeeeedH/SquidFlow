@@ -9,6 +9,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
 import { setupApp } from '../src/setup-app';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -145,23 +146,11 @@ describe('Driver Online / Offline (e2e)', () => {
       },
       select: { id: true },
     });
-    const userIds = testUsers.map((user) => user.id);
-
-    await prisma.notification.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.order.deleteMany({
-      where: { id: orderId },
-    });
-    await prisma.session.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.driver.deleteMany({
-      where: { userId: { in: userIds } },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: userIds } },
-    });
+    await cleanupTestUsers(
+      prisma,
+      testUsers.map((user) => user.id),
+      [orderId],
+    );
     await app.close();
     await prisma.$disconnect();
   });

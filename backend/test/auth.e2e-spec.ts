@@ -10,6 +10,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
 import { setupApp } from '../src/setup-app';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -81,27 +82,7 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({
-      where: {
-        userId: {
-          in: [users.active.id, users.suspended.id],
-        },
-      },
-    });
-    await prisma.session.deleteMany({
-      where: {
-        userId: {
-          in: [users.active.id, users.suspended.id],
-        },
-      },
-    });
-    await prisma.user.deleteMany({
-      where: {
-        id: {
-          in: [users.active.id, users.suspended.id],
-        },
-      },
-    });
+    await cleanupTestUsers(prisma, [users.active.id, users.suspended.id]);
     await app.close();
     await prisma.$disconnect();
   });

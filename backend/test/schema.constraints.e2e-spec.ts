@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
+import { cleanupTestUsers } from './cleanup-test-data';
 
 config();
 
@@ -52,26 +53,11 @@ describe('Database schema constraints', () => {
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({
-      where: {
-        OR: [
-          { orderId: { in: [ids.orderAId, ids.orderBId] } },
-          { userId: { in: [ids.adminId, ids.driverUserId] } },
-        ],
-      },
-    });
-    await prisma.order.deleteMany({
-      where: { id: { in: [ids.orderAId, ids.orderBId] } },
-    });
-    await prisma.session.deleteMany({
-      where: { userId: ids.driverUserId },
-    });
-    await prisma.driver.deleteMany({
-      where: { id: ids.driverId },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: [ids.adminId, ids.driverUserId] } },
-    });
+    await cleanupTestUsers(
+      prisma,
+      [ids.adminId, ids.driverUserId],
+      [ids.orderAId, ids.orderBId],
+    );
     await prisma.$disconnect();
   });
 
