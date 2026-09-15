@@ -244,23 +244,28 @@ watch(
 
       <article v-else-if="order" class="card">
         <header class="header">
-          <p class="kicker">{{ order.order_no }}</p>
+          <div class="header-copy">
+            <p class="kicker">{{ order.order_no }}</p>
+            <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
+          </div>
           <OrderStatusTag :status="order.status" />
         </header>
-        <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
+
         <div class="route">
           <p class="place">{{ order.pickup_location }}</p>
           <p class="arrow" aria-hidden="true">↓</p>
           <p class="place">{{ formatOptionalText(order.destination) }}</p>
         </div>
+
+        <div class="price-block">
+          <p class="price-label">價格</p>
+          <p class="price">{{ formatPrice(order.price) }}</p>
+        </div>
+
         <dl class="fields">
           <div>
             <dt>客戶</dt>
             <dd>{{ formatOptionalText(order.customer_name) }}</dd>
-          </div>
-          <div class="price-row">
-            <dt>價格</dt>
-            <dd class="price">{{ formatPrice(order.price) }}</dd>
           </div>
           <div class="note-row">
             <dt>備註</dt>
@@ -320,7 +325,7 @@ watch(
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
 }
 
 .back {
@@ -333,6 +338,7 @@ watch(
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
   padding: var(--space-16);
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
 }
 
 .header {
@@ -342,36 +348,68 @@ watch(
   gap: var(--space-12);
 }
 
+.header-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .kicker,
 .error-detail,
-.arrow {
+.arrow,
+.price-label {
   margin: 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
 }
 
 .time {
-  margin: var(--space-12) 0 var(--space-16);
-  font: var(--font-page-title);
+  margin: 0;
+  font: var(--font-label);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .route {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-bottom: var(--space-16);
+  margin: var(--space-16) 0;
+  padding: var(--space-12);
+  background: var(--color-primary-soft, #e8eef5);
+  border-radius: var(--radius-8);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #0b1f3a) 12%, var(--color-border));
 }
 
 .place {
   margin: 0;
   font: var(--font-section-title);
   line-height: 1.35;
+  color: var(--color-primary, #0b1f3a);
+  overflow-wrap: anywhere;
 }
 
 .arrow {
   display: block;
   margin: var(--space-4) 0;
   line-height: 1.1;
+  color: var(--color-primary-muted, #1a3358);
+  font-weight: 700;
+}
+
+.price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-12);
+}
+
+.price {
+  margin: 0;
+  font: var(--font-price);
+  font-size: 24px;
+  color: var(--color-primary, #0b1f3a);
 }
 
 .fields {
@@ -379,7 +417,7 @@ watch(
   grid-template-columns: 1fr 1fr;
   gap: var(--space-12) var(--space-16);
   margin: 0;
-  padding-top: var(--space-16);
+  padding-top: var(--space-12);
   border-top: 1px solid var(--color-border);
 }
 
@@ -388,7 +426,6 @@ watch(
   gap: var(--space-4);
 }
 
-.price-row,
 .note-row {
   grid-column: 1 / -1;
 }
@@ -402,13 +439,9 @@ dd {
   margin: 0;
 }
 
-.price {
-  font: var(--font-price);
-}
-
 .success,
 .action-error {
-  margin: var(--space-16) 0 0;
+  margin: var(--space-12) 0 0;
   padding: var(--space-12);
   border-radius: var(--radius-8);
   font: var(--font-label);
@@ -431,13 +464,18 @@ dd {
   z-index: 1;
   margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * var(--space-16));
   padding: var(--space-16);
-  background: var(--color-surface);
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 92%) 0%,
+    var(--color-surface) 40%
+  );
   border-top: 1px solid var(--color-border);
   border-radius: 0 0 var(--radius-12) var(--radius-12);
 }
 
 .accept {
   min-height: 52px;
+  font-weight: 700;
 }
 
 .state {

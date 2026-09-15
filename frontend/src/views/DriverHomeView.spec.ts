@@ -113,7 +113,7 @@ describe('DriverHomeView', () => {
     expect(wrapper.text()).toContain('尚未向伺服器確認上線狀態')
     expect(wrapper.text()).toContain('通知')
     expect(wrapper.text()).toContain('通知未開啟')
-    expect(wrapper.text()).toContain('查看可搶訂單')
+    expect(wrapper.text()).not.toContain('查看可搶訂單')
     expect(wrapper.text()).not.toContain('我的訂單')
     expect(switches(wrapper)).toHaveLength(2)
   })
@@ -177,18 +177,6 @@ describe('DriverHomeView', () => {
     expect(wrapper.text()).toContain('重試')
   })
 
-  it('opens open orders from the primary home CTA', async () => {
-    const { wrapper, router } = await mountHome()
-    const push = vi.spyOn(router, 'push')
-
-    const entry = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('查看可搶訂單'))
-    await entry!.trigger('click')
-
-    expect(push).toHaveBeenCalledWith({ name: 'driver-open-orders' })
-  })
-
   it('keeps auth user after successful home load', async () => {
     await mountHome()
     expect(useAuthStore().currentUser?.username).toBe('driver01')
@@ -200,7 +188,7 @@ describe('DriverHomeView', () => {
 
     expect(wrapper.text()).toContain('通知未開啟')
     expect(switches(wrapper)[1].props('disabled')).toBe(true)
-    expect(wrapper.text()).toContain('查看可搶訂單')
+    expect(wrapper.text()).not.toContain('查看可搶訂單')
   })
 
   it('creates a backend subscription when notifications are enabled', async () => {

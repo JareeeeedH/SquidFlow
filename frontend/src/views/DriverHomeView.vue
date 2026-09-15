@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ChevronRight, RotateCcw } from 'lucide-vue-next'
+import { RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin, NSwitch } from 'naive-ui'
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
 import type { OnlineStatus } from '../api/types'
 import AccountStatusTag from '../components/AccountStatusTag.vue'
@@ -13,7 +12,6 @@ import { usePushNotificationStore } from '../stores/push-notification'
 const auth = useAuthStore()
 const driverStatus = useDriverStatusStore()
 const pushNotification = usePushNotificationStore()
-const router = useRouter()
 const loading = ref(false)
 const updating = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
@@ -147,7 +145,7 @@ void loadHome()
         </header>
 
         <section class="status-panel">
-          <div class="switch-row">
+          <div class="switch-row online-row">
             <div class="switch-copy">
               <p class="row-label">上線狀態</p>
               <p
@@ -225,20 +223,6 @@ void loadHome()
             </div>
           </div>
         </section>
-
-        <NButton
-          class="primary-cta"
-          size="large"
-          type="primary"
-          block
-          icon-placement="right"
-          @click="router.push({ name: 'driver-open-orders' })"
-        >
-          查看可搶訂單
-          <template #icon>
-            <ChevronRight :size="18" />
-          </template>
-        </NButton>
       </template>
     </NSpin>
   </section>
@@ -248,7 +232,7 @@ void loadHome()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
   min-width: 0;
 }
 
@@ -257,12 +241,31 @@ void loadHome()
   overflow: visible;
 }
 
+.identity {
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-primary, #0b1f3a);
+  border-radius: var(--radius-12);
+  color: #f8fafc;
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+}
+
 .identity-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
   margin-top: var(--space-4);
+}
+
+.identity h1 {
+  margin: 0;
+  font: var(--font-page-title);
+  font-size: 24px;
+  color: #f8fafc;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .account-status {
@@ -274,7 +277,12 @@ void loadHome()
 }
 
 .kicker,
-.row-label,
+.identity .row-label {
+  margin: 0;
+  color: rgb(248 250 252 / 72%);
+  font: var(--font-caption);
+}
+
 .error-detail,
 .confirm-copy,
 .readiness {
@@ -283,14 +291,21 @@ void loadHome()
   font: var(--font-caption);
 }
 
+.row-label {
+  margin: 0;
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
 .status-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
-  padding: var(--space-16);
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
 }
 
 .switch-row {
@@ -301,17 +316,23 @@ void loadHome()
   min-height: 44px;
 }
 
+.online-row {
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .switch-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 2px;
 }
 
 .row-value {
   margin: 0;
   color: var(--color-text);
   font: var(--font-label);
+  font-weight: 600;
 }
 
 .row-value.is-online {
@@ -324,7 +345,6 @@ void loadHome()
 
 .readiness {
   padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
   color: var(--color-text);
 }
 
@@ -351,19 +371,8 @@ void loadHome()
   gap: var(--space-8);
 }
 
-.confirm-actions :deep(.n-button),
-.primary-cta {
+.confirm-actions :deep(.n-button) {
   min-height: 48px;
-}
-
-.primary-cta {
-  overflow: visible;
-  white-space: nowrap;
-}
-
-.primary-cta :deep(.n-button__content) {
-  overflow: visible;
-  flex: 1 1 auto;
 }
 
 .state {

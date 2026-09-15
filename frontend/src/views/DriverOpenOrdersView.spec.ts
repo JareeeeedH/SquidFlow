@@ -64,9 +64,9 @@ describe('DriverOpenOrdersView', () => {
     expect(wrapper.text()).toContain('左營高鐵站')
     expect(wrapper.text()).toContain('高雄小港機場')
     expect(wrapper.text()).toContain('NT$ 1,200')
-    expect(wrapper.text()).toContain('2件行李')
     expect(wrapper.text()).toContain('搶單中')
-    expect(wrapper.text()).toContain('查看訂單')
+    expect(wrapper.text()).toContain('查看 →')
+    expect(wrapper.text()).not.toContain('2件行李')
   })
 
   it('shows empty state when there are no open orders', async () => {

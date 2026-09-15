@@ -612,7 +612,7 @@ Phase 3 — Advanced Dispatch & Communication
 ### 已完成
 
 - Driver Home 改為 compact Online / Notification switch bar
-- 移除重複「可搶訂單」「我的訂單」入口；保留主 CTA「查看可搶訂單」
+- 移除 Home 上與導覽重複的可搶訂單 / 我的訂單入口
 - 未改 API、Push rules、導覽 IA 或 business rules
 
 ---
@@ -626,5 +626,18 @@ Phase 3 — Advanced Dispatch & Communication
 - 統一 Phase 1 / 2 / 3 邊界於 MVP / Architecture / API / Database / UI-UX / DEVELOPMENT-STATUS
 - Phase 2 限定 Location / Distance / ETA / Map；第三方通訊與進階派車移至 Phase 3
 - 未改 Backend / Frontend / Schema / Migration / API 實作
+
+---
+
+## TASK — Premium Polish Driver Mobile UI
+
+**Status:** completed
+
+### 已完成
+
+- Driver Layout / Home / Open Orders / My Orders / Order Detail 視覺 polish（deep navy accent、compact cards）
+- Open Orders 約 3 行 compact card；My Orders 歷史無操作 CTA
+- Home 維持不重複可搶訂單入口；不顯示 list 層 `customer_name`
+- 未改 API / Backend / Schema / business rules / IA
 
 ---

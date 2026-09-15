@@ -193,16 +193,14 @@ void loadOrders()
                   <div class="card-top">
                     <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
                     <OrderStatusTag :status="order.status" />
+                    <p class="price">{{ formatPrice(order.price) }}</p>
                   </div>
-                  <div class="route">
-                    <p class="place">{{ order.pickup_location }}</p>
-                    <p class="arrow" aria-hidden="true">↓</p>
-                    <p class="place">{{ formatOptionalText(order.destination) }}</p>
-                  </div>
+                  <p class="route">
+                    <span class="place">{{ order.pickup_location }}</span>
+                    <span class="arrow" aria-hidden="true">→</span>
+                    <span class="place">{{ formatOptionalText(order.destination) }}</span>
+                  </p>
                   <p class="order-no">{{ order.order_no }}</p>
-                  <div class="meta">
-                    <span class="price">{{ formatPrice(order.price) }}</span>
-                  </div>
                 </button>
                 <NButton
                   v-if="order.status === 'ACCEPTED'"
@@ -250,11 +248,11 @@ void loadOrders()
                   <p class="time">{{ historyDate(order.created_at) }}</p>
                   <OrderStatusTag :status="order.status" />
                 </div>
-                <div class="route">
-                  <p class="place">{{ order.pickup_location }}</p>
-                  <p class="arrow" aria-hidden="true">↓</p>
-                  <p class="place">{{ formatOptionalText(order.destination) }}</p>
-                </div>
+                <p class="route">
+                  <span class="place">{{ order.pickup_location }}</span>
+                  <span class="arrow" aria-hidden="true">→</span>
+                  <span class="place">{{ formatOptionalText(order.destination) }}</span>
+                </p>
                 <p class="order-no">{{ order.order_no }}</p>
               </button>
             </li>
@@ -269,7 +267,7 @@ void loadOrders()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-16);
+  gap: var(--space-12);
 }
 
 .page :deep(.n-spin-container),
@@ -280,17 +278,20 @@ void loadOrders()
 .page-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 2px;
 }
 
 h1 {
   margin: 0;
   font: var(--font-page-title);
+  font-size: 24px;
 }
 
 h2 {
   margin: 0 0 var(--space-8);
   font: var(--font-section-title);
+  font-size: 15px;
+  color: var(--color-primary, #0b1f3a);
 }
 
 .subtitle,
@@ -336,17 +337,18 @@ h2 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-8);
 }
 
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
-  padding: var(--space-16);
+  gap: var(--space-8);
+  padding: 10px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
 }
 
 .card.current[data-status='ACCEPTED'] {
@@ -354,11 +356,13 @@ h2 {
 }
 
 .card.current[data-status='IN_PROGRESS'] {
-  --status-color: var(--color-primary);
+  --status-color: var(--color-primary, #0b1f3a);
 }
 
 .card.current {
-  box-shadow: inset 4px 0 0 var(--status-color);
+  box-shadow:
+    inset 3px 0 0 var(--status-color),
+    var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
   border-color: color-mix(in srgb, var(--status-color) 28%, var(--color-border));
 }
 
@@ -368,7 +372,7 @@ h2 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-8);
+  gap: 6px;
   padding: 0;
   text-align: left;
   background: transparent;
@@ -379,41 +383,60 @@ h2 {
 }
 
 .history {
-  gap: var(--space-4);
-  padding: var(--space-12) var(--space-16);
-  background: color-mix(in srgb, var(--color-muted-text) 5%, var(--color-surface));
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-primary, #0b1f3a) 3%, var(--color-surface));
 }
 
 .history:focus-visible,
 .card-main:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-primary, #0b1f3a);
   outline-offset: 2px;
 }
 
 .card-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-8);
+  min-width: 0;
+}
+
+.history .card-top {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .time {
   margin: 0;
-  font: var(--font-label);
+  font: var(--font-caption);
   font-weight: 600;
+  color: var(--color-muted-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price {
+  margin: 0;
+  font: var(--font-label);
+  font-weight: 700;
+  color: var(--color-primary, #0b1f3a);
+  white-space: nowrap;
 }
 
 .route {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  margin: 0;
 }
 
 .place {
-  margin: 0;
+  min-width: 0;
+  flex: 1 1 0;
   font: var(--font-body);
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -424,25 +447,20 @@ h2 {
 }
 
 .arrow {
-  line-height: 1.1;
+  flex: 0 0 auto;
+  color: var(--color-primary-muted, #1a3358);
+  font-weight: 600;
 }
 
-.meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--space-8);
-  font: var(--font-label);
-  color: var(--color-muted-text);
-}
-
-.price {
-  font: var(--font-section-title);
-  color: var(--color-text);
+.order-no {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .card :deep(.n-button) {
-  min-height: 52px;
+  min-height: 48px;
 }
 
 .empty,

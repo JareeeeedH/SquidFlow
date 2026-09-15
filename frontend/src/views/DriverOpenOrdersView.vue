@@ -111,18 +111,17 @@ void loadOrders()
             <div class="card-top">
               <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
               <OrderStatusTag status="OPEN" />
+              <p class="price">{{ formatPrice(order.price) }}</p>
             </div>
-            <div class="route">
-              <p class="place">{{ order.pickup_location }}</p>
-              <p class="arrow" aria-hidden="true">↓</p>
-              <p class="place">{{ formatOptionalText(order.destination) }}</p>
+            <p class="route">
+              <span class="place">{{ order.pickup_location }}</span>
+              <span class="arrow" aria-hidden="true">→</span>
+              <span class="place">{{ formatOptionalText(order.destination) }}</span>
+            </p>
+            <div class="card-foot">
+              <p class="order-no">{{ order.order_no }}</p>
+              <span class="view">查看 →</span>
             </div>
-            <p class="order-no">{{ order.order_no }}</p>
-            <div class="meta">
-              <span class="price">{{ formatPrice(order.price) }}</span>
-            </div>
-            <p v-if="order.note" class="note">{{ order.note }}</p>
-            <span class="view">查看訂單 →</span>
           </button>
         </li>
       </ul>
@@ -145,18 +144,18 @@ void loadOrders()
 .page-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 2px;
 }
 
 h1 {
   margin: 0;
   font: var(--font-page-title);
+  font-size: 24px;
 }
 
 .subtitle,
 .error-detail,
 .order-no,
-.note,
 .arrow {
   margin: 0;
   color: var(--color-muted-text);
@@ -168,7 +167,7 @@ h1 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-8);
 }
 
 .card {
@@ -176,93 +175,102 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-8);
-  padding: var(--space-16);
+  gap: 6px;
+  padding: 10px 12px;
   min-height: 48px;
   text-align: left;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
   color: inherit;
   font: inherit;
   cursor: pointer;
 }
 
 .card:active {
-  background: #eff6ff;
+  background: var(--color-primary-soft, #e8eef5);
 }
 
 .card:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-primary, #0b1f3a);
   outline-offset: 2px;
 }
 
 .card-top {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-8);
+  min-width: 0;
 }
 
 .time {
   margin: 0;
-  font: var(--font-label);
+  font: var(--font-caption);
   font-weight: 600;
+  color: var(--color-muted-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.order-no {
-  line-height: 1.3;
+.price {
+  margin: 0;
+  font: var(--font-label);
+  font-weight: 700;
+  color: var(--color-primary, #0b1f3a);
+  white-space: nowrap;
 }
 
 .route {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  margin: 0;
 }
 
 .place {
-  margin: 0;
+  min-width: 0;
+  flex: 1 1 0;
   font: var(--font-body);
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .arrow {
-  line-height: 1.1;
+  flex: 0 0 auto;
+  color: var(--color-primary-muted, #1a3358);
+  font-weight: 600;
 }
 
-.meta {
+.card-foot {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-8);
-  font: var(--font-label);
-  color: var(--color-muted-text);
+  min-width: 0;
 }
 
-.price {
-  font: var(--font-section-title);
-  color: var(--color-text);
-}
-
-.note {
+.order-no {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
 }
 
 .view {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--space-4);
-  padding-top: var(--space-12);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-primary);
-  font: var(--font-label);
+  flex: 0 0 auto;
+  color: var(--color-primary, #0b1f3a);
+  font: var(--font-caption);
+  font-weight: 600;
 }
 
 .state {
