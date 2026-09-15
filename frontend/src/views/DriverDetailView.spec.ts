@@ -86,6 +86,8 @@ describe('DriverDetailView', () => {
     expect(wrapper.text()).toContain('driver01')
     expect(wrapper.text()).toContain('帳號資訊')
     expect(wrapper.text()).toContain('車輛資訊')
+    expect(wrapper.text()).toContain('操作')
+    expect(wrapper.get('.primary-value').text()).toContain('driver01')
     expect(wrapper.text()).toContain('ABC-1234')
     expect(wrapper.text()).toContain('Toyota')
     expect(wrapper.text()).toContain('Camry')
@@ -94,11 +96,13 @@ describe('DriverDetailView', () => {
     expect(wrapper.text()).not.toContain('年份')
     expect(wrapper.text()).toContain('帳號狀態')
     expect(wrapper.text()).toContain('上線狀態')
+    expect(wrapper.text()).toContain('上線狀態由司機端切換，此處僅顯示。')
     expect(wrapper.text()).toContain('啟用')
     expect(wrapper.text()).toContain('離線')
     expect(wrapper.text()).toContain('編輯')
     expect(wrapper.text()).toContain('停用')
     expect(wrapper.text()).not.toContain('刪除')
+    expect(wrapper.text()).not.toContain('帳號狀態與上線狀態分開管理')
   })
 
   it('edits a driver and uses the API response', async () => {

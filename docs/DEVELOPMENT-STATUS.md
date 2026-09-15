@@ -560,3 +560,15 @@
 - 不顯示車牌 / 車輛 / 車色；未新增 Timeline、API、Schema 或 business action
 
 ---
+
+## TASK — Polish Admin Driver Detail UI
+
+**Status:** completed
+
+### 已完成
+
+- 司機詳情改為置中約 960px、7:3 雙欄；左側帳號 / 車輛，右側狀態 / 操作
+- 提高帳號與車牌層級；上線提示降為次要文字，不提供 Admin 控制 Online / Offline
+- 未改 API / Schema / business rules
+
+---

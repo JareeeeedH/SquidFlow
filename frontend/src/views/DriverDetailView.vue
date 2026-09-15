@@ -159,7 +159,7 @@ watch(
 
 <template>
   <section class="page">
-    <NButton text type="primary" @click="router.push({ name: 'drivers' })">
+    <NButton class="back" text type="primary" @click="router.push({ name: 'drivers' })">
       <template #icon>
         <ArrowLeft :size="16" />
       </template>
@@ -213,17 +213,6 @@ watch(
           <div>
             <p class="kicker">司機詳情</p>
             <h1>{{ driver.username }}</h1>
-            <p class="readonly-hint">帳號狀態與上線狀態分開管理。</p>
-          </div>
-          <div class="header-status">
-            <div>
-              <span class="status-label">帳號狀態</span>
-              <AccountStatusTag :status="driver.status" />
-            </div>
-            <div>
-              <span class="status-label">上線狀態</span>
-              <OnlineStatusTag :status="driver.online_status" />
-            </div>
           </div>
         </header>
 
@@ -232,35 +221,38 @@ watch(
         </p>
 
         <div class="grid">
-          <article class="panel">
-            <h2>{{ editing ? '編輯司機' : '帳號與車輛' }}</h2>
-            <DriverForm
-              v-if="editing && editValues"
-              mode="edit"
-              submit-label="儲存變更"
-              :initial-values="editValues"
-              :submitting="saving"
-              :error="actionError"
-              show-cancel
-              @submit="onSave"
-              @cancel="cancelEdit"
-            />
-            <div v-else class="sections">
-              <section>
-                <h3>帳號資訊</h3>
+          <div class="main">
+            <article v-if="editing && editValues" class="panel">
+              <h2>編輯司機</h2>
+              <DriverForm
+                mode="edit"
+                submit-label="儲存變更"
+                :initial-values="editValues"
+                :submitting="saving"
+                :error="actionError"
+                show-cancel
+                @submit="onSave"
+                @cancel="cancelEdit"
+              />
+            </article>
+
+            <template v-else>
+              <article class="panel">
+                <h2>帳號資訊</h2>
                 <dl class="fields">
-                  <div>
+                  <div class="emphasis">
                     <dt>帳號</dt>
-                    <dd>{{ driver.username }}</dd>
+                    <dd class="primary-value">{{ driver.username }}</dd>
                   </div>
                 </dl>
-              </section>
-              <section>
-                <h3>車輛資訊</h3>
-                <dl class="fields">
-                  <div>
+              </article>
+
+              <article class="panel">
+                <h2>車輛資訊</h2>
+                <dl class="fields vehicle-fields">
+                  <div class="emphasis plate">
                     <dt>車牌</dt>
-                    <dd>{{ driver.license_plate }}</dd>
+                    <dd class="primary-value">{{ driver.license_plate }}</dd>
                   </div>
                   <div>
                     <dt>品牌</dt>
@@ -275,9 +267,9 @@ watch(
                     <dd>{{ driver.vehicle_color }}</dd>
                   </div>
                 </dl>
-              </section>
-            </div>
-          </article>
+              </article>
+            </template>
+          </div>
 
           <aside class="panel status-panel">
             <h2>狀態</h2>
@@ -292,57 +284,61 @@ watch(
                 <p class="online-hint">上線狀態由司機端切換，此處僅顯示。</p>
               </div>
             </div>
-            <div v-if="!editing" class="actions">
-              <template v-if="confirmStatus">
-                <p class="confirm-copy">
-                  {{
-                    confirmStatus === 'SUSPENDED'
-                      ? '確定停用此司機帳號？停用後不可登入。'
-                      : '確定重新啟用此司機帳號？'
-                  }}
-                </p>
-                <NButton
-                  block
-                  :disabled="changingStatus"
-                  @click="confirmStatus = null"
-                >
-                  取消
-                </NButton>
-                <NButton
-                  :type="confirmStatus === 'SUSPENDED' ? 'error' : 'success'"
-                  block
-                  :loading="changingStatus"
-                  :disabled="changingStatus"
-                  @click="onChangeStatus"
-                >
-                  {{ confirmStatus === 'SUSPENDED' ? '確認停用' : '確認啟用' }}
-                </NButton>
-              </template>
-              <template v-else>
-                <NButton type="primary" block :disabled="busy" @click="startEdit">
-                  編輯
-                </NButton>
-                <NButton
-                  v-if="nextStatus === 'SUSPENDED'"
-                  type="error"
-                  ghost
-                  block
-                  :disabled="busy"
-                  @click="confirmStatus = 'SUSPENDED'"
-                >
-                  停用
-                </NButton>
-                <NButton
-                  v-else
-                  type="success"
-                  ghost
-                  block
-                  :disabled="busy"
-                  @click="confirmStatus = 'ACTIVE'"
-                >
-                  啟用
-                </NButton>
-              </template>
+
+            <div v-if="!editing" class="actions-block">
+              <h2 class="actions-title">操作</h2>
+              <div class="actions">
+                <template v-if="confirmStatus">
+                  <p class="confirm-copy">
+                    {{
+                      confirmStatus === 'SUSPENDED'
+                        ? '確定停用此司機帳號？停用後不可登入。'
+                        : '確定重新啟用此司機帳號？'
+                    }}
+                  </p>
+                  <NButton
+                    block
+                    :disabled="changingStatus"
+                    @click="confirmStatus = null"
+                  >
+                    取消
+                  </NButton>
+                  <NButton
+                    :type="confirmStatus === 'SUSPENDED' ? 'error' : 'success'"
+                    block
+                    :loading="changingStatus"
+                    :disabled="changingStatus"
+                    @click="onChangeStatus"
+                  >
+                    {{ confirmStatus === 'SUSPENDED' ? '確認停用' : '確認啟用' }}
+                  </NButton>
+                </template>
+                <template v-else>
+                  <NButton type="primary" block :disabled="busy" @click="startEdit">
+                    編輯
+                  </NButton>
+                  <NButton
+                    v-if="nextStatus === 'SUSPENDED'"
+                    type="error"
+                    ghost
+                    block
+                    :disabled="busy"
+                    @click="confirmStatus = 'SUSPENDED'"
+                  >
+                    停用
+                  </NButton>
+                  <NButton
+                    v-else
+                    type="success"
+                    ghost
+                    block
+                    :disabled="busy"
+                    @click="confirmStatus = 'ACTIVE'"
+                  >
+                    啟用
+                  </NButton>
+                </template>
+              </div>
             </div>
           </aside>
         </div>
@@ -356,7 +352,14 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
   min-width: 0;
+}
+
+.back {
+  align-self: flex-start;
 }
 
 .page-header {
@@ -367,7 +370,6 @@ watch(
 }
 
 .kicker,
-.readonly-hint,
 .error-detail,
 .status-label,
 .online-hint {
@@ -383,27 +385,22 @@ watch(
 }
 
 h1 {
-  margin: var(--space-4) 0;
+  margin: var(--space-4) 0 0;
   font: var(--font-page-title);
-}
-
-.header-status {
-  display: flex;
-  gap: var(--space-16);
-}
-
-.header-status > div,
-.status-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr);
   gap: var(--space-16);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
 }
 
 .panel {
@@ -414,24 +411,15 @@ h1 {
 }
 
 h2 {
-  margin: 0 0 var(--space-16);
-  font: var(--font-section-title);
-}
-
-h3 {
   margin: 0 0 var(--space-12);
-  font: var(--font-label);
-  color: var(--color-muted-text);
-}
-
-.sections {
-  display: grid;
-  gap: var(--space-24);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  font: var(--font-section-title);
 }
 
 .fields {
   display: grid;
-  gap: var(--space-16);
+  gap: var(--space-12);
   margin: 0;
 }
 
@@ -440,7 +428,17 @@ h3 {
   gap: var(--space-4);
 }
 
-dt {
+.vehicle-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12) var(--space-16);
+}
+
+.vehicle-fields .plate {
+  grid-column: 1 / -1;
+}
+
+dt,
+.status-label {
   font: var(--font-label);
   color: var(--color-muted-text);
 }
@@ -449,11 +447,36 @@ dd {
   margin: 0;
 }
 
+.primary-value {
+  font: var(--font-section-title);
+  color: var(--color-text);
+}
+
 .status-block {
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
-  margin-bottom: var(--space-24);
+  margin-bottom: var(--space-16);
+}
+
+.status-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.online-hint {
+  margin-top: var(--space-4);
+}
+
+.actions-block {
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.actions-title {
+  margin-bottom: var(--space-12);
 }
 
 .actions {
@@ -471,16 +494,27 @@ dd {
   padding: var(--space-32) 0;
 }
 
-@media (max-width: 900px) {
-  .grid,
-  .header-status,
-  .page-header {
+@media (max-width: 768px) {
+  .grid {
     grid-template-columns: 1fr;
-    flex-direction: column;
   }
 
   h1 {
     font-size: 24px;
+  }
+
+  .actions :deep(.n-button) {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: var(--space-16);
+  }
+
+  .vehicle-fields {
+    grid-template-columns: 1fr;
   }
 }
 </style>
