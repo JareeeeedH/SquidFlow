@@ -94,7 +94,7 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).toContain('編輯')
     expect(wrapper.text()).toContain('發布')
     expect(wrapper.text()).toContain('刪除')
-    expect(wrapper.text()).toContain('草稿可編輯、刪除或發布')
+    expect(wrapper.text()).not.toContain('草稿可編輯、刪除或發布')
     expect(wrapper.text()).not.toContain('取消訂單')
     expect(wrapper.text()).toContain('尚無')
   })

@@ -11,8 +11,7 @@ import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatDateTimeTaipei, formatOptionalText, formatPrice } from '../lib/format'
 import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form'
 
-const STATUS_HINT: Record<OrderStatus, string> = {
-  DRAFT: '草稿可編輯、刪除或發布',
+const STATUS_HINT: Partial<Record<OrderStatus, string>> = {
   OPEN: '搶單中，可取消此訂單',
   ACCEPTED: '已接單，可取消此訂單',
   IN_PROGRESS: '行程進行中，此訂單為唯讀',
@@ -284,7 +283,9 @@ watch(
           <div>
             <p class="kicker">訂單詳情</p>
             <h1>{{ order.order_no }}</h1>
-            <p class="readonly-hint">{{ STATUS_HINT[order.status] }}</p>
+            <p v-if="STATUS_HINT[order.status]" class="readonly-hint">
+              {{ STATUS_HINT[order.status] }}
+            </p>
           </div>
           <OrderStatusTag :status="order.status" />
         </header>

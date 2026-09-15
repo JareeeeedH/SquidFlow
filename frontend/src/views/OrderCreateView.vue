@@ -51,7 +51,6 @@ async function onSubmit(input: CreateOrderInput) {
 
     <header class="page-header">
       <h1>建立派車單</h1>
-      <p class="subtitle">儲存後會建立草稿，可再查看訂單內容。</p>
     </header>
 
     <div class="panel">
