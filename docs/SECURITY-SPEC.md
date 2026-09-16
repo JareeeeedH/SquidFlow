@@ -153,17 +153,17 @@ Production Error 不得暴露：
 
 ---
 
-# 9B. Pickup Geocoding Security（Phase 2 / P2-02）— BLOCKING
+# 9B. Pickup Geocoding Security（Phase 2 / P2-02）
 
-產品選定 Provider：**Google Geocoding API**。安全原則（即使尚未實作也必須遵守）：
+產品選定 Provider：**Google Geocoding API**。見 `PHASE-2-SPEC.md` P2-02。
 
-- Google API Key / Secret **不得**進入 Frontend 或 Git。
-- Provider 僅允許 Backend 以 Environment Variables／既有 Secrets 規範持有與呼叫。
-- Error response / Log **不得**暴露 API key、request signature、或 provider secrets。
-- **不**新增 Driver 可呼叫的 Geocoding endpoint。
+- Google API Key / Secret **不得**進入 Frontend 或 Git；僅 Backend Environment Variables／既有 Secrets 規範。
+- Provider 僅允許 Backend 呼叫。
+- Error response / Log **不得**暴露 API key 或 provider secrets。
+- **不**新增 Driver（或任何角色）可呼叫的公開 Geocoding endpoint。
+- **不**把 Pickup lat/lng 寫入 Database；避免以 DB 做長期座標倉儲。
 - **不**新增 Role／Permission 體系。
-
-**BLOCKING：** 在 `PHASE-2-SPEC.md` §5.5 產品／法務決策解除前，**不得實作**將 Google Geocoding lat/lng 長期寫入 Order 並供多角色共用的功能。不得以「技術方便」假設永久保存合法。
+- **不**引入 Google Routes API。
 
 ---
 

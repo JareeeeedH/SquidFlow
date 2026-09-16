@@ -712,7 +712,7 @@ Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI�
 
 產品範圍以 `PHASE-2-SPEC.md` 為準。Phase 2 / Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 2 地圖頁或 Phase 3 通訊介面。Phase 2 UI **不**呈現道路距離或 ETA。
 
-P2-02：不提供 Driver／一般使用者手動觸發 Geocoding 的 UI；Geocoding 為建單／改地址後的系統行為。P2-02 實作目前受 Google Geocoding 儲存／地圖條款 **BLOCKING**（見 `PHASE-2-SPEC.md` §5.5），解除前不設計依賴「訂單長期共用 Pickup 座標」的 UI 假設為已可上線。
+P2-02：不提供手動觸發 Geocoding 的 UI；Geocoding 為建單／修改 `pickup_location` 後的系統非同步行為。UI **不**假設 Order DB 內有 Pickup lat/lng 欄位；距離／地圖所需座標由 Backend 在執行期提供（見 `PHASE-2-SPEC.md` P2-02）。內嵌地圖 SDK 須於 P2-04 與 Google Geocoding 地圖條款一併決定。
 
 ---
 

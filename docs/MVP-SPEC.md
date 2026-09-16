@@ -730,7 +730,11 @@ Phase 2 包含：
 
 ### Pickup Geocoding（P2-02）
 
-- 建單先存文字上車地址；建立後系統自動 Geocoding
+- Provider：Google Geocoding API（Backend 呼叫）
+- 建單先存文字 `pickup_location`；建立後非同步 Geocoding；不阻塞建單 response
+- **不**將 Pickup lat/lng 存入 Database
+- 同一 Order 的 Geocoding 結果供 Distance／Map 使用；不因多名 Driver 重複呼叫 Google
+- `pickup_location` 修改後必須重新 Geocode；不得沿用舊座標
 - Geocoding 失敗不阻塞訂單流程
 
 ### Phase 2 基本原則

@@ -1458,36 +1458,33 @@ Phase 3 — Advanced Dispatch & Communication
 - Backend 儲存最新位置 only
 - Admin 可讀 ONLINE Drivers 最新位置
 
-**Phase 2 / P2-02 Pickup Geocoding — BLOCKING（不得實作直到產品／法務解除）：**
+**Phase 2 / P2-02 Pickup Geocoding（已對齊）：**
 
-產品已選定 **Google Geocoding API**，且產品意圖為：
+產品選定 **Google Geocoding API**。
 
 ```text
-Create/Update Order 成功（文字 pickup_location 已存）
+Create/Update Order 成功（文字 pickup_location 已存於 DB）
         ↓
-立即回傳 API response（不等待第三方）
+立即回傳 API response（不等待 Google）
         ↓
 Backend 非同步呼叫 Google Geocoding（server-side only）
         ↓
-成功 → 寫入 Pickup 座標（供 Distance / Map）
-失敗 → Order 保留；不清空文字地址；不 rollback
+成功 → 將 lat/lng 保留於 Backend runtime（同一 Order + 目前地址可重用）
+失敗 → Order 保留；不清空文字地址；不 rollback；Distance/Map 暫無 Pickup 點
 ```
 
-架構約束（產品意圖，實作仍 blocked）：
+架構規則：
 
+- **不**把 Pickup lat/lng 寫入 PostgreSQL／Prisma Schema
 - **不**由 Browser 呼叫 Provider
-- **不**引入獨立 queue / worker 系統（現有架構無 queue）；解除 BLOCKING 後採 process-local async（例如 fire-and-forget + 簡單延遲重試）即可
-- `pickup_location` 修改必須重新 geocode；舊座標不得繼續視為有效
-- Secrets 僅存 Environment Variables；錯誤不得外洩 API key
+- **不**引入 Redis／獨立 queue／worker（現有架構無 queue）
+- 使用 process-local async + memoization／single-flight：同一 Order 的同一 `pickup_location` 不因多名 Driver 重複打 Google
+- `pickup_location` 修改 → 使舊 runtime 結果失效 → 重新 geocode
+- timeout／provider error：有限次數的簡單延遲重試；`ZERO_RESULTS` 不對同一未改地址無限重試
+- Secrets 僅 Environment Variables；錯誤不得外洩 API key
+- P2-03 計算直線距離；P2-04 負責 Map／Navigation；本切片不做 Routes／ETA
 
-**BLOCKING 原因（官方事實 + 技術判斷）：**
-
-- `[Official]` Google Geocoding Service Specific Terms §6.3.1：lat/lng 暫存最多 30 天後須刪除。
-- `[Official]` §6.3.2：無限期快取須隔離單一 End User，且不得跨多 End User、不得用來替代再次呼叫。
-- `[Official]` §6.2：不得與 non-Google map 併用 Geocoding 內容。
-- `[判斷]` Order 上長期保存並供 Admin／多名 Driver 共用，與上述儲存模型衝突風險高；P2-04 內嵌非 Google 地圖亦會觸發 §6.2。詳見 `PHASE-2-SPEC.md` §5.5。
-
-在產品／法務解除 BLOCKING 前：**不得實作** Google Geocoding 寫入 Order 座標的流程。
+殘餘注意（非 DB 永久儲存 blocker）：P2-04 內嵌地圖若非 Google Map，不得把 Geocoding 內容畫在 non-Google map 上（Google §6.2）。地圖 SDK 於 P2-04 Spec 決定。
 
 **Phase 2 / P2-03–P2-04（產品已定方向，技術細節後續同步）：**
 
