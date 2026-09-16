@@ -76,6 +76,11 @@ const pickupPoint = computed(() => {
   return null
 })
 
+function driverDistanceLabel(distanceMeters: number | null): string | null {
+  const label = formatStraightLineDistance(distanceMeters)
+  return label ? `直線距離：${label}` : null
+}
+
 const driverPoints = computed(() =>
   onlineDrivers.value
     .filter(
@@ -90,6 +95,15 @@ const driverPoints = computed(() =>
       lng: d.longitude as number,
       label: d.username,
     })),
+)
+
+const onlineDriverDistanceRows = computed(() =>
+  onlineDrivers.value.map((d) => ({
+    id: d.id,
+    username: d.username,
+    license_plate: d.license_plate,
+    distanceLabel: driverDistanceLabel(d.distance_meters),
+  })),
 )
 
 const showDispatchMap = computed(
@@ -121,11 +135,6 @@ function captureError(caught: unknown) {
     return { code: caught.code, message: caught.message }
   }
   return { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
-}
-
-function driverDistanceLabel(distanceMeters: number | null): string {
-  const label = formatStraightLineDistance(distanceMeters)
-  return label ? `直線距離：${label}` : '直線距離：—'
 }
 
 async function loadOrder() {
@@ -403,10 +412,10 @@ watch(
             <article v-if="showDispatchMap" class="panel">
               <h2>地圖</h2>
               <OrderMap :pickup="pickupPoint" :drivers="driverPoints" />
-              <ul v-if="onlineDrivers.length" class="driver-distances">
-                <li v-for="d in onlineDrivers" :key="d.id">
+              <ul v-if="onlineDriverDistanceRows.length" class="driver-distances">
+                <li v-for="d in onlineDriverDistanceRows" :key="d.id">
                   <span>{{ d.username }} · {{ d.license_plate }}</span>
-                  <span>{{ driverDistanceLabel(d.distance_meters) }}</span>
+                  <span v-if="d.distanceLabel">{{ d.distanceLabel }}</span>
                 </li>
               </ul>
             </article>

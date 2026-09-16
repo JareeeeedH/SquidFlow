@@ -705,8 +705,8 @@ Driver
 ## Product Phase UI Boundary
 
 ```text
-Phase 1 — 目前 MVP UI Scope（上表）
-Phase 2 — Driver Location & Trip Information（地圖 / 直線距離相關 UI）
+Phase 1 — 核心派車 MVP UI Scope（上表；已實作）
+Phase 2 — Driver Location & Trip Information（地圖 / 直線距離相關 UI；已對齊）
 Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI）
 ```
 

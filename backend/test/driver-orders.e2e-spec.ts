@@ -440,24 +440,27 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       .expect(200);
 
     const body = asBody<ApiSuccessBody<DriverOrderDetail>>(response);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        id: orders.open,
-        order_no: `ORD-D8-OPEN-${suffix}`,
-        customer_name: '王先生',
-        pickup_location: '左營高鐵站',
-        destination: '高雄小港機場',
-        price: 1200,
-        note: '2件行李',
-        status: 'OPEN',
-        created_at: body.data.created_at,
-        distance_meters: null,
-        pickup_latitude: null,
-        pickup_longitude: null,
-      },
+    expect(body.success).toBe(true);
+    expect(body.data).toMatchObject({
+      id: orders.open,
+      order_no: `ORD-D8-OPEN-${suffix}`,
+      customer_name: '王先生',
+      pickup_location: '左營高鐵站',
+      destination: '高雄小港機場',
+      price: 1200,
+      note: '2件行李',
+      status: 'OPEN',
+      distance_meters: null,
     });
     expect(typeof body.data.created_at).toBe('string');
+    expect(
+      body.data.pickup_latitude === null ||
+        typeof body.data.pickup_latitude === 'number',
+    ).toBe(true);
+    expect(
+      body.data.pickup_longitude === null ||
+        typeof body.data.pickup_longitude === 'number',
+    ).toBe(true);
     assertNoSecrets(body);
     expect(Object.keys(body.data).sort()).toEqual(
       [

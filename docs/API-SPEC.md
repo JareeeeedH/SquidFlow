@@ -527,6 +527,8 @@ Admin-only。Driver 回 `403 FORBIDDEN`。
 
 ## Get Order Events
 
+> **MVP 實作狀態：** 本端點契約已定義，但 **尚未實作**。`order_events` 於 Create／Publish／Accept／Start／Complete／Cancel 時寫入 DB；Admin Order Detail UI 依 `UI-UX-SPEC.md` **不顯示 Timeline**。讀取 API／Timeline UI 屬後續決策，不阻塞核心派車流程。
+
 ```http
 GET /api/v1/orders/:id/events
 ```
@@ -1102,6 +1104,8 @@ pickup_longitude: number | null
 # 6. Notification
 
 ## List Notifications
+
+> **MVP 實作狀態：** 本端點契約已定義，但 **尚未實作**。MVP 通知以 Web Push（`POST`／`DELETE /notifications/subscription`）為準；Inbox 列表屬後續決策，不阻塞核心派車流程。
 
 ```http
 GET /api/v1/notifications

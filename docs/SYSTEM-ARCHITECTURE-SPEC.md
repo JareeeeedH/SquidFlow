@@ -236,7 +236,7 @@ Controller 不直接處理核心 Business Logic。
 
 負責：
 
-- Order Timeline
+- Order Timeline（**MVP UI 不顯示**；見 `UI-UX-SPEC.md`。Event 仍寫入 DB 作為 Audit／Troubleshooting）
 - Process History
 - Audit Log
 - Troubleshooting

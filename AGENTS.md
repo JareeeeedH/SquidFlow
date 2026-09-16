@@ -40,6 +40,7 @@ Review
 ```text
 docs/
 ├── MVP-SPEC.md
+├── PHASE-2-SPEC.md
 ├── TECHNOLOGY-SPEC.md
 ├── DATABASE-SPEC.md
 ├── API-SPEC.md

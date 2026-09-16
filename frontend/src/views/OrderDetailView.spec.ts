@@ -314,6 +314,38 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).toContain('訂單狀態不允許此操作')
   })
 
+  it('hides Admin straight-line distance when distance_meters is null', async () => {
+    vi.mocked(getOrder).mockResolvedValue(openOrder)
+    vi.mocked(listOnlineDriverDistances).mockResolvedValue([
+      {
+        id: 'driver-1',
+        username: 'driver_a',
+        license_plate: 'ABC-1234',
+        online_status: 'ONLINE',
+        latitude: 22.7,
+        longitude: 120.3,
+        location_updated_at: '2026-09-16T04:00:00.000Z',
+        distance_meters: null,
+      },
+      {
+        id: 'driver-2',
+        username: 'driver_b',
+        license_plate: 'XYZ-5678',
+        online_status: 'ONLINE',
+        latitude: 22.71,
+        longitude: 120.31,
+        location_updated_at: '2026-09-16T04:00:00.000Z',
+        distance_meters: 850,
+      },
+    ])
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain('driver_a · ABC-1234')
+    expect(wrapper.text()).toContain('driver_b · XYZ-5678')
+    expect(wrapper.text()).toContain('直線距離：850 公尺')
+    expect(wrapper.text()).not.toContain('直線距離：—')
+  })
+
   it('shows 404 when the order does not exist', async () => {
     vi.mocked(getOrder).mockRejectedValue(
       new ApiClientError('NOT_FOUND', '找不到訂單', 404),

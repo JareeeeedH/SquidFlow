@@ -5,10 +5,12 @@
 與正式 Spec 一致的產品階段邊界：
 
 ```text
-Phase 1 — 核心派車 MVP（目前實作範圍）
-Phase 2 — Driver Location & Trip Information
+Phase 1 — 核心派車 MVP（產品功能已實作）
+Phase 2 — Driver Location & Trip Information（P2-01～P2-04 已實作）
 Phase 3 — Advanced Dispatch & Communication
 ```
+
+> 產品功能（P1 + P2）已收斂；Production deployment（Docker／HTTPS／反向代理）仍見 Production Readiness Audit，不屬本文件「功能完成」範圍。
 
 ### Phase 1
 
