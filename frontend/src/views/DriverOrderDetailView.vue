@@ -14,6 +14,7 @@ import { ApiClientError } from '../api/types'
 import type { DriverOrderDetail } from '../api/types'
 import OrderMap from '../components/OrderMap.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
+import SlideToConfirm from '../components/SlideToConfirm.vue'
 import { formatStraightLineDistance } from '../lib/format-distance'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 import { openGoogleMapsNavigation } from '../lib/google-maps-nav'
@@ -98,8 +99,8 @@ const acting = computed(
 
 const backTarget = computed(() =>
   order.value?.status === 'OPEN'
-    ? { name: 'driver-open-orders' as const, label: '返回可搶訂單' }
-    : { name: 'driver-my-orders' as const, label: '返回我的訂單' },
+    ? { name: 'driver-open-orders' as const, label: '返回' }
+    : { name: 'driver-my-orders' as const, label: '返回' },
 )
 
 const hasPrimaryAction = computed(
@@ -369,42 +370,30 @@ watch(
         </p>
 
         <div v-if="hasPrimaryAction" class="action-dock">
-          <NButton
+          <SlideToConfirm
             v-if="order.status === 'OPEN'"
-            class="accept"
-            size="large"
-            type="primary"
-            block
+            label="滑動接單"
+            loading-label="搶單中..."
             :loading="accepting"
-            :disabled="acting"
-            @click="acceptOrder"
-          >
-            {{ accepting ? '搶單中...' : '我要接單' }}
-          </NButton>
-          <NButton
+            :disabled="acting && !accepting"
+            @confirm="acceptOrder"
+          />
+          <SlideToConfirm
             v-else-if="order.status === 'ACCEPTED'"
-            class="accept"
-            size="large"
-            type="primary"
-            block
+            label="滑動開始行程"
+            loading-label="開始中..."
             :loading="starting"
-            :disabled="acting"
-            @click="startOrder"
-          >
-            {{ starting ? '開始中...' : '開始行程' }}
-          </NButton>
-          <NButton
+            :disabled="acting && !starting"
+            @confirm="startOrder"
+          />
+          <SlideToConfirm
             v-else-if="order.status === 'IN_PROGRESS'"
-            class="accept"
-            size="large"
-            type="primary"
-            block
+            label="滑動完成訂單"
+            loading-label="完成中..."
             :loading="completing"
-            :disabled="acting"
-            @click="completeOrder"
-          >
-            {{ completing ? '完成中...' : '完成訂單' }}
-          </NButton>
+            :disabled="acting && !completing"
+            @confirm="completeOrder"
+          />
         </div>
       </article>
     </NSpin>

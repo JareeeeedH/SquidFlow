@@ -520,7 +520,7 @@ Driver 採簡化導覽。
 狀態
 ```
 
-上方固定顯示品牌標記、使用者名稱與登出。Online / Offline **不**在頂欄重複顯示，只在狀態頁 Switch Bar。
+上方固定顯示品牌名稱 **SquidFlow** 與登出（可點品牌回狀態頁）。**不**在頂欄顯示裝飾 icon 或使用者名稱。Online / Offline **不**在頂欄重複顯示，只在狀態頁 Switch Bar。
 
 導覽保留「狀態 / 可搶訂單 / 我的訂單」。
 
@@ -556,7 +556,14 @@ Driver 採簡化導覽。
 └──────────────────────────────┘
 ```
 
-時間 / Status / Price 同層；路線最醒目；Order No 為 secondary；長地址 ellipsis。
+時間 / Status / Price 同層；路線最醒目；Order No 為 secondary。
+
+路線採左右並排（上車 → 下車）：
+
+- 兩側各自限制在可用寬度內（`min-width: 0`／等寬欄），不得互相撐開 layout
+- 長地址允許自然換行，最多 **2 行**（不以單行 ellipsis 為主）
+- 下車地為 `null` 時顯示「—」
+- **不得**出現 horizontal scrollbar；以 flex／grid 寬度約束處理，不以 `overflow-x: hidden` 掩蓋
 
 ---
 
@@ -564,30 +571,28 @@ Driver 採簡化導覽。
 
 路線與價格為主要層級；Primary action 置底且清楚。
 
+OPEN／ACCEPTED／IN_PROGRESS 的主操作皆為 **滑動確認 Bar**（非點擊按鈕）：
+
 ```text
 ┌─────────────────────┐
 │ ← 返回…              │
 ├─────────────────────┤
 │ ORD-…        搶單中  │
-│ 09/15 11:20          │
-│                     │
-│ 左營高鐵站            │
-│        ↓             │
-│ 小港機場              │
-│                     │
-│ 價格                 │
-│ NT$ 1,200            │
-│ 客戶 / 備註           │
-│                     │
-│ [     我要接單     ]   │
+│ …                    │
+│ ║ 滑動接單 →        ║ │
 └─────────────────────┘
 ```
+
+- OPEN：滑動接單
+- ACCEPTED：滑動開始行程
+- IN_PROGRESS：滑動完成訂單
+- 未滑至末端不觸發；進行中顯示 loading 文案並鎖定；失敗後可再滑
 
 ---
 
 # 15. Driver Accept Order
 
-點擊「我要接單」。
+滑動「接單」至末端確認。
 
 ```text
 搶單中...
@@ -617,6 +622,8 @@ OPEN → ACCEPTED
 ❌ 目前無法接單
 ```
 
+開始行程／完成訂單同樣採滑動確認（見 §14／§16）。
+
 ---
 
 # 16. Driver My Orders
@@ -636,7 +643,7 @@ Current / History 分層清楚。列表不顯示 `customer_name`。
 09/15 11:20  已接單  NT$1,200
 左營高鐵站 → 高雄小港機場
 ORD-…
-[開始行程]
+║ 滑動開始行程 → ║
 ```
 
 開始後：
@@ -644,18 +651,26 @@ ORD-…
 ```text
 IN_PROGRESS
 
-[完成訂單]
+║ 滑動完成訂單 → ║
 ```
+
+列表與訂單詳情的開始／完成皆為滑動確認 Bar（規則同 §14）。
+
+頂列為時間／Status／Price；Order No 在路線下方。路線換行／寬度約束規則同 §13。
 
 ## 歷史訂單
 
 compact，無操作 CTA：
 
 ```text
-2026-09-15        已完成
+2026-09-15
+已完成
 左營高鐵站 → 高雄小港機場
 ORD-…
 ```
+
+- 日期獨立一行；Status 次之；路線左右並排；Order No 在路線下方
+- 路線換行／寬度約束規則同 §13（最多 2 行；`null` 下車地顯示「—」；無水平捲軸）
 
 Route 為主要資訊；日期 / Order No / Status 為次要。
 
@@ -786,7 +801,7 @@ OFFLINE      Muted
 - 登入後進入狀態頁；可搶訂單與我的訂單由導覽進入
 - Online Status 於狀態頁 Switch 顯示，並以 GET hydrate
 - 上線 / 通知使用 compact switch
-- Open / My Orders 使用 compact card；路線為主、單號為次
+- Open / My Orders 使用 compact card；路線為主、單號為次；長地址最多 2 行換行，避免水平溢出
 - deep navy 僅用於 header、accent、active、primary action
 - 新訂單優先使用 Web Push 通知
 - 搶單按鈕明確、醒目

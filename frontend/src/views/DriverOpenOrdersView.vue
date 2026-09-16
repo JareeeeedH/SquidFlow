@@ -134,17 +134,22 @@ void loadOrders()
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .page :deep(.n-spin-container),
 .page :deep(.n-spin-content) {
   overflow: visible;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .page-header {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 h1 {
@@ -168,10 +173,14 @@ h1 {
   padding: 0;
   display: grid;
   gap: var(--space-8);
+  min-width: 0;
 }
 
 .card {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -207,12 +216,10 @@ h1 {
 
 .time {
   margin: 0;
+  min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
   color: var(--color-muted-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .price {
@@ -224,28 +231,35 @@ h1 {
 }
 
 .route {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 6px;
   min-width: 0;
+  width: 100%;
   margin: 0;
 }
 
 .place {
   min-width: 0;
-  flex: 1 1 0;
+  max-width: 100%;
   font: var(--font-body);
   font-weight: 600;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .arrow {
   flex: 0 0 auto;
+  margin-top: 1px;
   color: var(--color-primary-muted, #1a3358);
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .card-foot {
@@ -259,11 +273,9 @@ h1 {
 .order-no {
   flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .view {

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
 import type { DriverMyOrder } from '../api/types'
+import SlideToConfirm from '../components/SlideToConfirm.vue'
 import DriverMyOrdersView from './DriverMyOrdersView.vue'
 
 vi.mock('../api/driver-orders', () => ({
@@ -61,6 +62,12 @@ async function mountMine() {
   return { wrapper, router }
 }
 
+async function confirmSlide(wrapper: Awaited<ReturnType<typeof mountMine>>['wrapper']) {
+  const slide = wrapper.getComponent(SlideToConfirm)
+  slide.vm.complete()
+  await flushPromises()
+}
+
 describe('DriverMyOrdersView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -80,9 +87,9 @@ describe('DriverMyOrdersView', () => {
     expect(wrapper.text()).toContain('ORD-20260915-009')
     expect(wrapper.text()).toContain('已接單')
     expect(wrapper.text()).toContain('已完成')
-    expect(wrapper.text()).toContain('開始行程')
-    expect(wrapper.text()).not.toContain('完成訂單')
-    expect(wrapper.text()).not.toContain('我要接單')
+    expect(wrapper.text()).toContain('滑動開始行程')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
+    expect(wrapper.text()).not.toContain('滑動接單')
     expect(wrapper.text()).not.toContain('取消訂單')
   })
 
@@ -100,17 +107,13 @@ describe('DriverMyOrdersView', () => {
       ])
 
     const { wrapper } = await mountMine()
-    const start = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('開始行程'))
-    await start!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(startDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('行程已開始')
     expect(wrapper.text()).toContain('行程中')
-    expect(wrapper.text()).toContain('完成訂單')
-    expect(wrapper.text()).not.toContain('開始行程')
+    expect(wrapper.text()).toContain('滑動完成訂單')
+    expect(wrapper.text()).not.toContain('滑動開始行程')
   })
 
   it('completes an in-progress order into history', async () => {
@@ -124,17 +127,13 @@ describe('DriverMyOrdersView', () => {
       .mockResolvedValueOnce([{ ...accepted, status: 'COMPLETED' }])
 
     const { wrapper } = await mountMine()
-    const complete = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('完成訂單'))
-    await complete!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(completeDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('訂單已完成')
     expect(wrapper.text()).toContain('目前沒有進行中的訂單')
     expect(wrapper.text()).toContain('已完成')
-    expect(wrapper.text()).not.toContain('完成訂單')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
   })
 
   it('shows backend errors without inventing a local status', async () => {
@@ -146,11 +145,7 @@ describe('DriverMyOrdersView', () => {
       .mockResolvedValueOnce([{ ...accepted, status: 'IN_PROGRESS' }])
 
     const { wrapper } = await mountMine()
-    const start = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('開始行程'))
-    await start!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(wrapper.text()).toContain('INVALID_ORDER_STATUS')
     expect(wrapper.text()).toContain('訂單狀態不允許此操作')
@@ -165,6 +160,35 @@ describe('DriverMyOrdersView', () => {
       name: 'driver-order-detail',
       params: { id: 'order-1' },
     })
+  })
+
+  it('keeps history card hierarchy with date above route and order no below', async () => {
+    vi.mocked(listDriverOrders).mockResolvedValue([
+      {
+        ...completed,
+        pickup_location:
+          '高雄市左營區高鐵路一段非常非常非常非常非常長的上車地址名稱測試用字串',
+        destination:
+          '高雄市小港區中山四路非常非常非常非常非常長的下車地址名稱測試用字串',
+      },
+    ])
+    const { wrapper } = await mountMine()
+    const history = wrapper.get('.history')
+
+    expect(history.find('.history-date').exists()).toBe(true)
+    expect(history.find('.history-status').exists()).toBe(true)
+    expect(history.findAll('.place')).toHaveLength(2)
+    expect(history.text()).toContain('ORD-20260915-009')
+    expect(history.text()).toContain('已完成')
+  })
+
+  it('shows em dash for null destination on current cards', async () => {
+    vi.mocked(listDriverOrders).mockResolvedValue([
+      { ...accepted, destination: null },
+    ])
+    const { wrapper } = await mountMine()
+    const places = wrapper.findAll('.current .place')
+    expect(places[1].text()).toBe('—')
   })
 
   it('shows empty groups and load errors', async () => {

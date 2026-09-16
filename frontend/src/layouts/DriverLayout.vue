@@ -4,10 +4,12 @@ import type { GlobalThemeOverrides } from 'naive-ui'
 import { NButton, NConfigProvider } from 'naive-ui'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
 import { useAuthStore } from '../stores/auth'
 import { useDriverStatusStore } from '../stores/driver-status'
 import { usePushNotificationStore } from '../stores/push-notification'
 
+const app = useAppStore()
 const auth = useAuthStore()
 const driverStatus = useDriverStatusStore()
 const pushNotification = usePushNotificationStore()
@@ -41,13 +43,9 @@ onMounted(() => {
         <RouterLink
           class="brand"
           :to="{ name: 'driver-home' }"
-          aria-label="首頁"
         >
-          <span class="brand-mark" aria-hidden="true" />
+          {{ app.name }}
         </RouterLink>
-        <p v-if="auth.currentUser" class="user">
-          {{ auth.currentUser.username }}
-        </p>
         <NButton class="logout" quaternary size="large" @click="onLogout">
           <template #icon>
             <LogOut :size="18" />
@@ -110,6 +108,7 @@ onMounted(() => {
 .topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-12);
   padding: var(--space-12) var(--space-16);
   background: var(--color-primary);
@@ -118,38 +117,21 @@ onMounted(() => {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-8);
-  background: rgb(248 250 252 / 12%);
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.brand-mark {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: #f8fafc;
-  box-shadow: 6px 0 0 rgb(248 250 252 / 45%);
-}
-
-.user {
   flex: 1;
-  margin: 0;
   min-width: 0;
-  font: var(--font-label);
-  font-weight: 600;
+  margin: 0;
   color: #f8fafc;
+  text-decoration: none;
+  font: var(--font-label);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .logout {
+  flex-shrink: 0;
   min-height: 44px;
   color: #f8fafc !important;
 }

@@ -11,6 +11,7 @@ import {
 import { ApiClientError } from '../api/types'
 import type { DriverMyOrder } from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
+import SlideToConfirm from '../components/SlideToConfirm.vue'
 import { splitDriverMyOrders } from '../lib/driver-my-orders'
 import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
 
@@ -202,28 +203,22 @@ void loadOrders()
                   </p>
                   <p class="order-no">{{ order.order_no }}</p>
                 </button>
-                <NButton
+                <SlideToConfirm
                   v-if="order.status === 'ACCEPTED'"
-                  size="large"
-                  type="primary"
-                  block
+                  label="滑動開始行程"
+                  loading-label="開始中..."
                   :loading="actingId === order.id"
-                  :disabled="acting"
-                  @click="startOrder(order)"
-                >
-                  {{ actingId === order.id ? '開始中...' : '開始行程' }}
-                </NButton>
-                <NButton
+                  :disabled="acting && actingId !== order.id"
+                  @confirm="startOrder(order)"
+                />
+                <SlideToConfirm
                   v-else-if="order.status === 'IN_PROGRESS'"
-                  size="large"
-                  type="primary"
-                  block
+                  label="滑動完成訂單"
+                  loading-label="完成中..."
                   :loading="actingId === order.id"
-                  :disabled="acting"
-                  @click="completeOrder(order)"
-                >
-                  {{ actingId === order.id ? '完成中...' : '完成訂單' }}
-                </NButton>
+                  :disabled="acting && actingId !== order.id"
+                  @confirm="completeOrder(order)"
+                />
               </article>
             </li>
           </ul>
@@ -244,8 +239,8 @@ void loadOrders()
                 :data-status="order.status"
                 @click="openDetail(order.id)"
               >
-                <div class="card-top">
-                  <p class="time">{{ historyDate(order.created_at) }}</p>
+                <p class="history-date">{{ historyDate(order.created_at) }}</p>
+                <div class="history-status">
                   <OrderStatusTag :status="order.status" />
                 </div>
                 <p class="route">
@@ -268,17 +263,22 @@ void loadOrders()
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .page :deep(.n-spin-container),
 .page :deep(.n-spin-content) {
   overflow: visible;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .page-header {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 h1 {
@@ -325,6 +325,7 @@ h2 {
 .group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .history-group {
@@ -338,9 +339,14 @@ h2 {
   padding: 0;
   display: grid;
   gap: var(--space-8);
+  min-width: 0;
 }
 
 .card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
@@ -366,9 +372,11 @@ h2 {
   border-color: color-mix(in srgb, var(--status-color) 28%, var(--color-border));
 }
 
-.card-main,
-.history {
+.card-main {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -383,8 +391,27 @@ h2 {
 }
 
 .history {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--color-primary, #0b1f3a) 3%, var(--color-surface));
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+}
+
+.history:active {
+  background: var(--color-primary-soft, #e8eef5);
 }
 
 .history:focus-visible,
@@ -401,18 +428,26 @@ h2 {
   min-width: 0;
 }
 
-.history .card-top {
-  grid-template-columns: minmax(0, 1fr) auto;
+.history-date {
+  margin: 0;
+  min-width: 0;
+  font: var(--font-caption);
+  font-weight: 600;
+  color: var(--color-muted-text);
+  line-height: 1.3;
+}
+
+.history-status {
+  display: flex;
+  min-width: 0;
 }
 
 .time {
   margin: 0;
+  min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
   color: var(--color-muted-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .price {
@@ -424,22 +459,27 @@ h2 {
 }
 
 .route {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 6px;
   min-width: 0;
+  width: 100%;
   margin: 0;
 }
 
 .place {
   min-width: 0;
-  flex: 1 1 0;
+  max-width: 100%;
   font: var(--font-body);
   font-weight: 600;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .history .place {
@@ -447,16 +487,17 @@ h2 {
 }
 
 .arrow {
-  flex: 0 0 auto;
+  margin-top: 1px;
   color: var(--color-primary-muted, #1a3358);
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .order-no {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
   line-height: 1.3;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .card :deep(.n-button) {

@@ -68,6 +68,26 @@ describe('DriverOpenOrdersView', () => {
     expect(wrapper.text()).toContain('搶單中')
     expect(wrapper.text()).toContain('查看 →')
     expect(wrapper.text()).not.toContain('2件行李')
+    expect(wrapper.find('.route').classes()).not.toContain('overflow')
+    expect(wrapper.findAll('.place')).toHaveLength(2)
+  })
+
+  it('shows em dash when destination is null and keeps places clamped', async () => {
+    vi.mocked(listOpenDriverOrders).mockResolvedValue([
+      {
+        ...sample,
+        pickup_location:
+          '高雄市左營區高鐵路一段非常非常非常非常非常長的上車地址名稱測試用字串',
+        destination: null,
+      },
+    ])
+    const { wrapper } = await mountOpen()
+
+    expect(wrapper.text()).toContain('—')
+    expect(wrapper.text()).not.toContain('null')
+    const places = wrapper.findAll('.place')
+    expect(places).toHaveLength(2)
+    expect(places[1].text()).toBe('—')
   })
 
   it('shows empty state when there are no open orders', async () => {

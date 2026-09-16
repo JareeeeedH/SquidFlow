@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
 import type { DriverOrderDetail } from '../api/types'
+import SlideToConfirm from '../components/SlideToConfirm.vue'
 import DriverOrderDetailView from './DriverOrderDetailView.vue'
 
 vi.mock('../api/driver-orders', () => ({
@@ -75,6 +76,12 @@ async function mountDetail(id = 'order-1') {
   return { wrapper }
 }
 
+async function confirmSlide(wrapper: Awaited<ReturnType<typeof mountDetail>>['wrapper']) {
+  const slide = wrapper.getComponent(SlideToConfirm)
+  slide.vm.complete()
+  await flushPromises()
+}
+
 describe('DriverOrderDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -96,7 +103,7 @@ describe('DriverOrderDetailView', () => {
     vi.resetAllMocks()
   })
 
-  it('shows an OPEN order with an accept action', async () => {
+  it('shows an OPEN order with a slide-to-accept action', async () => {
     const { wrapper } = await mountDetail()
 
     expect(wrapper.text()).toContain('ORD-20260915-002')
@@ -106,10 +113,10 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).toContain('高雄小港機場')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).toContain('2件行李')
-    expect(wrapper.text()).toContain('我要接單')
-    expect(wrapper.text()).not.toContain('開始行程')
-    expect(wrapper.text()).not.toContain('完成訂單')
-    expect(wrapper.text()).toContain('返回可搶訂單')
+    expect(wrapper.text()).toContain('滑動接單')
+    expect(wrapper.text()).not.toContain('滑動開始行程')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
+    expect(wrapper.text()).toContain('返回')
   })
 
   it('accepts an OPEN order from the backend response then reloads detail', async () => {
@@ -118,16 +125,12 @@ describe('DriverOrderDetailView', () => {
       .mockResolvedValueOnce(ownAccepted)
     const { wrapper } = await mountDetail()
 
-    const accept = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('我要接單'))
-    await accept!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(acceptDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('接單成功')
     expect(wrapper.text()).toContain('已接單')
-    expect(wrapper.text()).not.toContain('我要接單')
+    expect(wrapper.text()).not.toContain('滑動接單')
   })
 
   it('shows the backend error when another driver already accepted', async () => {
@@ -145,11 +148,7 @@ describe('DriverOrderDetailView', () => {
       )
     const { wrapper } = await mountDetail()
 
-    const accept = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('我要接單'))
-    await accept!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(wrapper.text()).toContain('ORDER_ALREADY_ACCEPTED')
     expect(wrapper.text()).toContain('此訂單已被其他司機接單')
@@ -161,13 +160,13 @@ describe('DriverOrderDetailView', () => {
 
     expect(wrapper.text()).toContain('已接單')
     expect(wrapper.text()).toContain('李小姐')
-    expect(wrapper.text()).toContain('開始行程')
-    expect(wrapper.text()).toContain('返回我的訂單')
-    expect(wrapper.text()).not.toContain('我要接單')
-    expect(wrapper.text()).not.toContain('完成訂單')
+    expect(wrapper.text()).toContain('滑動開始行程')
+    expect(wrapper.text()).toContain('返回')
+    expect(wrapper.text()).not.toContain('滑動接單')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
   })
 
-  it('starts then completes from order detail', async () => {
+  it('starts then completes from order detail via slide confirm', async () => {
     vi.mocked(startDriverOrder).mockResolvedValue({
       id: 'order-1',
       status: 'IN_PROGRESS',
@@ -184,27 +183,19 @@ describe('DriverOrderDetailView', () => {
       .mockResolvedValueOnce({ ...ownAccepted, status: 'COMPLETED' })
 
     const { wrapper } = await mountDetail()
-    const start = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('開始行程'))
-    await start!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(startDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('行程已開始')
-    expect(wrapper.text()).toContain('完成訂單')
+    expect(wrapper.text()).toContain('滑動完成訂單')
 
-    const complete = wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('完成訂單'))
-    await complete!.trigger('click')
-    await flushPromises()
+    await confirmSlide(wrapper)
 
     expect(completeDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('訂單已完成')
     expect(wrapper.text()).toContain('已完成')
-    expect(wrapper.text()).not.toContain('開始行程')
-    expect(wrapper.text()).not.toContain('完成訂單')
+    expect(wrapper.text()).not.toContain('滑動開始行程')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
   })
 
   it('shows 404 when the order is missing or belongs to another driver', async () => {
