@@ -148,10 +148,12 @@ describe('GeocodingService', () => {
 
   it('does not retry ZERO_RESULTS, INVALID, or DISABLED', async () => {
     client.geocode.mockResolvedValue({ ok: false, reason: 'ZERO_RESULTS' });
-    await expect(service.ensureGeocoded('order-0', 'nowhere')).resolves.toEqual({
-      ok: false,
-      reason: 'ZERO_RESULTS',
-    });
+    await expect(service.ensureGeocoded('order-0', 'nowhere')).resolves.toEqual(
+      {
+        ok: false,
+        reason: 'ZERO_RESULTS',
+      },
+    );
     expect(client.geocode).toHaveBeenCalledTimes(1);
 
     client.geocode.mockClear();
