@@ -220,4 +220,57 @@ describe('DashboardView', () => {
     expect(wrapper.find('.board-mobile').exists()).toBe(true)
     expect(wrapper.find('.board-desktop').exists()).toBe(true)
   })
+
+  it('limits mobile focus preview to 3 latest orders and links to filtered list', async () => {
+    const openOrders = Array.from({ length: 5 }, (_, index) => ({
+      id: `open-${index}`,
+      order_no: `ORD-OPEN-${index}`,
+      customer_name: null,
+      pickup_location: '左營高鐵站',
+      destination: null,
+      created_at: `2026-09-15T1${index}:00:00.000Z`,
+      price: null,
+      status: 'OPEN' as const,
+      driver: null,
+    }))
+
+    vi.mocked(getAdminDashboard).mockResolvedValue({
+      summary: {
+        DRAFT: 0,
+        OPEN: 5,
+        ACCEPTED: 0,
+        IN_PROGRESS: 0,
+        COMPLETED: 0,
+        CANCELLED: 0,
+      },
+      board_orders: openOrders,
+    })
+
+    const { wrapper, router } = await mountDashboard()
+    const push = vi.spyOn(router, 'push')
+    const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
+
+    expect(openGroup.exists()).toBe(true)
+    expect(openGroup.findAll('.order-card')).toHaveLength(3)
+    expect(openGroup.text()).toContain('ORD-OPEN-0')
+    expect(openGroup.text()).toContain('ORD-OPEN-1')
+    expect(openGroup.text()).toContain('ORD-OPEN-2')
+    expect(openGroup.text()).not.toContain('ORD-OPEN-3')
+    expect(openGroup.text()).toContain('查看全部 5 →')
+
+    const viewAll = openGroup.find('.view-all')
+    await viewAll.trigger('click')
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'orders',
+      query: { status: 'OPEN' },
+    })
+  })
+
+  it('hides mobile view-all when status has at most 3 orders', async () => {
+    const { wrapper } = await mountDashboard()
+    const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
+
+    expect(openGroup.text()).not.toContain('查看全部')
+  })
 })

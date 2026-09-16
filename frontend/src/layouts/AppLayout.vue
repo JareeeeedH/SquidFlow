@@ -35,7 +35,6 @@ async function onLogout() {
         </template>
       </NButton>
       <RouterLink class="mobile-brand" :to="{ name: 'dashboard' }">{{ app.name }}</RouterLink>
-      <span class="mobile-user">{{ auth.currentUser?.username }}</span>
     </header>
 
     <aside class="sidebar">
@@ -204,8 +203,7 @@ async function onLogout() {
   padding: var(--space-8);
 }
 
-.username,
-.mobile-user {
+.username {
   font: var(--font-caption);
   color: var(--color-muted-text);
   overflow: hidden;
@@ -269,11 +267,6 @@ async function onLogout() {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .mobile-user {
-    max-width: 88px;
-    flex-shrink: 0;
   }
 
   .sidebar {

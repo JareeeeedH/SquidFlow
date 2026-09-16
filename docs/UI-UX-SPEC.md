@@ -143,10 +143,10 @@ Driver
 Compact header + hamburger drawer：
 
 ```text
-[☰]  Brand          username
+[☰]  SquidFlow
 ```
 
-Drawer 內為相同導覽項目與登出。Desktop sidebar 維持不變。
+Header 僅 Menu + Brand（不顯示 username）。Drawer 內為相同導覽項目、username 與登出。Desktop sidebar 維持不變。
 
 ---
 
@@ -203,6 +203,8 @@ OPEN
 ACCEPTED
 IN_PROGRESS
 ```
+
+每個 Status 最多顯示**最新 3 筆**（依 `board_orders` 的 `created_at` 降序）。若該 Status 還有更多訂單，顯示「查看全部 N →」，導向 `/orders?status=<status>`（N 為 summary 數量）。
 
 草稿不進 Mobile 重點區。完整訂單（含草稿／已完成／已取消與搜尋篩選）維持 `/orders`。提供「完整訂單」入口。
 

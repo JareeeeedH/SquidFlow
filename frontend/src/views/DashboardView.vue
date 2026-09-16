@@ -37,12 +37,19 @@ const boardColumns = computed(() =>
 )
 
 /** Mobile focus board: OPEN / ACCEPTED / IN_PROGRESS only (DRAFT stays on desktop board). */
+const MOBILE_FOCUS_PREVIEW_LIMIT = 3
+
 const mobileFocusColumns = computed(() =>
-  OPERATIONAL_ORDER_STATUSES.map((status) => ({
-    status,
-    count: dashboard.value?.summary[status] ?? 0,
-    orders: groupedBoardOrders.value[status],
-  })),
+  OPERATIONAL_ORDER_STATUSES.map((status) => {
+    const orders = groupedBoardOrders.value[status]
+    const count = dashboard.value?.summary[status] ?? 0
+    return {
+      status,
+      count,
+      preview: orders.slice(0, MOBILE_FOCUS_PREVIEW_LIMIT),
+      showViewAll: count > MOBILE_FOCUS_PREVIEW_LIMIT,
+    }
+  }),
 )
 
 function driverLabel(order: DashboardBoardOrder) {
@@ -235,13 +242,13 @@ void loadDashboard()
                 <span class="column-count">{{ column.count }}</span>
               </header>
               <p
-                v-if="!loading && column.orders.length === 0"
+                v-if="!loading && column.preview.length === 0"
                 class="column-empty focus-empty"
               >
                 目前沒有訂單
               </p>
               <button
-                v-for="order in column.orders"
+                v-for="order in column.preview"
                 :key="order.id"
                 class="order-card"
                 type="button"
@@ -268,6 +275,14 @@ void loadDashboard()
                     {{ driverLabel(order) }}
                   </span>
                 </p>
+              </button>
+              <button
+                v-if="column.showViewAll"
+                class="view-all"
+                type="button"
+                @click="openOrders(column.status)"
+              >
+                查看全部 {{ column.count }} →
               </button>
             </div>
           </template>
@@ -604,6 +619,28 @@ h1 {
 
 .focus-empty {
   padding: var(--space-12) var(--space-8);
+}
+
+.view-all {
+  margin-top: var(--space-4);
+  padding: var(--space-8);
+  border: none;
+  border-radius: var(--radius-8);
+  background: transparent;
+  color: var(--color-primary);
+  font: var(--font-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.view-all:hover,
+.view-all:focus-visible {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.view-all:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1280px) {
