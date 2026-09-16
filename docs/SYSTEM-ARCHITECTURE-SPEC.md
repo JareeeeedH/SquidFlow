@@ -1472,7 +1472,7 @@ Backend 非同步呼叫 Google Geocoding（server-side only）
 - **不**引入 Redis／獨立 queue／worker（現有架構無 queue）
 - 使用 process-local async + memoization／single-flight：同一 Order 的同一 `pickup_location` 不因多名 Driver 重複打 Google
 - `pickup_location` 修改 → 使舊 runtime 結果失效 → 重新 geocode
-- timeout／provider error：有限次數的簡單延遲重試；`ZERO_RESULTS` 不對同一未改地址無限重試
+- timeout／provider error：最多 **2 次** provider 呼叫（含首次）；失敗後隔 **200ms** 再試一次；`ZERO_RESULTS`／`INVALID`／`DISABLED` **不重試**
 - Secrets 僅 Environment Variables；錯誤不得外洩 API key
 - P2-03 計算直線距離；P2-04 負責 Map／Navigation；本切片不做 Routes／ETA
 
@@ -1504,7 +1504,7 @@ Admin：GET /api/v1/orders/:id/online-driver-distances
 - Driver 只能看到自己的 Distance；Admin 只看 ONLINE Drivers ↔ 指定 Order Pickup
 - Distance 為參考資訊；**不**改變 Phase 1 claim／Order State
 - Canonical API field：`distance_meters: number | null`
-- UI 單位：`< 1 km` → meters；`>= 1 km` → kilometers；標示「直線距離」；顯示捨入精度仍 open
+- UI 單位：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；標示「直線距離」（已確認；見 `PHASE-2-SPEC.md` §6.5／§11）
 
 **Phase 2 / P2-04 Map & Google Maps Navigation（已對齊）：**
 

@@ -7,6 +7,7 @@ type GoogleMapsNamespace = {
       fitBounds: (bounds: unknown) => void
       setCenter: (c: { lat: number; lng: number }) => void
       setZoom: (z: number) => void
+      getZoom: () => number | undefined
     }
     Marker: new (opts: Record<string, unknown>) => { setMap: (m: unknown) => void }
     LatLngBounds: new () => {

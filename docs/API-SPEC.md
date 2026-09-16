@@ -939,7 +939,7 @@ distance_meters: number | null
 - `null`：Driver GPS 或缺 Pickup runtime 座標 → **不顯示** Distance（UI 必須隱藏，不得顯示 `0` 或假值）
 - **不**在 P2-03 response 中回傳 Pickup lat/lng（座標仍由 P2-02 runtime 內部持有；地圖座標契約屬 P2-04）
 - **不**回傳 `road_distance`、`eta`、Routes 相關欄位
-- 顯示單位（`< 1 km` → meters；`>= 1 km` → kilometers）與「直線距離」標示由 UI 依產品規則處理；**顯示捨入精度仍 open**（見 `PHASE-2-SPEC.md` §11）
+- 顯示單位與精度（已確認）：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；UI 標示 **「直線距離」**（見 `PHASE-2-SPEC.md` §6.5／§11）
 
 ## Driver — Distance on related Orders
 
@@ -977,7 +977,7 @@ GET /api/v1/orders/:id/online-driver-distances
 
 僅 `ADMIN`。回傳目前 `online_status = ONLINE` 的 Drivers，以及各自到**該 Order** Pickup 的直線距離。
 
-用途：Dispatch／Dashboard／Order 情境下，Admin 查看 Online Drivers ↔ Pickup（產品已確認的 visibility；畫面配置仍 open）。
+用途：Dispatch／Dashboard／Order 情境下，Admin 查看 Online Drivers ↔ Pickup（產品已確認的 visibility）。
 
 規則：
 
@@ -1007,7 +1007,7 @@ GET /api/v1/orders/:id/online-driver-distances
 }
 ```
 
-Dashboard `board_orders` **不**強制嵌入全量 Online Driver distances（避免 N×M payload；UI 於需要時對選定 Order 呼叫本端點）。畫面配置見 UI-UX／`PHASE-2-SPEC.md` open decisions。
+Dashboard `board_orders` **不**強制嵌入全量 Online Driver distances（避免 N×M payload；UI 於需要時對選定 Order 呼叫本端點）。畫面配置見 UI-UX／`PHASE-2-SPEC.md`。
 
 ---
 
@@ -1249,6 +1249,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Provider：**Google Geocoding API**；僅 Backend 呼叫
 - **不**新增公開 Geocoding endpoint（含 Driver）
 - Create／Update Order（含 `pickup_location` 變更）成功後：非同步觸發 geocode；**不**阻塞 API response；失敗**不** rollback Order
+- Geocode retry（已確認）：最多 **2** 次 provider 呼叫（含首次）；provider error 後隔 **200ms** 再試一次；`ZERO_RESULTS`／`INVALID`／`DISABLED` **不重試**
 - Order API response **不**把 Pickup lat/lng 當成 DB 持久化欄位回傳（P2-02 不存 DB）
 - 同一 Order 的 Pickup 不得因多名 Driver 讀取而各自打一次 Google Geocoding
 - `pickup_location` 修改後必須重新 geocode；舊座標結果作廢

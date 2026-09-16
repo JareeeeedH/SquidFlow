@@ -1,6 +1,6 @@
 /**
  * Format P2-03 straight-line distance for UI.
- * Rounding precision remains open in Spec; use simple whole meters / 1-decimal km.
+ * Confirmed: < 1 km → integer meters; >= 1 km → 1 decimal km; label 直線距離 in UI.
  */
 export function formatStraightLineDistance(
   distanceMeters: number | null | undefined,

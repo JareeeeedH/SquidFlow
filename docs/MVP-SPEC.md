@@ -716,7 +716,7 @@ Phase 2 包含：
 - Backend `DistanceService` 自行計算**直線距離**（great-circle／Haversine）
 - API canonical field：`distance_meters: number | null`；缺任一座標 → `null` → UI 不顯示
 - Driver 只看自己的距離（相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS`）；Admin 可看 ONLINE Drivers ↔ Pickup
-- 顯示：`< 1 km` → meters；`>= 1 km` → kilometers；必須標示「直線距離」
+- 顯示：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；必須標示「直線距離」
 - Distance 不存 DB；僅參考資訊；不影響搶單／Order State
 - 不做道路距離，不做 ETA；不使用 Google Routes API
 
@@ -733,6 +733,7 @@ Phase 2 包含：
 
 - Provider：Google Geocoding API（Backend 呼叫）
 - 建單先存文字 `pickup_location`；建立後非同步 Geocoding；不阻塞建單 response
+- Provider error／timeout：最多 **2** 次 provider 呼叫（含首次）；隔 **200ms** 再試一次；`ZERO_RESULTS`／`INVALID`／`DISABLED` 不重試
 - **不**將 Pickup lat/lng 存入 Database
 - 同一 Order 的 Geocoding 結果供 Distance／Map 使用；不因多名 Driver 重複呼叫 Google
 - `pickup_location` 修改後必須重新 Geocode；不得沿用舊座標

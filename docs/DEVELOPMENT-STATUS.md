@@ -666,7 +666,7 @@ Phase 3 — Advanced Dispatch & Communication
 
 - 以 `PHASE-2-SPEC.md` 為產品準據，同步 P2-03 至 API／DATABASE／Architecture／Security／UI-UX／MVP／DEVELOPMENT-STATUS
 - 定義 `DistanceService`、透過 `GeocodingService.getPickupCoordinates` 取得 transient Pickup 座標、canonical `distance_meters`
-- Driver／Admin visibility、缺座標行為、單位門檻（捨入精度仍 open）已寫入 Spec
+- Driver／Admin visibility、缺座標行為、單位門檻與精度（整數公尺／1 位小數公里）已寫入 Spec
 - **不**新增 Distance／Pickup lat/lng DB 欄位；**不**引入 Redis／Queue／Worker／Routes／ETA
 - 未改 Backend／Frontend／Schema／Migration／API 實作
 

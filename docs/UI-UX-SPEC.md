@@ -720,7 +720,7 @@ P2-03 Straight-line Distance UI（已對齊產品＋API contract）：
 - `distance_meters === null`（或缺欄位語意為無法計算）→ **不顯示**距離區塊；不得顯示假的道路距離或 ETA；**真實**直線距離為 `0` 時可顯示（與「缺座標不顯示」不同）
 - 有值時必須標示 **「直線距離」**
 - 單位：`< 1 km`（即 `< 1000` meters）→ 以 **meters** 顯示；`>= 1 km` → 以 **kilometers** 顯示
-- 顯示捨入／小數精度：**仍 open**（`PHASE-2-SPEC.md` §11）；實作前需產品拍板，本 Spec 不自訂精度
+- 顯示捨入／小數精度（已確認）：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；標示 **「直線距離」**（見 `PHASE-2-SPEC.md` §6.5／§11）
 - Driver：僅在相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS` Order 情境顯示自己的直線距離；**不**顯示其他 Driver 的距離
 - Admin：在 Dispatch／Dashboard／Order 情境，可顯示 ONLINE Drivers ↔ 該 Order Pickup 的直線距離（資料來自 `GET /api/v1/orders/:id/online-driver-distances`）
 - Distance 僅為參考資訊；UI **不得**因距離改變搶單按鈕可用性或 Order State 操作規則（仍以 Phase 1 Backend 規則為準）
@@ -737,7 +737,7 @@ P2-04 Map & Navigation UI（已對齊）：
   - Pickup：Admin Order Detail 的 ephemeral Pickup 座標
 - Map 載入失敗、缺座標、key 缺失 → 隱藏或降級地圖區塊；**不得**阻擋訂單操作或 Online／Offline
 - **不做** App 內 turn-by-turn、道路路線繪製、ETA／交通導航 UI
-- 像素級 marker／預設 zoom 等細節可依既有 UI direction 實作；不另定產品規則
+- Map chrome（已確認）：不強制像素級固定 Spec；維持既有 UI direction；**Driver 與 Pickup marker 必須可清楚區分**；地圖範圍合理可見（見 `PHASE-2-SPEC.md` §7.1／§11）
 
 ---
 

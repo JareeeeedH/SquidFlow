@@ -127,8 +127,8 @@ Map and distance are **assistive information only**. They do **not** change Phas
 
 - Geocoding failure must not block Order create / publish / claim / execution flows.
 - Missing usable Pickup coordinates simply means distance / map Pickup point may be unavailable until a successful geocode exists in Backend runtime.
-- Retry policy: simple, controllable, process-local (for example limited delayed retries after timeout / provider error). No queue system.
-- `ZERO_RESULTS` / no usable result: do not spin endless retries on the same unchanged address; Order remains valid with text only.
+- Retry policy (confirmed): **maximum 2 total provider attempts** (including the initial request). On timeout / provider error, **retry once after 200ms**. Process-local only; no queue.
+- `ZERO_RESULTS` / `INVALID` / `DISABLED` / no usable result: **do not retry**; Order remains valid with text only.
 
 ## 5.5 Provider
 
@@ -187,8 +187,8 @@ Distance is shown **only** when both coordinate sets are available. If either si
 
 Display distance using:
 
-- `< 1 km` → meters
-- `>= 1 km` → kilometers
+- `< 1 km` → **integer meters**（整數公尺）
+- `>= 1 km` → **1 decimal kilometer**（小數一位公里）
 
 The value must be clearly labeled as **straight-line distance** (直線距離).
 
@@ -208,6 +208,7 @@ The value must be clearly labeled as **straight-line distance** (直線距離).
 - Admin can view Online Driver locations and related Pickup context.
 - `OFFLINE` Drivers are not required on the Online Drivers map (same as P2-01).
 - Map data reuses P2-01 Driver GPS and P2-02 runtime Pickup coordinates (not DB columns). Distance display reuses P2-03; map does **not** require WebSocket / Redis / Queue.
+- **MVP map chrome:** no pixel-level fixed marker / zoom Spec. Follow existing UI/UX direction. **Driver and Pickup markers must be clearly distinguishable.** Use a **reasonable visible map range** (fit content; avoid extreme over-zoom).
 
 ## 7.2 Navigation
 
@@ -277,15 +278,26 @@ Reuse existing Spec terms:
 
 ---
 
-# 11. Open Product Decisions
+# 11. Confirmed Product Decisions (display / retry / map chrome)
 
-Still **not** decided:
+Previously open items are **confirmed**:
 
-1. Exact rounding / precision rules for meter and kilometer display beyond the unit threshold.
-2. Exact geocode retry intervals / max attempts (policy shape is confirmed: simple process-local retries; no queue).
-3. Pixel-level map chrome (marker icons, default zoom/center heuristics) beyond the confirmed screen contexts below — implement within existing UI/UX direction.
+1. **Distance display precision**
+   - `< 1 km` → integer meters
+   - `>= 1 km` → 1 decimal kilometer
+   - Label: **直線距離**
+2. **Geocode retry**
+   - Maximum **2** total provider attempts (including the initial request)
+   - On timeout / provider error: retry **once** after **200ms**
+   - `ZERO_RESULTS` / `INVALID` / `DISABLED` → **no retry**
+   - Remains asynchronous and non-blocking; process-local; no queue
+3. **Map UI chrome**
+   - No pixel-level fixed chrome requirement for MVP
+   - Follow existing UI/UX direction
+   - Driver and Pickup must be clearly distinguishable
+   - Use a reasonable visible map range
 
-Resolved:
+Also resolved (earlier):
 
 - Geocoding Provider → **Google Geocoding API**
 - In-app Map SDK → **Google Maps JavaScript API**
@@ -315,7 +327,8 @@ Missing either coordinate set → do not show distance
 Distance is computed, not stored as an independent long-lived field
 Driver distance for related OPEN / ACCEPTED / IN_PROGRESS Orders only; no other Drivers’ distances
 Admin distance in dispatch / Dashboard / Order context for Online Drivers ↔ Pickup
-Display units → meters when < 1 km; kilometers when >= 1 km; labeled straight-line
+Display units → integer meters when < 1 km; 1-decimal km when >= 1 km; labeled 直線距離
+Geocode retry → max 2 attempts; 200ms once on provider error; no retry on ZERO_RESULTS/INVALID/DISABLED
 Driver map → own location + Pickup
 Admin map → ONLINE Drivers + related Pickup context; OFFLINE not on Online Drivers map
 After accept → Start Navigation → Google Maps; no in-app turn-by-turn / routing engine
@@ -339,8 +352,4 @@ Treat this file as the Phase 2 product authority for:
 
 **P2-01**, **P2-02**, **P2-03**, and **P2-04** technical Specs are synchronized with this document.
 
-Remaining open items (not blockers for P2-04 Spec sync):
-
-- Display rounding / precision for meters and kilometers (unit threshold confirmed)
-- Exact geocode retry intervals / max attempts
-- Pixel-level map chrome within the confirmed UI contexts
+Display precision, geocode retry counts/delays, and map chrome principles above are **confirmed** (see §11) — no longer open product decisions.

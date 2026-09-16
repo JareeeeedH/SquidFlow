@@ -119,17 +119,56 @@ describe('GeocodingService', () => {
     ).resolves.toBeNull();
   });
 
-  it('retries provider errors then succeeds', async () => {
+  it('retries provider errors once after 200ms then succeeds (2 total attempts)', async () => {
     jest.useFakeTimers();
     client.geocode
       .mockResolvedValueOnce({ ok: false, reason: 'PROVIDER_ERROR' })
       .mockResolvedValueOnce(success(1, 2));
 
     const promise = service.ensureGeocoded('order-1', 'retry-me');
-    await jest.advanceTimersByTimeAsync(150);
+    await jest.advanceTimersByTimeAsync(200);
     await expect(promise).resolves.toEqual(success(1, 2));
     expect(client.geocode).toHaveBeenCalledTimes(2);
     jest.useRealTimers();
+  });
+
+  it('stops after 2 provider attempts on repeated PROVIDER_ERROR', async () => {
+    jest.useFakeTimers();
+    client.geocode.mockResolvedValue({ ok: false, reason: 'PROVIDER_ERROR' });
+
+    const promise = service.ensureGeocoded('order-1', 'flaky');
+    await jest.advanceTimersByTimeAsync(200);
+    await expect(promise).resolves.toEqual({
+      ok: false,
+      reason: 'PROVIDER_ERROR',
+    });
+    expect(client.geocode).toHaveBeenCalledTimes(2);
+    jest.useRealTimers();
+  });
+
+  it('does not retry ZERO_RESULTS, INVALID, or DISABLED', async () => {
+    client.geocode.mockResolvedValue({ ok: false, reason: 'ZERO_RESULTS' });
+    await expect(service.ensureGeocoded('order-0', 'nowhere')).resolves.toEqual({
+      ok: false,
+      reason: 'ZERO_RESULTS',
+    });
+    expect(client.geocode).toHaveBeenCalledTimes(1);
+
+    client.geocode.mockClear();
+    client.geocode.mockResolvedValue({ ok: false, reason: 'INVALID' });
+    await expect(service.ensureGeocoded('order-1', 'bad')).resolves.toEqual({
+      ok: false,
+      reason: 'INVALID',
+    });
+    expect(client.geocode).toHaveBeenCalledTimes(1);
+
+    client.geocode.mockClear();
+    client.isEnabled.mockReturnValue(false);
+    await expect(service.ensureGeocoded('order-2', 'x')).resolves.toEqual({
+      ok: false,
+      reason: 'DISABLED',
+    });
+    expect(client.geocode).not.toHaveBeenCalled();
   });
 
   it('re-geocodes after cache miss (process restart simulation)', async () => {

@@ -6,8 +6,9 @@ import {
   isGeocodeSuccess,
 } from './geocoding.types';
 
-const MAX_PROVIDER_ATTEMPTS = 3;
-const RETRY_DELAYS_MS = [150, 300] as const;
+const MAX_PROVIDER_ATTEMPTS = 2;
+/** Delay after attempt 1 failure before the single retry (attempt 2). */
+const RETRY_DELAY_MS = 200;
 
 function cacheKey(orderId: string, pickupLocation: string): string {
   return `${orderId}\0${pickupLocation}`;
@@ -134,9 +135,9 @@ export class GeocodingService {
         return last;
       }
 
-      const delay = RETRY_DELAYS_MS[attempt];
-      if (delay !== undefined) {
-        await sleep(delay);
+      // At most one delayed retry (attempt index 0 → wait → attempt index 1).
+      if (attempt + 1 < MAX_PROVIDER_ATTEMPTS) {
+        await sleep(RETRY_DELAY_MS);
       }
     }
 
