@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { DistanceModule } from '../distance/distance.module';
 import { GeocodingModule } from '../geocoding/geocoding.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminDashboardController } from './admin-dashboard.controller';
@@ -8,7 +9,7 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, GeocodingModule],
+  imports: [AuthModule, NotificationsModule, GeocodingModule, DistanceModule],
   controllers: [
     AdminDashboardController,
     OrdersController,

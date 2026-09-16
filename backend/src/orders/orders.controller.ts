@@ -83,6 +83,15 @@ export class OrdersController {
     };
   }
 
+  @Get(':id/online-driver-distances')
+  async listOnlineDriverDistances(@Param('id', parseOrderId) id: string) {
+    const data = await this.ordersService.listOnlineDriverDistances(id);
+    return {
+      success: true,
+      data,
+    };
+  }
+
   @Get(':id')
   async getById(@Param('id', parseOrderId) id: string) {
     const data = await this.ordersService.getById(id);

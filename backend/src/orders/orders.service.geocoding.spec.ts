@@ -7,6 +7,7 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { DistanceService } from '../distance/distance.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,6 +41,12 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     invalidateOrder: jest.fn(),
     getPickupCoordinates: jest.fn(),
   };
+  const distanceService = {
+    metersForOrder: jest.fn(),
+    listOnlineDriverDistancesForOrder: jest.fn(),
+    coordsFromDecimals: jest.fn().mockReturnValue(null),
+    straightLineMeters: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -49,6 +56,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     );
     prisma.$executeRawUnsafe.mockResolvedValue(undefined);
     prisma.order.findMany.mockResolvedValue([]);
+    distanceService.coordsFromDecimals.mockReturnValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,6 +64,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: GeocodingService, useValue: geocodingService },
+        { provide: DistanceService, useValue: distanceService },
       ],
     }).compile();
 

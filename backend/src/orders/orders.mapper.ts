@@ -106,6 +106,7 @@ export type DriverMyOrder = {
   destination: string | null;
   price: number | null;
   status: OrderStatus;
+  distance_meters: number | null;
 };
 
 export type DriverOpenOrder = {
@@ -116,6 +117,7 @@ export type DriverOpenOrder = {
   destination: string | null;
   price: number | null;
   note: string | null;
+  distance_meters: number | null;
 };
 
 export type DriverOrderDetail = {
@@ -128,6 +130,7 @@ export type DriverOrderDetail = {
   price: number | null;
   note: string | null;
   status: OrderStatus;
+  distance_meters: number | null;
 };
 
 type DriverMyOrderRow = Pick<
@@ -272,7 +275,10 @@ export function toDetail(order: OrderWithAssignedDriver): OrderDetail {
   };
 }
 
-export function toDriverMyOrder(order: DriverMyOrderRow): DriverMyOrder {
+export function toDriverMyOrder(
+  order: DriverMyOrderRow,
+  distanceMeters: number | null = null,
+): DriverMyOrder {
   return {
     id: order.id,
     order_no: order.orderNo,
@@ -281,10 +287,14 @@ export function toDriverMyOrder(order: DriverMyOrderRow): DriverMyOrder {
     destination: order.destination,
     price: priceNumber(order.price),
     status: order.status,
+    distance_meters: distanceMeters,
   };
 }
 
-export function toDriverOpenOrder(order: DriverOpenOrderRow): DriverOpenOrder {
+export function toDriverOpenOrder(
+  order: DriverOpenOrderRow,
+  distanceMeters: number | null = null,
+): DriverOpenOrder {
   return {
     id: order.id,
     order_no: order.orderNo,
@@ -293,11 +303,13 @@ export function toDriverOpenOrder(order: DriverOpenOrderRow): DriverOpenOrder {
     destination: order.destination,
     price: priceNumber(order.price),
     note: order.note,
+    distance_meters: distanceMeters,
   };
 }
 
 export function toDriverOrderDetail(
   order: DriverOrderDetailRow,
+  distanceMeters: number | null = null,
 ): DriverOrderDetail {
   return {
     id: order.id,
@@ -309,5 +321,6 @@ export function toDriverOrderDetail(
     price: priceNumber(order.price),
     note: order.note,
     status: order.status,
+    distance_meters: distanceMeters,
   };
 }

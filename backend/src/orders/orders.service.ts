@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { DistanceService } from '../distance/distance.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -57,6 +58,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly geocodingService: GeocodingService,
+    private readonly distanceService: DistanceService,
   ) {}
 
   async list(query: OrderListQuery) {
@@ -183,6 +185,10 @@ export class OrdersService {
 
   async listMine(user: AuthenticatedUser, query: DriverMyOrdersQuery) {
     const driver = await this.findCurrentDriverOrThrow(user.id);
+    const driverCoords = this.distanceService.coordsFromDecimals(
+      driver.latitude,
+      driver.longitude,
+    );
     const orders = await this.prisma.order.findMany({
       where: {
         driverId: driver.id,
@@ -203,7 +209,21 @@ export class OrdersService {
       },
     });
 
-    return orders.map(toDriverMyOrder);
+    return Promise.all(
+      orders.map(async (order) => {
+        const eligible =
+          order.status === OrderStatus.ACCEPTED ||
+          order.status === OrderStatus.IN_PROGRESS;
+        const distanceMeters = eligible
+          ? await this.distanceService.metersForOrder(
+              driverCoords,
+              order.id,
+              order.pickupLocation,
+            )
+          : null;
+        return toDriverMyOrder(order, distanceMeters);
+      }),
+    );
   }
 
   async listOpenForDriver(user: AuthenticatedUser) {
@@ -211,6 +231,11 @@ export class OrdersService {
     if (!this.canAcceptOpenOrders(user, driver)) {
       return [];
     }
+
+    const driverCoords = this.distanceService.coordsFromDecimals(
+      driver.latitude,
+      driver.longitude,
+    );
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -230,7 +255,16 @@ export class OrdersService {
       },
     });
 
-    return orders.map(toDriverOpenOrder);
+    return Promise.all(
+      orders.map(async (order) => {
+        const distanceMeters = await this.distanceService.metersForOrder(
+          driverCoords,
+          order.id,
+          order.pickupLocation,
+        );
+        return toDriverOpenOrder(order, distanceMeters);
+      }),
+    );
   }
 
   async getForDriver(user: AuthenticatedUser, id: string) {
@@ -261,7 +295,27 @@ export class OrdersService {
       throw AppErrors.notFound('找不到訂單');
     }
 
-    return toDriverOrderDetail(order);
+    const distanceEligible =
+      order.status === OrderStatus.OPEN ||
+      order.status === OrderStatus.ACCEPTED ||
+      order.status === OrderStatus.IN_PROGRESS;
+    const driverCoords = this.distanceService.coordsFromDecimals(
+      driver.latitude,
+      driver.longitude,
+    );
+    const distanceMeters = distanceEligible
+      ? await this.distanceService.metersForOrder(
+          driverCoords,
+          order.id,
+          order.pickupLocation,
+        )
+      : null;
+
+    return toDriverOrderDetail(order, distanceMeters);
+  }
+
+  async listOnlineDriverDistances(orderId: string) {
+    return this.distanceService.listOnlineDriverDistancesForOrder(orderId);
   }
 
   async accept(id: string, user: AuthenticatedUser) {
@@ -670,6 +724,8 @@ export class OrdersService {
       select: {
         id: true,
         onlineStatus: true,
+        latitude: true,
+        longitude: true,
         orders: {
           where: {
             status: {
