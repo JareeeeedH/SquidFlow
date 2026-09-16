@@ -47,6 +47,8 @@ export type OrderDetail = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
 };
 
 export type OrderWithAssignedDriver = Order & {
@@ -131,6 +133,8 @@ export type DriverOrderDetail = {
   note: string | null;
   status: OrderStatus;
   distance_meters: number | null;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
 };
 
 type DriverMyOrderRow = Pick<
@@ -252,7 +256,13 @@ export function toAssignedDriver(
   };
 }
 
-export function toDetail(order: OrderWithAssignedDriver): OrderDetail {
+export function toDetail(
+  order: OrderWithAssignedDriver,
+  pickup: {
+    pickup_latitude: number | null;
+    pickup_longitude: number | null;
+  } = { pickup_latitude: null, pickup_longitude: null },
+): OrderDetail {
   return {
     id: order.id,
     order_no: order.orderNo,
@@ -272,6 +282,8 @@ export function toDetail(order: OrderWithAssignedDriver): OrderDetail {
     cancelled_at: iso(order.cancelledAt),
     created_at: order.createdAt.toISOString(),
     updated_at: order.updatedAt.toISOString(),
+    pickup_latitude: pickup.pickup_latitude,
+    pickup_longitude: pickup.pickup_longitude,
   };
 }
 
@@ -310,6 +322,10 @@ export function toDriverOpenOrder(
 export function toDriverOrderDetail(
   order: DriverOrderDetailRow,
   distanceMeters: number | null = null,
+  pickup: {
+    pickup_latitude: number | null;
+    pickup_longitude: number | null;
+  } = { pickup_latitude: null, pickup_longitude: null },
 ): DriverOrderDetail {
   return {
     id: order.id,
@@ -322,5 +338,7 @@ export function toDriverOrderDetail(
     note: order.note,
     status: order.status,
     distance_meters: distanceMeters,
+    pickup_latitude: pickup.pickup_latitude,
+    pickup_longitude: pickup.pickup_longitude,
   };
 }

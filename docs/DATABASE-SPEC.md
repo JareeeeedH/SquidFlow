@@ -575,9 +575,10 @@ Phase 3 — Advanced Dispatch & Communication
 - 計算輸入來自：`drivers` 最新 GPS + P2-02 runtime Pickup coordinates（非 DB）
 - Phase 2 **不**儲存道路距離或 ETA
 
-**Phase 2 / P2-04：**
+**Phase 2 / P2-04 Map & Navigation（已定義）：**
 
-- 地圖／導航相關持久化需求於後續同步時再定義
+- Map／Navigation **不**新增 DB 欄位（含 Pickup lat/lng、route、ETA）
+- Map 使用的 Pickup 座標僅為 Backend runtime（P2-02）；**不**為此做 Migration
 - Phase 2 **不**儲存道路距離或 ETA
 
 **Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。

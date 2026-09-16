@@ -37,6 +37,17 @@ describe('toDetail', () => {
   it('returns driver null when the order is unassigned', () => {
     expect(toDetail(orderRow()).driver).toBeNull();
     expect(toDetail(orderRow()).driver_id).toBeNull();
+    expect(toDetail(orderRow()).pickup_latitude).toBeNull();
+    expect(toDetail(orderRow()).pickup_longitude).toBeNull();
+  });
+
+  it('includes ephemeral pickup coordinates when provided', () => {
+    const detail = toDetail(orderRow(), {
+      pickup_latitude: 22.687,
+      pickup_longitude: 120.307,
+    });
+    expect(detail.pickup_latitude).toBe(22.687);
+    expect(detail.pickup_longitude).toBe(120.307);
   });
 
   it('maps assigned driver vehicle fields without extra driver API data', () => {

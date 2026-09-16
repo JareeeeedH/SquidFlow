@@ -14,16 +14,16 @@ Phase 3 — Advanced Dispatch & Communication
 
 核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線 / 離線、Web Push、Admin / Driver UI。詳見下方已完成 TASK。
 
-### Phase 2（P2-01／P2-02 已實作；P2-03 Spec 已同步／待實作；P2-04 待 Spec sync）
+### Phase 2（P2-01／P2-02／P2-03／P2-04 已實作）
 
 產品範圍以 `PHASE-2-SPEC.md` 為準。包含：
 
 - Driver Location（P2-01：已實作 — GPS、立即首次定位、每 30 秒更新、Backend 只存最新位置；Online / Offline 控制更新；失敗不改 Online 狀態）
 - Pickup Geocoding（P2-02：已實作 — Google Geocoding API；建單不阻塞；非同步 geocode；**不**存 Pickup lat/lng 到 DB；同 Order 結果供 Distance／Map；改地址重 geocode）
-- Straight-line Distance（P2-03：Spec 已同步 — `DistanceService` + `distance_meters`；無道路距離／ETA；待實作）
-- Map & Google Maps Navigation handoff（P2-04：產品已定；技術 Spec 待同步）
+- Straight-line Distance（P2-03：已實作 — `DistanceService` + `distance_meters`；無道路距離／ETA）
+- Map & Google Maps Navigation handoff（P2-04：已實作 — Google Maps JavaScript API；Driver／Admin Map；ephemeral Pickup 座標；導航 handoff；Maps／導航失敗不影響核心流程）
 
-不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA；不引入 Redis／Queue／Worker 做 geocoding／distance。
+不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA；不引入 Redis／Queue／Worker／WebSocket 做 geocoding／distance／map。
 
 ### Phase 3（後續規劃，僅簡述）
 
@@ -667,6 +667,35 @@ Phase 3 — Advanced Dispatch & Communication
 - Driver／Admin visibility、缺座標行為、單位門檻（捨入精度仍 open）已寫入 Spec
 - **不**新增 Distance／Pickup lat/lng DB 欄位；**不**引入 Redis／Queue／Worker／Routes／ETA
 - 未改 Backend／Frontend／Schema／Migration／API 實作
+
+---
+
+## TASK — P2-04 Map & Navigation Technical + UI/UX Spec Sync
+
+**Status:** completed
+
+### 已完成
+
+- Map SDK 定為 Google Maps JavaScript API；導航為 Google Maps handoff
+- 同步 PHASE-2／API／DATABASE／Architecture／Security／Technology／UI-UX／MVP／DEVELOPMENT-STATUS
+- 定義 ephemeral `pickup_latitude`／`pickup_longitude`（Order Detail）；沿用 P2-01／P2-03；不改 P2-03 distances array shape
+- 釐清 Geocoding server key vs Maps browser key；Map／導航失敗不影響核心派車
+- 未改 Backend／Frontend／Schema／Migration／API 實作
+
+---
+
+## TASK — P2-04 Map & Google Maps Navigation Implementation
+
+**Status:** completed
+
+### 已完成
+
+- Backend Order Detail（Admin／Driver）附加 ephemeral `pickup_latitude`／`pickup_longitude`（runtime geocode；非 DB）
+- Frontend：`OrderMap`、Maps JS loader、`VITE_GOOGLE_MAPS_API_KEY`、距離格式、Google Maps 導航 handoff
+- Driver Order Detail：Map（自己位置 + Pickup）+ 直線距離 + ACCEPTED 後「開始導航」
+- Admin Order Detail：Map（ONLINE Drivers + Pickup）+ 沿用 `online-driver-distances`
+- Map／導航／缺 key／缺座標失敗隔離；不影響 Accept／Online／Offline／核心 Order
+- 未新增 Pickup lat/lng DB 欄位、WebSocket／Redis／Queue／Routing／ETA；未改 P2-03 distances array shape
 
 ---
 

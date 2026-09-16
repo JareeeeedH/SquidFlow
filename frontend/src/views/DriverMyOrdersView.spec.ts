@@ -26,6 +26,7 @@ const accepted: DriverMyOrder = {
   created_at: '2026-09-15T07:30:00.000Z',
   price: 1200,
   status: 'ACCEPTED',
+  distance_meters: null,
 }
 
 const completed: DriverMyOrder = {

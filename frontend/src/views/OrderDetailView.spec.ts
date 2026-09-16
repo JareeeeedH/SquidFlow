@@ -12,9 +12,10 @@ vi.mock('../api/orders', () => ({
   deleteOrder: vi.fn(),
   publishOrder: vi.fn(),
   cancelOrder: vi.fn(),
+  listOnlineDriverDistances: vi.fn(),
 }))
 
-import { cancelOrder, deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
+import { cancelOrder, deleteOrder, getOrder, listOnlineDriverDistances, publishOrder, updateOrder } from '../api/orders'
 
 const draft: OrderDetail = {
   id: 'order-1',
@@ -35,6 +36,8 @@ const draft: OrderDetail = {
   cancelled_at: null,
   created_at: '2026-09-15T07:00:00.000Z',
   updated_at: '2026-09-15T07:00:00.000Z',
+  pickup_latitude: null,
+  pickup_longitude: null,
 }
 
 const openOrder: OrderDetail = {
@@ -87,6 +90,7 @@ describe('OrderDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(getOrder).mockResolvedValue(draft)
+    vi.mocked(listOnlineDriverDistances).mockResolvedValue([])
   })
 
   afterEach(() => {

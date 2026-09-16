@@ -25,6 +25,8 @@ const sample: OrderDetail = {
   cancelled_at: null,
   created_at: '2026-09-15T07:00:00.000Z',
   updated_at: '2026-09-15T07:00:00.000Z',
+  pickup_latitude: null,
+  pickup_longitude: null,
 }
 
 describe('order form helpers', () => {

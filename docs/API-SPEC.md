@@ -369,12 +369,16 @@ GET /api/v1/orders/:id
     "completed_at": null,
     "cancelled_at": null,
     "created_at": "2026-09-15T07:00:00Z",
-    "updated_at": "2026-09-15T07:05:00Z"
+    "updated_at": "2026-09-15T07:05:00Z",
+    "pickup_latitude": 22.6870123,
+    "pickup_longitude": 120.3090456
   }
 }
 ```
 
 未指派司機時 `driver` 為 `null`。`driver` 只包含上述欄位，不含 `id`、`vehicle_type`、`vehicle_year`、`online_status`、帳號 `status`。選填欄位未填時為 `null`。不含 `scheduled_at`、訂單 `vehicle_type`。
+
+`pickup_latitude`／`pickup_longitude`（P2-04）：ephemeral runtime Pickup 座標（見 §5D）；**不是** DB 欄位。缺 geocode 結果時為 `null`。
 
 ---
 
@@ -663,12 +667,16 @@ status = OPEN
     "price": 1200,
     "note": "2件行李",
     "status": "ACCEPTED",
-    "distance_meters": 2450.5
+    "distance_meters": 2450.5,
+    "pickup_latitude": 22.6870123,
+    "pickup_longitude": 120.3090456
   }
 }
 ```
 
 `distance_meters`：僅在 `OPEN`／自己的 `ACCEPTED`／`IN_PROGRESS` 且雙方座標可用時為 number；否則 `null`（見 §5C）。
+
+`pickup_latitude`／`pickup_longitude`：P2-04 Map 用的 **ephemeral** Pickup 座標，來自 Backend runtime `GeocodingService.getPickupCoordinates`（**不是** DB 欄位）。缺可用 geocode 結果時為 `null`；UI 隱藏 Pickup map marker。見 §5D。
 
 ---
 
@@ -1035,6 +1043,62 @@ Dashboard `board_orders` **不**強制嵌入全量 Online Driver distances（避
 
 ---
 
+# 5D. Map & Navigation Handoff（Phase 2 / P2-04）
+
+產品規則見 `PHASE-2-SPEC.md`（P2-04）。
+
+## Map SDK / Architecture
+
+- In-app Map SDK：**Google Maps JavaScript API**（Frontend）
+- Pickup 座標：**不**存 DB；僅 Backend runtime（P2-02 `GeocodingService.getPickupCoordinates`）
+- Driver 位置：沿用 P2-01（`GET /api/v1/driver/location` 或既有上報之最新位置）
+- Distance 顯示：沿用 P2-03 `distance_meters`
+- Admin Online Drivers：沿用 `GET /api/v1/orders/:id/online-driver-distances`（及／或 `GET /api/v1/drivers/online-locations`）
+- **不**新增 WebSocket／SSE／Redis／Queue／Worker
+- **不**新增 Google Routes／道路距離／ETA／App 內 turn-by-turn endpoint
+- **不**新增公開 Geocoding endpoint（Frontend **不得**用 Geocoding server key 打 Google Geocoding）
+
+## Ephemeral Pickup coordinates on Order reads（for Map）
+
+為讓 Frontend 能在 Google Map 上畫 Pickup，而不呼叫 Geocoding、也不讀 DB lat/lng 欄位，下列讀取 API **附加** ephemeral 欄位：
+
+```text
+pickup_latitude: number | null
+pickup_longitude: number | null
+```
+
+| Endpoint | 規則 |
+|----------|------|
+| `GET /api/v1/driver/orders/:id` | 與既有 Driver Order Detail 授權相同；值來自 runtime geocode；失敗／未就緒 → `null` |
+| `GET /api/v1/orders/:id` | 僅 `ADMIN`；同上 |
+
+語意：
+
+- **不是** PostgreSQL／Prisma 持久化欄位；response 中的座標為執行期結果
+- 兩個都有值才可畫 Pickup marker；任一 `null` → 不畫 Pickup 點（可仍顯示 Driver／Online Drivers）
+- **不**改變 P2-03 `online-driver-distances` 的 array response shape（避免破壞既有 Distance contract）
+- Open Orders／My Orders list **不**要求附帶 Pickup lat/lng（Map 主場景為 Order Detail／Admin Order／Dispatch context）
+
+## Navigation handoff（no Backend route engine）
+
+- 「開始導航」為 Frontend handoff 至 **Google Maps**（例如開啟 Google Maps URL／App）
+- 僅在 Driver **已接單之後**（`ACCEPTED`／後續行程狀態依產品：接單後可用）提供入口
+- Destination 優先使用可用的 Pickup coordinates；若座標 `null`，可降級使用文字 `pickup_location`
+- Handoff 失敗（無法開啟 Maps、缺目的地等）**不得**影響 Order／Accept／Online／Offline
+- Backend **不**實作 routing／ETA／turn-by-turn API
+
+## Failure rules
+
+- Map SDK 載入失敗、key 缺失、Pickup／Driver 座標缺失、導航 handoff 失敗 → 僅影響地圖／導航 UI
+- **不得**阻擋或改變 Order CRUD、Publish、Accept、Start、Complete、Cancel，或 Driver Online／Offline
+
+## Keys（see SECURITY-SPEC）
+
+- `GOOGLE_GEOCODING_API_KEY`（或同等 Backend Geocoding server key）：**僅 Backend**；**不得**進入 Frontend／Git
+- Google Maps JavaScript API：使用**分開的** Frontend-restricted browser key（Environment／build 注入；建議 HTTP referrer 限制）；**不得**與 Geocoding server key 共用同一把暴露於瀏覽器
+
+---
+
 # 6. Notification
 
 ## List Notifications
@@ -1243,11 +1307,12 @@ Phase 3 — Advanced Dispatch & Communication
 - Provider：**Google Geocoding API**；僅 Backend 呼叫
 - **不**新增公開 Geocoding endpoint（含 Driver）
 - Create／Update Order（含 `pickup_location` 變更）成功後：非同步觸發 geocode；**不**阻塞 API response；失敗**不** rollback Order
-- Order API response **不**持久化回傳 DB 中的 Pickup lat/lng（因為不存 DB）
+- Order API response **不**把 Pickup lat/lng 當成 DB 持久化欄位回傳（P2-02 不存 DB）
 - 同一 Order 的 Pickup 不得因多名 Driver 讀取而各自打一次 Google Geocoding
 - `pickup_location` 修改後必須重新 geocode；舊座標結果作廢
 - **不**新增 Google Routes／道路距離／ETA endpoint
 - Distance 所需座標：內部使用 `GeocodingService.getPickupCoordinates`（見 P2-03）；P2-02 不定義 Distance field shape
+- Map 所需 ephemeral Pickup 座標於 P2-04（§5D）在 Order Detail 讀取 API 附加；仍**不**經由公開 Geocoding endpoint
 
 **Phase 2 / P2-03 Straight-line Distance（已定義）：**
 
@@ -1258,9 +1323,14 @@ Phase 3 — Advanced Dispatch & Communication
 - **不**新增公開 Geocoding endpoint；**不**存 Distance／Pickup lat/lng 到 DB；**不**引入 Redis／Queue／Worker
 - **不**影響 Phase 1 claim／Order State；**不**新增道路距離／ETA／Routes endpoint
 
-**Phase 2 / P2-04：**
+**Phase 2 / P2-04 Map & Navigation（已定義）：**
 
-- 地圖／導航 contract 於後續同步時再定義
+- Map SDK：**Google Maps JavaScript API**
+- Ephemeral `pickup_latitude`／`pickup_longitude` 附加於 `GET /api/v1/orders/:id`（Admin）與 `GET /api/v1/driver/orders/:id`（Driver）；來源 runtime geocode
+- 沿用 P2-01 Driver GPS、P2-03 Distance、Admin online-driver-distances；**不**改 P2-03 array shape
+- Navigation：Frontend → Google Maps handoff；**無** Backend routing／ETA／turn-by-turn
+- Geocoding server key **不得**進 Frontend；Maps JS 使用分開的 Frontend-restricted key
+- Map／導航失敗不影響 Order／Accept／Online／Offline
 - Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
 **Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。

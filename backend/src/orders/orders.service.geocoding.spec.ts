@@ -39,7 +39,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
   const geocodingService = {
     scheduleGeocode: jest.fn(),
     invalidateOrder: jest.fn(),
-    getPickupCoordinates: jest.fn(),
+    getPickupCoordinates: jest.fn().mockResolvedValue(null),
   };
   const distanceService = {
     metersForOrder: jest.fn(),

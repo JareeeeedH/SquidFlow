@@ -47,6 +47,16 @@ Quasar
 
 Frontend 只負責 UI、互動與 API 呼叫。Business Rule 由 Backend 保證。
 
+### Phase 2 Frontend additions（P2-04）
+
+```text
+Google Maps JavaScript API（in-app map）
+```
+
+- Maps browser key：Frontend Environment／build 注入（建議 HTTP referrer 限制）
+- **不得**將 Backend Geocoding server key 放入 Frontend
+- Navigation：外部 Google Maps handoff（非 App 內 routing engine）
+
 ### Backend
 Node.js / NestJS / TypeScript
 
@@ -59,6 +69,12 @@ REST API
 ### Notification
 Web Push
 
+### Phase 2 Backend external APIs
+
+```text
+Google Geocoding API（server-side only；Pickup coordinates）
+```
+
 ### Architecture
 Modular Monolith
 
@@ -70,3 +86,5 @@ Git / GitHub
 
 ### MVP 暫不使用
 Redis / WebSocket / SSE / Message Queue / Microservices / Kubernetes
+
+Phase 2 Map／Distance／Geocoding **同樣不**引入 Redis／WebSocket／SSE／Message Queue。

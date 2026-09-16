@@ -710,20 +710,34 @@ Phase 2 — Driver Location & Trip Information（地圖 / 直線距離相關 UI�
 Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI）
 ```
 
-產品範圍以 `PHASE-2-SPEC.md` 為準。Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 3 通訊介面。Phase 2 UI **不**呈現道路距離或 ETA。
+產品範圍以 `PHASE-2-SPEC.md` 為準。Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 3 通訊介面。Phase 2 UI **不**呈現道路距離或 ETA。維持既有 Modern SaaS + Dispatch Console 視覺／操作方向（見 §1）；不另開一套地圖產品視覺語言。
 
-P2-02：不提供手動觸發 Geocoding 的 UI；Geocoding 為建單／修改 `pickup_location` 後的系統非同步行為。UI **不**假設 Order DB 內有 Pickup lat/lng 欄位；距離／地圖所需座標由 Backend 在執行期提供（見 `PHASE-2-SPEC.md` P2-02）。內嵌地圖 SDK 須於 P2-04 與 Google Geocoding 地圖條款一併決定。
+P2-02：不提供手動觸發 Geocoding 的 UI；Geocoding 為建單／修改 `pickup_location` 後的系統非同步行為。UI **不**假設 Order DB 內有 Pickup lat/lng 欄位；距離／地圖所需座標由 Backend 在執行期提供（見 `PHASE-2-SPEC.md` P2-02）。In-app Map SDK：**Google Maps JavaScript API**（P2-04）。
 
 P2-03 Straight-line Distance UI（已對齊產品＋API contract）：
 
 - 顯示資料來源：Backend `distance_meters`（見 `API-SPEC.md` §5C）；**不**由 Frontend 呼叫 Google／自行 geocode
-- `distance_meters === null`（或缺欄位語意為無法計算）→ **不顯示**距離區塊；不得顯示 `0`、道路距離、或 ETA
+- `distance_meters === null`（或缺欄位語意為無法計算）→ **不顯示**距離區塊；不得顯示假的道路距離或 ETA；**真實**直線距離為 `0` 時可顯示（與「缺座標不顯示」不同）
 - 有值時必須標示 **「直線距離」**
 - 單位：`< 1 km`（即 `< 1000` meters）→ 以 **meters** 顯示；`>= 1 km` → 以 **kilometers** 顯示
 - 顯示捨入／小數精度：**仍 open**（`PHASE-2-SPEC.md` §11）；實作前需產品拍板，本 Spec 不自訂精度
 - Driver：僅在相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS` Order 情境顯示自己的直線距離；**不**顯示其他 Driver 的距離
-- Admin：在 Dispatch／Dashboard／Order 情境，可顯示 ONLINE Drivers ↔ 該 Order Pickup 的直線距離（資料來自 `GET /api/v1/orders/:id/online-driver-distances`）；畫面細部 layout 仍 open
+- Admin：在 Dispatch／Dashboard／Order 情境，可顯示 ONLINE Drivers ↔ 該 Order Pickup 的直線距離（資料來自 `GET /api/v1/orders/:id/online-driver-distances`）
 - Distance 僅為參考資訊；UI **不得**因距離改變搶單按鈕可用性或 Order State 操作規則（仍以 Phase 1 Backend 規則為準）
+
+P2-04 Map & Navigation UI（已對齊）：
+
+- Map SDK：Frontend 使用 **Google Maps JavaScript API**（browser-restricted key；**不得**使用 Geocoding server key）
+- **Driver Order Detail**：顯示 Map（自己的最新位置 + Pickup）+ 直線距離（P2-03）+ **開始導航**
+  - Pickup marker：僅當 `pickup_latitude`／`pickup_longitude` 皆有值
+  - Driver marker：僅當有可用自己的最新位置（P2-01）
+  - 「開始導航」：Driver **接單後**可用；handoff 至 Google Maps（外部）；缺座標時可降級用文字 `pickup_location`；失敗不影響 Order／Online 狀態
+- **Admin Order／Dispatch context**：顯示 Online Drivers + Pickup Map
+  - Online Driver markers：沿用 P2-01／P2-03 Admin APIs（僅 `ONLINE`）
+  - Pickup：Admin Order Detail 的 ephemeral Pickup 座標
+- Map 載入失敗、缺座標、key 缺失 → 隱藏或降級地圖區塊；**不得**阻擋訂單操作或 Online／Offline
+- **不做** App 內 turn-by-turn、道路路線繪製、ETA／交通導航 UI
+- 像素級 marker／預設 zoom 等細節可依既有 UI direction 實作；不另定產品規則
 
 ---
 

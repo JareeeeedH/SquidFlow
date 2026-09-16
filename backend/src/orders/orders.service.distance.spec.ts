@@ -31,6 +31,7 @@ describe('OrdersService distance hooks (P2-03)', () => {
   const geocodingService = {
     scheduleGeocode: jest.fn(),
     invalidateOrder: jest.fn(),
+    getPickupCoordinates: jest.fn().mockResolvedValue(null),
   };
   const distanceService = {
     metersForOrder: jest.fn(),
@@ -173,5 +174,42 @@ describe('OrdersService distance hooks (P2-03)', () => {
     expect(
       distanceService.listOnlineDriverDistancesForOrder,
     ).toHaveBeenCalledWith('order-1');
+  });
+
+  it('includes ephemeral pickup coordinates on driver order detail', async () => {
+    prisma.driver.findUnique.mockResolvedValue(driverRow());
+    distanceService.coordsFromDecimals.mockReturnValue({
+      latitude: 22.687,
+      longitude: 120.307,
+    });
+    prisma.order.findUnique.mockResolvedValue({
+      id: 'order-1',
+      orderNo: 'SF-1',
+      customerName: null,
+      pickupLocation: '左營高鐵站',
+      destination: null,
+      createdAt: new Date('2026-09-16T01:00:00.000Z'),
+      price: null,
+      note: null,
+      status: OrderStatus.OPEN,
+      driverId: null,
+    });
+    distanceService.metersForOrder.mockResolvedValue(100);
+    geocodingService.getPickupCoordinates.mockResolvedValue({
+      latitude: 22.7,
+      longitude: 120.3,
+    });
+
+    await expect(
+      service.getForDriver(driverUser(), 'order-1'),
+    ).resolves.toMatchObject({
+      distance_meters: 100,
+      pickup_latitude: 22.7,
+      pickup_longitude: 120.3,
+    });
+    expect(geocodingService.getPickupCoordinates).toHaveBeenCalledWith(
+      'order-1',
+      '左營高鐵站',
+    );
   });
 });

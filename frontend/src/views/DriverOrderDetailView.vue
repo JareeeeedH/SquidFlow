@@ -9,14 +9,20 @@ import {
   getDriverOrder,
   startDriverOrder,
 } from '../api/driver-orders'
+import { getDriverLocation } from '../api/driver-location'
 import { ApiClientError } from '../api/types'
 import type { DriverOrderDetail } from '../api/types'
+import OrderMap from '../components/OrderMap.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
+import { formatStraightLineDistance } from '../lib/format-distance'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
+import { openGoogleMapsNavigation } from '../lib/google-maps-nav'
 
 const route = useRoute()
 const router = useRouter()
 const order = ref<DriverOrderDetail | null>(null)
+const driverLat = ref<number | null>(null)
+const driverLng = ref<number | null>(null)
 const loading = ref(false)
 const accepting = ref(false)
 const starting = ref(false)
@@ -24,6 +30,7 @@ const completing = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const actionError = ref<{ code: string; message: string } | null>(null)
 const successMessage = ref<string | null>(null)
+const navHint = ref<string | null>(null)
 const notFound = ref(false)
 const forbidden = ref(false)
 
@@ -43,6 +50,7 @@ async function loadOrder() {
   error.value = null
   notFound.value = false
   forbidden.value = false
+  navHint.value = null
 
   try {
     const data = await getDriverOrder(id)
@@ -50,6 +58,18 @@ async function loadOrder() {
       return
     }
     order.value = data
+    try {
+      const location = await getDriverLocation()
+      if (seq === requestSeq) {
+        driverLat.value = location.latitude
+        driverLng.value = location.longitude
+      }
+    } catch {
+      if (seq === requestSeq) {
+        driverLat.value = null
+        driverLng.value = null
+      }
+    }
   } catch (caught) {
     if (seq !== requestSeq) {
       return
@@ -88,6 +108,56 @@ const hasPrimaryAction = computed(
     order.value?.status === 'ACCEPTED' ||
     order.value?.status === 'IN_PROGRESS',
 )
+
+const distanceLabel = computed(() =>
+  formatStraightLineDistance(order.value?.distance_meters),
+)
+
+const pickupPoint = computed(() => {
+  const lat = order.value?.pickup_latitude
+  const lng = order.value?.pickup_longitude
+  if (
+    typeof lat === 'number' &&
+    Number.isFinite(lat) &&
+    typeof lng === 'number' &&
+    Number.isFinite(lng)
+  ) {
+    return { lat, lng, label: '上車點' }
+  }
+  return null
+})
+
+const selfPoint = computed(() => {
+  if (
+    typeof driverLat.value === 'number' &&
+    Number.isFinite(driverLat.value) &&
+    typeof driverLng.value === 'number' &&
+    Number.isFinite(driverLng.value)
+  ) {
+    return { lat: driverLat.value, lng: driverLng.value, label: '我的位置' }
+  }
+  return null
+})
+
+const canNavigate = computed(
+  () =>
+    order.value?.status === 'ACCEPTED' || order.value?.status === 'IN_PROGRESS',
+)
+
+function startNavigation() {
+  if (!order.value || !canNavigate.value) {
+    return
+  }
+  navHint.value = null
+  const ok = openGoogleMapsNavigation({
+    latitude: order.value.pickup_latitude,
+    longitude: order.value.pickup_longitude,
+    address: order.value.pickup_location,
+  })
+  if (!ok) {
+    navHint.value = '無法開啟 Google Maps'
+  }
+}
 
 async function acceptOrder() {
   if (!order.value || acting.value || order.value.status !== 'OPEN') {
@@ -257,6 +327,26 @@ watch(
           <p class="place">{{ formatOptionalText(order.destination) }}</p>
         </div>
 
+        <OrderMap
+          class="map-block"
+          :pickup="pickupPoint"
+          :self-location="selfPoint"
+        />
+
+        <p v-if="distanceLabel" class="distance">直線距離：{{ distanceLabel }}</p>
+
+        <NButton
+          v-if="canNavigate"
+          class="nav-btn"
+          size="large"
+          secondary
+          block
+          @click="startNavigation"
+        >
+          開始導航
+        </NButton>
+        <p v-if="navHint" class="nav-hint">{{ navHint }}</p>
+
         <div class="price-block">
           <p class="price-label">價格</p>
           <p class="price">{{ formatPrice(order.price) }}</p>
@@ -396,6 +486,29 @@ watch(
   line-height: 1.1;
   color: var(--color-primary-muted, #1a3358);
   font-weight: 700;
+}
+
+.map-block {
+  margin: var(--space-12) 0;
+}
+
+.distance {
+  margin: 0 0 var(--space-12);
+  font: var(--font-label);
+  font-weight: 600;
+  color: var(--color-primary, #0b1f3a);
+}
+
+.nav-btn {
+  margin-bottom: var(--space-8);
+  min-height: 48px;
+  font-weight: 700;
+}
+
+.nav-hint {
+  margin: 0 0 var(--space-12);
+  font: var(--font-caption);
+  color: var(--color-muted-text);
 }
 
 .price-block {

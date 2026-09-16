@@ -35,7 +35,7 @@ Known sync status:
 - **P2-01** — technical Specs synchronized for Driver GPS Location
 - **P2-02** — product + technical Specs synchronized for Google Geocoding **without** persisting Pickup lat/lng in the database
 - **P2-03** — product + technical Specs synchronized for straight-line Distance (computed; not stored)
-- **P2-04** — product rules confirmed; map embedding / navigation handoff contracts follow in later Spec sync
+- **P2-04** — product + technical Specs synchronized for **Google Maps JavaScript API** in-app map + Google Maps navigation handoff
 
 ---
 
@@ -141,9 +141,9 @@ Map and distance are **assistive information only**. They do **not** change Phas
 
 Product decision: **do not persist Pickup lat/lng in DB**, which removes the previous “permanent multi-role DB storage” blocker.
 
-Remaining Terms awareness (not legal advice; P2-04 map strategy still open):
+Remaining Terms awareness (not legal advice; Map SDK selected):
 
-- `[Official]` Geocoding content must not be used with a **non-Google map** (§6.2). In-app map SDK choice for P2-04 must stay consistent.
+- `[Official]` Geocoding content must not be used with a **non-Google map** (§6.2). **Resolved for Phase 2:** in-app map uses **Google Maps JavaScript API**.
 - `[Official]` Caching / storage of lat/lng remains restricted; place_id may be stored indefinitely if ever needed later — Phase 2 does **not** require place_id columns.
 - `[Judgment]` Runtime reuse of one Order geocode result for Distance / Map (instead of per-Driver Google calls) is the product rule; keep usage ephemeral and avoid building a durable lat/lng store.
 
@@ -203,20 +203,26 @@ The value must be clearly labeled as **straight-line distance** (直線距離).
 
 ## 7.1 In-app map
 
-- Provide map capability inside the Web App.
+- Provide map capability inside the Web App using **Google Maps JavaScript API** (selected Map SDK; aligns with Google Geocoding §6.2).
 - Driver can see their own current location and the Pickup location.
 - Admin can view Online Driver locations and related Pickup context.
 - `OFFLINE` Drivers are not required on the Online Drivers map (same as P2-01).
+- Map data reuses P2-01 Driver GPS and P2-02 runtime Pickup coordinates (not DB columns). Distance display reuses P2-03; map does **not** require WebSocket / Redis / Queue.
 
 ## 7.2 Navigation
 
 - After accepting an Order, Driver can use **Start Navigation**.
-- Navigation is handled by **Google Maps** (for example by opening Google Maps).
+- Navigation is handled by **Google Maps** handoff (for example by opening Google Maps).
 - SquidFlow does **not** implement turn-by-turn navigation.
 - SquidFlow does **not** build its own routing engine.
 - Phase 2 does **not** include road ETA or traffic navigation inside SquidFlow.
 
-## 7.3 Relationship to Phase 1 rules
+## 7.3 Failure degradation
+
+- Map load failure, missing Pickup coordinates, missing Driver GPS, Maps key/config issues, or navigation handoff failure must **not** change Order State, claim/accept rules, or `ONLINE` / `OFFLINE`.
+- Degrade by hiding or disabling map / navigation UI as needed; core dispatch flows continue.
+
+## 7.4 Relationship to Phase 1 rules
 
 - Map and distance are assistive information only.
 - They must **not** change Phase 1 dispatch / accept rules.
@@ -275,16 +281,20 @@ Reuse existing Spec terms:
 
 Still **not** decided:
 
-1. In-app **map SDK / map strategy** for P2-04 (must remain consistent with Google Geocoding §6.2: Geocoding content must not be used with a non-Google map).
-2. Exact UI layout for where Admin / Driver see distance and maps (product contexts are confirmed; screen-level UI remains for UI/UX Spec).
-3. Exact rounding / precision rules for meter and kilometer display beyond the unit threshold.
-4. Exact geocode retry intervals / max attempts (policy shape is confirmed: simple process-local retries; no queue).
+1. Exact rounding / precision rules for meter and kilometer display beyond the unit threshold.
+2. Exact geocode retry intervals / max attempts (policy shape is confirmed: simple process-local retries; no queue).
+3. Pixel-level map chrome (marker icons, default zoom/center heuristics) beyond the confirmed screen contexts below — implement within existing UI/UX direction.
 
 Resolved:
 
 - Geocoding Provider → **Google Geocoding API**
+- In-app Map SDK → **Google Maps JavaScript API**
 - Pickup lat/lng → **not stored in DB**; runtime reuse per Order for Distance / Map; no per-Driver Google calls for the same Order Pickup
 - Editing `pickup_location` → must re-geocode; stale coordinates must not be reused
+- Driver Order Detail → Map + straight-line distance + Start Navigation (navigation after accept)
+- Admin Order / Dispatch context → Online Drivers + Pickup map
+- Navigation → Google Maps external handoff; no in-app routing / ETA / turn-by-turn
+- Keys → Backend Geocoding server key never in Frontend; Maps JavaScript API uses a separate Frontend-restricted key
 
 ---
 
@@ -327,10 +337,10 @@ Treat this file as the Phase 2 product authority for:
 - Runtime reuse of the same Order geocode result for Distance / Map (not per Driver)
 - Map + Google Maps navigation handoff
 
-**P2-01**, **P2-02**, and **P2-03** technical Specs are synchronized with this document.
+**P2-01**, **P2-02**, **P2-03**, and **P2-04** technical Specs are synchronized with this document.
 
-Remaining technical Spec work:
+Remaining open items (not blockers for P2-04 Spec sync):
 
-- P2-04 map embedding (SDK must align with Google Geocoding map Terms) and Google Maps navigation handoff details
-- Related Technology / UI-UX detail updates as those slices are implemented
-- Display rounding / precision for meters and kilometers (unit threshold confirmed; exact rounding still open)
+- Display rounding / precision for meters and kilometers (unit threshold confirmed)
+- Exact geocode retry intervals / max attempts
+- Pixel-level map chrome within the confirmed UI contexts

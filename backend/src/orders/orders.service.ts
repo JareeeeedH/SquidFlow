@@ -126,7 +126,11 @@ export class OrdersService {
 
   async getById(id: string) {
     const order = await this.findOrderOrThrow(id);
-    return toDetail(order);
+    const pickup = await this.resolvePickupCoords(
+      order.id,
+      order.pickupLocation,
+    );
+    return toDetail(order, pickup);
   }
 
   async create(user: AuthenticatedUser, input: OrderInput) {
@@ -310,8 +314,12 @@ export class OrdersService {
           order.pickupLocation,
         )
       : null;
+    const pickup = await this.resolvePickupCoords(
+      order.id,
+      order.pickupLocation,
+    );
 
-    return toDriverOrderDetail(order, distanceMeters);
+    return toDriverOrderDetail(order, distanceMeters, pickup);
   }
 
   async listOnlineDriverDistances(orderId: string) {
@@ -658,7 +666,11 @@ export class OrdersService {
       this.geocodingService.scheduleGeocode(id, order.pickupLocation);
     }
 
-    return toDetail(order);
+    const pickup = await this.resolvePickupCoords(
+      order.id,
+      order.pickupLocation,
+    );
+    return toDetail(order, pickup);
   }
 
   async remove(id: string) {
@@ -716,6 +728,23 @@ export class OrdersService {
       throw AppErrors.notFound('找不到訂單');
     }
     throw AppErrors.invalidOrderStatus();
+  }
+
+  private async resolvePickupCoords(
+    orderId: string,
+    pickupLocation: string,
+  ): Promise<{
+    pickup_latitude: number | null;
+    pickup_longitude: number | null;
+  }> {
+    const coords = await this.geocodingService.getPickupCoordinates(
+      orderId,
+      pickupLocation,
+    );
+    return {
+      pickup_latitude: coords?.latitude ?? null,
+      pickup_longitude: coords?.longitude ?? null,
+    };
   }
 
   private async findCurrentDriverOrThrow(userId: string) {

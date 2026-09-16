@@ -13,12 +13,17 @@ vi.mock('../api/driver-orders', () => ({
   completeDriverOrder: vi.fn(),
 }))
 
+vi.mock('../api/driver-location', () => ({
+  getDriverLocation: vi.fn(),
+}))
+
 import {
   acceptDriverOrder,
   completeDriverOrder,
   getDriverOrder,
   startDriverOrder,
 } from '../api/driver-orders'
+import { getDriverLocation } from '../api/driver-location'
 
 const openOrder: DriverOrderDetail = {
   id: 'order-1',
@@ -30,6 +35,9 @@ const openOrder: DriverOrderDetail = {
   price: 1200,
   note: '2件行李',
   status: 'OPEN',
+  distance_meters: null,
+  pickup_latitude: null,
+  pickup_longitude: null,
 }
 
 const ownAccepted: DriverOrderDetail = {
@@ -71,6 +79,11 @@ describe('DriverOrderDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(getDriverOrder).mockResolvedValue(openOrder)
+    vi.mocked(getDriverLocation).mockResolvedValue({
+      latitude: null,
+      longitude: null,
+      location_updated_at: null,
+    })
     vi.mocked(acceptDriverOrder).mockResolvedValue({
       id: 'order-1',
       status: 'ACCEPTED',

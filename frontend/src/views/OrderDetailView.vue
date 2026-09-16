@@ -3,11 +3,25 @@ import { ArrowLeft, RotateCcw } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { cancelOrder, deleteOrder, getOrder, publishOrder, updateOrder } from '../api/orders'
+import {
+  cancelOrder,
+  deleteOrder,
+  getOrder,
+  listOnlineDriverDistances,
+  publishOrder,
+  updateOrder,
+} from '../api/orders'
 import { ApiClientError } from '../api/types'
-import type { CreateOrderInput, OrderDetail, OrderStatus } from '../api/types'
+import type {
+  CreateOrderInput,
+  OnlineDriverDistanceItem,
+  OrderDetail,
+  OrderStatus,
+} from '../api/types'
 import OrderForm from '../components/OrderForm.vue'
+import OrderMap from '../components/OrderMap.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
+import { formatStraightLineDistance } from '../lib/format-distance'
 import { formatDateTimeTaipei, formatOptionalText, formatPrice } from '../lib/format'
 import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form'
 
@@ -22,6 +36,7 @@ const STATUS_HINT: Partial<Record<OrderStatus, string>> = {
 const route = useRoute()
 const router = useRouter()
 const order = ref<OrderDetail | null>(null)
+const onlineDrivers = ref<OnlineDriverDistanceItem[]>([])
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const actionError = ref<{ code: string; message: string } | null>(null)
@@ -45,6 +60,43 @@ const canCancel = computed(
 )
 const busy = computed(
   () => saving.value || deleting.value || publishing.value || cancelling.value,
+)
+
+const pickupPoint = computed(() => {
+  const lat = order.value?.pickup_latitude
+  const lng = order.value?.pickup_longitude
+  if (
+    typeof lat === 'number' &&
+    Number.isFinite(lat) &&
+    typeof lng === 'number' &&
+    Number.isFinite(lng)
+  ) {
+    return { lat, lng, label: '上車點' }
+  }
+  return null
+})
+
+const driverPoints = computed(() =>
+  onlineDrivers.value
+    .filter(
+      (d) =>
+        typeof d.latitude === 'number' &&
+        Number.isFinite(d.latitude) &&
+        typeof d.longitude === 'number' &&
+        Number.isFinite(d.longitude),
+    )
+    .map((d) => ({
+      lat: d.latitude as number,
+      lng: d.longitude as number,
+      label: d.username,
+    })),
+)
+
+const showDispatchMap = computed(
+  () =>
+    order.value != null &&
+    order.value.status !== 'DRAFT' &&
+    (pickupPoint.value != null || driverPoints.value.length > 0),
 )
 
 const timestamps = computed(() => {
@@ -71,6 +123,11 @@ function captureError(caught: unknown) {
   return { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
 }
 
+function driverDistanceLabel(distanceMeters: number | null): string {
+  const label = formatStraightLineDistance(distanceMeters)
+  return label ? `直線距離：${label}` : '直線距離：—'
+}
+
 async function loadOrder() {
   const id = String(route.params.id ?? '')
   const seq = ++requestSeq
@@ -91,10 +148,21 @@ async function loadOrder() {
       return
     }
     order.value = data
+    try {
+      const distances = await listOnlineDriverDistances(id)
+      if (seq === requestSeq) {
+        onlineDrivers.value = distances
+      }
+    } catch {
+      if (seq === requestSeq) {
+        onlineDrivers.value = []
+      }
+    }
   } catch (caught) {
     if (seq !== requestSeq) {
       return
     }
+    onlineDrivers.value = []
     if (caught instanceof ApiClientError) {
       if (caught.status === 404 && caught.code === 'NOT_FOUND') {
         notFound.value = true
@@ -330,6 +398,17 @@ watch(
                   <dd>{{ formatOptionalText(order.note) }}</dd>
                 </div>
               </dl>
+            </article>
+
+            <article v-if="showDispatchMap" class="panel">
+              <h2>地圖</h2>
+              <OrderMap :pickup="pickupPoint" :drivers="driverPoints" />
+              <ul v-if="onlineDrivers.length" class="driver-distances">
+                <li v-for="d in onlineDrivers" :key="d.id">
+                  <span>{{ d.username }} · {{ d.license_plate }}</span>
+                  <span>{{ driverDistanceLabel(d.distance_meters) }}</span>
+                </li>
+              </ul>
             </article>
 
             <article class="panel">
@@ -627,5 +706,21 @@ dd {
   .panel {
     padding: var(--space-16);
   }
+}
+
+.driver-distances {
+  list-style: none;
+  margin: var(--space-12) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.driver-distances li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  font: var(--font-label);
+  color: var(--color-text);
 }
 </style>

@@ -118,6 +118,8 @@ export type OrderDetail = {
   cancelled_at: string | null
   created_at: string
   updated_at: string
+  pickup_latitude: number | null
+  pickup_longitude: number | null
 }
 
 export type CreateOrderInput = {
@@ -197,6 +199,17 @@ export type OnlineDriverLocationItem = {
   location_updated_at: string | null
 }
 
+export type OnlineDriverDistanceItem = {
+  id: string
+  username: string
+  license_plate: string
+  online_status: 'ONLINE'
+  latitude: number | null
+  longitude: number | null
+  location_updated_at: string | null
+  distance_meters: number | null
+}
+
 export type DriverOpenOrder = {
   id: string
   order_no: string
@@ -205,6 +218,7 @@ export type DriverOpenOrder = {
   destination: string | null
   price: number | null
   note: string | null
+  distance_meters: number | null
 }
 
 export type DriverOrderDetail = {
@@ -217,6 +231,9 @@ export type DriverOrderDetail = {
   price: number | null
   note: string | null
   status: OrderStatus
+  distance_meters: number | null
+  pickup_latitude: number | null
+  pickup_longitude: number | null
 }
 
 export type AcceptOrderResult = {
@@ -234,6 +251,7 @@ export type DriverMyOrder = {
   destination: string | null
   price: number | null
   status: OrderStatus
+  distance_meters: number | null
 }
 
 export type StartOrderResult = {

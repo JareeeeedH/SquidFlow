@@ -157,13 +157,15 @@ Production Error 不得暴露：
 
 產品選定 Provider：**Google Geocoding API**。見 `PHASE-2-SPEC.md` P2-02。
 
-- Google API Key / Secret **不得**進入 Frontend 或 Git；僅 Backend Environment Variables／既有 Secrets 規範。
-- Provider 僅允許 Backend 呼叫。
+- **Geocoding server key**（例如 `GOOGLE_GEOCODING_API_KEY`）**不得**進入 Frontend 或 Git；僅 Backend Environment Variables／既有 Secrets 規範。
+- Provider Geocoding 呼叫僅允許 Backend。
 - Error response / Log **不得**暴露 API key 或 provider secrets。
 - **不**新增 Driver（或任何角色）可呼叫的公開 Geocoding endpoint。
 - **不**把 Pickup lat/lng 寫入 Database；避免以 DB 做長期座標倉儲。
 - **不**新增 Role／Permission 體系。
 - **不**引入 Google Routes API。
+
+> 說明：本節約束的是 **Geocoding server key**。P2-04 的 Google Maps JavaScript API 使用**分開的** Frontend-restricted key，見 §9D；兩把 key 不得混用或把 Geocoding server key 放到瀏覽器。
 
 ---
 
@@ -179,6 +181,22 @@ Production Error 不得暴露：
 - Distance 為參考資訊；**不得**改變 claim-order 條件或 Order State。
 - **不**新增 Role／Permission 體系。
 - **不**引入 Google Routes API、道路距離、或 ETA。
+
+---
+
+# 9D. Map & Navigation Security（Phase 2 / P2-04）
+
+產品選定 in-app Map SDK：**Google Maps JavaScript API**；導航為 Google Maps handoff。見 `PHASE-2-SPEC.md` P2-04。
+
+- Maps JavaScript API 使用**分開的** Frontend-restricted browser key（Environment／build 注入；建議限制 HTTP referrer／應用程式限制）。
+- **Geocoding server key 不得**進入 Frontend、Git，或與 Maps browser key 混用。
+- Frontend **不得**直接呼叫 Google Geocoding API；Pickup 座標僅經 Backend Order Detail 的 ephemeral 欄位或既有內部 geocode。
+- Ephemeral `pickup_latitude`／`pickup_longitude` 僅提供給已授權的 Admin Order Detail 或 Driver 可讀 Order Detail；**不**等同公開 Geocoding endpoint。
+- Driver Map 只能使用**自己的**位置 + 該 Order Pickup；**不得**藉 Map API 取得其他 Driver 位置（Admin Online Drivers API 除外且僅 ADMIN）。
+- Map 載入失敗、key 缺失、導航 handoff 失敗：**不得**改變 Order State、Accept、或 Online／Offline。
+- **不**把 Pickup lat/lng／route／ETA 寫入 Database。
+- **不**新增 Role／Permission 體系。
+- **不**引入 Google Routes API、道路距離、App 內 turn-by-turn。
 
 ---
 
@@ -205,6 +223,7 @@ SquidFlow MVP 必須至少具備：
 - Order Business Logic / Concurrency Protection
 - Driver Location Ownership / Coordinate Validation（Phase 2 / P2-01）
 - Straight-line Distance Visibility／Ownership（Phase 2 / P2-03）
+- Map／Navigation Key Separation & Failure Isolation（Phase 2 / P2-04）
 
 ---
 

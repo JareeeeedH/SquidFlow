@@ -728,8 +728,12 @@ Phase 2 包含：
 
 ### Map & Navigation（P2-04）
 
-- Web App 內顯示地圖（Driver 自己的位置、Pickup；Admin 查看 ONLINE Drivers）
-- 接單後「開始導航」交由 Google Maps；不做 App 內 turn-by-turn
+- In-app Map SDK：Google Maps JavaScript API
+- Web App 內顯示地圖（Driver：自己的位置 + Pickup；Admin：ONLINE Drivers + Pickup）
+- Pickup 座標來自 Backend runtime geocode（不存 DB）；沿用 P2-01 GPS、P2-03 直線距離
+- 接單後「開始導航」交由 Google Maps handoff；不做 App 內 turn-by-turn／routing／ETA
+- Map／導航失敗不影響 Order／Accept／Online／Offline
+- Geocoding server key 不進 Frontend；Maps JS 使用分開的 browser-restricted key
 
 ### Pickup Geocoding（P2-02）
 

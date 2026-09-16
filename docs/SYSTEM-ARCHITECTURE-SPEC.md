@@ -1484,7 +1484,7 @@ Backend 非同步呼叫 Google Geocoding（server-side only）
 - Secrets 僅 Environment Variables；錯誤不得外洩 API key
 - P2-03 計算直線距離；P2-04 負責 Map／Navigation；本切片不做 Routes／ETA
 
-殘餘注意（非 DB 永久儲存 blocker）：P2-04 內嵌地圖若非 Google Map，不得把 Geocoding 內容畫在 non-Google map 上（Google §6.2）。地圖 SDK 於 P2-04 Spec 決定。
+殘餘注意（非 DB 永久儲存 blocker）：P2-04 內嵌地圖選定 **Google Maps JavaScript API**，與 Google Geocoding §6.2 一致。
 
 **Phase 2 / P2-03 Straight-line Distance（已對齊）：**
 
@@ -1514,9 +1514,24 @@ Admin：GET /api/v1/orders/:id/online-driver-distances
 - Canonical API field：`distance_meters: number | null`
 - UI 單位：`< 1 km` → meters；`>= 1 km` → kilometers；標示「直線距離」；顯示捨入精度仍 open
 
-**Phase 2 / P2-04（產品已定方向，技術細節後續同步）：**
+**Phase 2 / P2-04 Map & Google Maps Navigation（已對齊）：**
 
-- Web App 內地圖 + Google Maps 導航 handoff（地圖 SDK 策略須與 Geocoding Terms 一致）
+```text
+Frontend（Vue）
+  ├── Google Maps JavaScript API（in-app map）
+  ├── Driver Order Detail：own GPS (P2-01) + Pickup (runtime P2-02) + distance_meters (P2-03)
+  ├── Admin Order / Dispatch：ONLINE Drivers + Pickup
+  └── Start Navigation → Google Maps handoff（external；no in-app routing）
+```
+
+架構規則：
+
+- Map SDK：**Google Maps JavaScript API**
+- Pickup lat/lng：**不**寫入 DB；API 僅以 ephemeral `pickup_latitude`／`pickup_longitude` 提供給 Map（Order Detail 讀取）
+- 沿用 P2-01／P2-02／P2-03；**不**引入 WebSocket／SSE／Redis／Queue／Worker
+- **不**呼叫 Google Routes API；**不**做道路距離／ETA／App 內 turn-by-turn
+- Geocoding server key 僅 Backend；Maps JS 使用分開的 Frontend-restricted key
+- Map／導航失敗不得影響 Order／Accept／Online／Offline
 
 Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn。
 

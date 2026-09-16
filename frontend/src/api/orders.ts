@@ -3,6 +3,7 @@ import type {
   CancelOrderResult,
   CreateOrderInput,
   CreateOrderResult,
+  OnlineDriverDistanceItem,
   OrderDetail,
   OrderListItem,
   OrderListQuery,
@@ -52,4 +53,10 @@ export function publishOrder(id: string) {
 
 export function cancelOrder(id: string) {
   return api.post<CancelOrderResult>(`/orders/${id}/cancel`)
+}
+
+export function listOnlineDriverDistances(orderId: string) {
+  return api.get<OnlineDriverDistanceItem[]>(
+    `/orders/${orderId}/online-driver-distances`,
+  )
 }
