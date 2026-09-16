@@ -661,9 +661,11 @@ export class OrdersService {
     });
 
     // P2-02: invalidate stale runtime coords immediately, then async re-geocode.
+    // Must not await Google — same non-blocking contract as Create Order.
     if (pickupChanged) {
       this.geocodingService.invalidateOrder(id);
       this.geocodingService.scheduleGeocode(id, order.pickupLocation);
+      return toDetail(order);
     }
 
     const pickup = await this.resolvePickupCoords(

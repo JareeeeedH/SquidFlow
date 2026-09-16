@@ -50,6 +50,10 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    geocodingService.getPickupCoordinates.mockReset();
+    geocodingService.getPickupCoordinates.mockResolvedValue(null);
+    geocodingService.scheduleGeocode.mockReset();
+    geocodingService.invalidateOrder.mockReset();
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => Promise<unknown>) =>
         callback(prisma),
@@ -183,7 +187,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
       draftOrder({ pickupLocation: '高雄車站' }),
     );
 
-    await service.update('order-1', {
+    const result = await service.update('order-1', {
       customerName: '王先生',
       pickupLocation: '高雄車站',
       destination: '小港機場',
@@ -196,12 +200,58 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
       'order-1',
       '高雄車站',
     );
+    // After invalidate, response must not wait for / return stale coords.
+    expect(geocodingService.getPickupCoordinates).not.toHaveBeenCalled();
+    expect(result.pickup_latitude).toBeNull();
+    expect(result.pickup_longitude).toBeNull();
 
     const updateCall = prisma.order.update.mock.calls[0] as
       [{ data: Record<string, unknown> }] | undefined;
     const updateData = updateCall?.[0].data;
     expect(updateData).not.toHaveProperty('latitude');
     expect(updateData).not.toHaveProperty('longitude');
+  });
+
+  it('does not await geocoding when pickup_location changes', async () => {
+    prisma.order.findUnique.mockResolvedValue(draftOrder());
+    prisma.order.update.mockResolvedValue(
+      draftOrder({ pickupLocation: '高雄車站' }),
+    );
+
+    let resolveGeocode!: () => void;
+    const geocodeDone = new Promise<void>((resolve) => {
+      resolveGeocode = resolve;
+    });
+    geocodingService.scheduleGeocode.mockImplementation(() => {
+      void geocodeDone;
+    });
+    geocodingService.getPickupCoordinates.mockImplementation(
+      () =>
+        new Promise(() => {
+          // Never resolves — Update must not await this path.
+        }),
+    );
+
+    const result = await service.update('order-1', {
+      customerName: '王先生',
+      pickupLocation: '高雄車站',
+      destination: '小港機場',
+      price: new Prisma.Decimal(1200),
+      note: null,
+    });
+
+    expect(result.pickup_location).toBe('高雄車站');
+    expect(geocodingService.invalidateOrder).toHaveBeenCalledWith('order-1');
+    expect(geocodingService.scheduleGeocode).toHaveBeenCalledWith(
+      'order-1',
+      '高雄車站',
+    );
+    expect(geocodingService.getPickupCoordinates).not.toHaveBeenCalled();
+    expect(result.pickup_latitude).toBeNull();
+    expect(result.pickup_longitude).toBeNull();
+
+    resolveGeocode();
+    await geocodeDone;
   });
 
   it('does not invalidate when pickup_location is unchanged', async () => {
