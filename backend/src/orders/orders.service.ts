@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -55,6 +56,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly geocodingService: GeocodingService,
   ) {}
 
   async list(query: OrderListQuery) {
@@ -160,6 +162,8 @@ export class OrdersService {
           return created;
         });
 
+        // P2-02: async geocode after text pickup is persisted; do not await.
+        this.geocodingService.scheduleGeocode(order.id, order.pickupLocation);
         return toCreateResponse(order);
       } catch (error) {
         const isUniqueConflict =
@@ -580,6 +584,8 @@ export class OrdersService {
       throw AppErrors.invalidOrderStatus();
     }
 
+    const pickupChanged = existing.pickupLocation !== input.pickupLocation;
+
     const order = await this.prisma.order.update({
       where: { id },
       data: {
@@ -591,6 +597,12 @@ export class OrdersService {
       },
       include: assignedDriverInclude,
     });
+
+    // P2-02: invalidate stale runtime coords immediately, then async re-geocode.
+    if (pickupChanged) {
+      this.geocodingService.invalidateOrder(id);
+      this.geocodingService.scheduleGeocode(id, order.pickupLocation);
+    }
 
     return toDetail(order);
   }
@@ -606,6 +618,7 @@ export class OrdersService {
       await tx.notification.deleteMany({ where: { orderId: id } });
       await tx.order.delete({ where: { id } });
     });
+    this.geocodingService.invalidateOrder(id);
   }
 
   private async findOrderOrThrow(id: string): Promise<OrderWithAssignedDriver> {
