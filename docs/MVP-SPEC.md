@@ -718,10 +718,13 @@ Phase 2 包含：
 
 ### Distance（P2-03）
 
-- 使用 Driver 最新座標與 Pickup 座標
-- SquidFlow 內部計算**直線距離**
-- 不做道路距離，不做 ETA
-- 不使用 Google Routes API 做距離／ETA
+- 使用 Driver 最新 GPS 與 Pickup **transient** 座標（P2-02 runtime；不存 DB）
+- Backend `DistanceService` 自行計算**直線距離**（great-circle／Haversine）
+- API canonical field：`distance_meters: number | null`；缺任一座標 → `null` → UI 不顯示
+- Driver 只看自己的距離（相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS`）；Admin 可看 ONLINE Drivers ↔ Pickup
+- 顯示：`< 1 km` → meters；`>= 1 km` → kilometers；必須標示「直線距離」
+- Distance 不存 DB；僅參考資訊；不影響搶單／Order State
+- 不做道路距離，不做 ETA；不使用 Google Routes API
 
 ### Map & Navigation（P2-04）
 

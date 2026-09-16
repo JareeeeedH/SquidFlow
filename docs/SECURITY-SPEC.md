@@ -167,6 +167,21 @@ Production Error 不得暴露：
 
 ---
 
+# 9C. Straight-line Distance Security（Phase 2 / P2-03）
+
+產品規則見 `PHASE-2-SPEC.md` P2-03。
+
+- Distance 由 Backend 計算；Frontend **不得**自行發明搶單／狀態規則。
+- Driver 只能取得**自己的** `distance_meters`（附加於自己可讀的 Order API）；**不得**讀取其他 Driver 的 Distance。
+- Admin Online Driver distances（`GET /api/v1/orders/:id/online-driver-distances`）僅 `ADMIN`；只含 `ONLINE` Drivers。
+- **不**新增公開 Geocoding endpoint；Pickup 座標僅經內部 `GeocodingService.getPickupCoordinates`。
+- **不**把 Distance 或 Pickup lat/lng 寫入 Database。
+- Distance 為參考資訊；**不得**改變 claim-order 條件或 Order State。
+- **不**新增 Role／Permission 體系。
+- **不**引入 Google Routes API、道路距離、或 ETA。
+
+---
+
 # 10. MVP Security Baseline
 
 SquidFlow MVP 必須至少具備：
@@ -189,6 +204,7 @@ SquidFlow MVP 必須至少具備：
 - Secure Error Handling
 - Order Business Logic / Concurrency Protection
 - Driver Location Ownership / Coordinate Validation（Phase 2 / P2-01）
+- Straight-line Distance Visibility／Ownership（Phase 2 / P2-03）
 
 ---
 

@@ -1486,9 +1486,36 @@ Backend 非同步呼叫 Google Geocoding（server-side only）
 
 殘餘注意（非 DB 永久儲存 blocker）：P2-04 內嵌地圖若非 Google Map，不得把 Geocoding 內容畫在 non-Google map 上（Google §6.2）。地圖 SDK 於 P2-04 Spec 決定。
 
-**Phase 2 / P2-03–P2-04（產品已定方向，技術細節後續同步）：**
+**Phase 2 / P2-03 Straight-line Distance（已對齊）：**
 
-- SquidFlow 內部直線距離（非道路距離；無 ETA）
+```text
+Driver latest GPS (drivers table, P2-01)
+        +
+Pickup transient coords (GeocodingService.getPickupCoordinates, P2-02)
+        ↓
+DistanceService（Backend）
+        ↓
+great-circle / Haversine → distance_meters
+        ↓
+附加於既有 Driver Order 讀取 API
+Admin：GET /api/v1/orders/:id/online-driver-distances
+```
+
+架構規則：
+
+- **負責：** Backend `DistanceService`（計算）；取得 Pickup 座標**只**透過既有 `GeocodingService.getPickupCoordinates`
+- **不**新增公開 Geocoding／Distance-only 對外計算 endpoint 供任意地址查詢
+- **不**把 Distance 或 Pickup lat/lng 寫入 PostgreSQL
+- **不**引入 Redis／Queue／Worker
+- **不**呼叫 Google Routes API；**不**計算道路距離／ETA
+- 缺任一座標 → API 回 `distance_meters: null`；UI 不顯示 Distance
+- Driver 只能看到自己的 Distance；Admin 只看 ONLINE Drivers ↔ 指定 Order Pickup
+- Distance 為參考資訊；**不**改變 Phase 1 claim／Order State
+- Canonical API field：`distance_meters: number | null`
+- UI 單位：`< 1 km` → meters；`>= 1 km` → kilometers；標示「直線距離」；顯示捨入精度仍 open
+
+**Phase 2 / P2-04（產品已定方向，技術細節後續同步）：**
+
 - Web App 內地圖 + Google Maps 導航 handoff（地圖 SDK 策略須與 Geocoding Terms 一致）
 
 Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn。

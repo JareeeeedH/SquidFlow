@@ -568,9 +568,16 @@ Phase 3 — Advanced Dispatch & Communication
 - Geocoding 結果不進 PostgreSQL；供同一 Order 的 Distance／Map 在 Backend runtime 重用
 - Phase 2 **不**儲存道路距離或 ETA
 
-**Phase 2 / P2-03–P2-04：**
+**Phase 2 / P2-03 Straight-line Distance（已定義）：**
 
-- 直線距離不需獨立長期欄位；地圖／導航細節待後續同步
+- Distance **不**新增 DB 欄位；**不**持久化計算結果
+- **不**新增 Pickup lat/lng 欄位（沿用 P2-02）
+- 計算輸入來自：`drivers` 最新 GPS + P2-02 runtime Pickup coordinates（非 DB）
+- Phase 2 **不**儲存道路距離或 ETA
+
+**Phase 2 / P2-04：**
+
+- 地圖／導航相關持久化需求於後續同步時再定義
 - Phase 2 **不**儲存道路距離或 ETA
 
 **Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。

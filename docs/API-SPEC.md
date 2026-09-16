@@ -574,13 +574,15 @@ GET /api/v1/driver/orders
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
       "price": 1200,
-      "status": "COMPLETED"
+      "status": "COMPLETED",
+      "distance_meters": null
     }
   ]
 }
 ```
 
-僅回傳目前登入 Driver 的訂單。依 `created_at` 降序。
+僅回傳目前登入 Driver 的訂單。依 `created_at` 降序。  
+`distance_meters`：僅在 `ACCEPTED`／`IN_PROGRESS` 且雙方座標可用時為 number；否則 `null`（見 §5C）。
 
 ---
 
@@ -603,7 +605,8 @@ GET /api/v1/driver/orders/open
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
       "price": 1200,
-      "note": "2件行李"
+      "note": "2件行李",
+      "distance_meters": 2450.5
     }
   ]
 }
@@ -621,7 +624,8 @@ status = OPEN
 online_status = ONLINE
 ```
 
-並可接單的訂單。依 `created_at` 降序。
+並可接單的訂單。依 `created_at` 降序。  
+`distance_meters`：該 Driver 自己的 GPS ↔ Pickup 直線距離（公尺）；缺座標則 `null`（見 §5C）。
 
 ---
 
@@ -658,10 +662,13 @@ status = OPEN
     "created_at": "2026-09-15T07:00:00Z",
     "price": 1200,
     "note": "2件行李",
-    "status": "ACCEPTED"
+    "status": "ACCEPTED",
+    "distance_meters": 2450.5
   }
 }
 ```
+
+`distance_meters`：僅在 `OPEN`／自己的 `ACCEPTED`／`IN_PROGRESS` 且雙方座標可用時為 number；否則 `null`（見 §5C）。
 
 ---
 
@@ -906,6 +913,7 @@ GET /api/v1/drivers/online-locations
 - 不含 `OFFLINE` Drivers（Online Drivers map 不需要顯示他們）
 - 若某 ONLINE Driver 尚未有有效位置，仍列入清單，`latitude` / `longitude` / `location_updated_at` 為 `null`
 - 不回傳道路距離、ETA，亦不呼叫 Google Routes API
+- 本端點**不**附帶 Order Pickup Distance（見 P2-03 `GET /api/v1/orders/:id/online-driver-distances`）
 
 ### Response
 
@@ -925,6 +933,105 @@ GET /api/v1/drivers/online-locations
   ]
 }
 ```
+
+---
+
+# 5C. Straight-line Distance（Phase 2 / P2-03）
+
+產品規則見 `PHASE-2-SPEC.md`（P2-03）。
+
+## Calculation contract（Backend internal）
+
+- **負責模組：** Backend `DistanceService`（名稱可依實作調整；職責固定）
+- **輸入：**
+  - Driver 最新 GPS：讀取 `drivers.latitude` / `drivers.longitude`（P2-01）
+  - Pickup 座標：呼叫既有 `GeocodingService.getPickupCoordinates(orderId, pickupLocation)`（P2-02 transient runtime；**不**讀 DB Pickup lat/lng 欄位——因為不存在）
+- **算法：** SquidFlow 自行計算地表直線距離（great-circle／Haversine）。**不**呼叫 Google Routes API；**不**計算道路距離；**不**計算 ETA
+- **輸出語意：** 公尺（meters）數值；缺任一座標 → 視為無法計算
+- **持久化：** Distance **不**寫入 PostgreSQL；**不**新增 Distance 欄位；**不**引入 Redis／Queue／Worker
+- **副作用：** Distance 計算**不得**改變 Order State、搶單條件、或 `ONLINE`／`OFFLINE`
+
+## Canonical API field
+
+所有對外 Distance 欄位統一為：
+
+```text
+distance_meters: number | null
+```
+
+- `number`：直線距離（公尺）
+- `null`：Driver GPS 或缺 Pickup runtime 座標 → **不顯示** Distance（UI 必須隱藏，不得顯示 `0` 或假值）
+- **不**在 P2-03 response 中回傳 Pickup lat/lng（座標仍由 P2-02 runtime 內部持有；地圖座標契約屬 P2-04）
+- **不**回傳 `road_distance`、`eta`、Routes 相關欄位
+- 顯示單位（`< 1 km` → meters；`>= 1 km` → kilometers）與「直線距離」標示由 UI 依產品規則處理；**顯示捨入精度仍 open**（見 `PHASE-2-SPEC.md` §11）
+
+## Driver — Distance on related Orders
+
+適用狀態：`OPEN`、`ACCEPTED`、`IN_PROGRESS`。  
+僅計算**目前登入 Driver 自己的** GPS ↔ 該 Order Pickup。Driver **不可**取得其他 Driver 的 Distance。
+
+在既有 Driver Order 讀取 API 上**附加** `distance_meters`（不新增獨立公開 Distance／Geocoding endpoint）：
+
+| Endpoint | `distance_meters` |
+|----------|-------------------|
+| `GET /api/v1/driver/orders/open` | 每筆 OPEN Order；缺座標則 `null` |
+| `GET /api/v1/driver/orders/:id` | 當 Order 為 `OPEN`，或為自己的 `ACCEPTED`／`IN_PROGRESS`；否則依既有授權；缺座標則 `null` |
+| `GET /api/v1/driver/orders` | 僅當該筆為自己的 `ACCEPTED`／`IN_PROGRESS` 時可有值；`COMPLETED`／`CANCELLED` 等為 `null` |
+
+### Example（Open Orders item）
+
+```json
+{
+  "id": "uuid",
+  "order_no": "ORD-20260915-001",
+  "created_at": "2026-09-15T07:00:00Z",
+  "pickup_location": "左營高鐵站",
+  "destination": "高雄小港機場",
+  "price": 1200,
+  "note": "2件行李",
+  "distance_meters": 2450.5
+}
+```
+
+## Admin — Online Drivers ↔ Pickup（Order context）
+
+```http
+GET /api/v1/orders/:id/online-driver-distances
+```
+
+僅 `ADMIN`。回傳目前 `online_status = ONLINE` 的 Drivers，以及各自到**該 Order** Pickup 的直線距離。
+
+用途：Dispatch／Dashboard／Order 情境下，Admin 查看 Online Drivers ↔ Pickup（產品已確認的 visibility；畫面配置仍 open）。
+
+規則：
+
+- **不含** `OFFLINE` Drivers
+- 若某 ONLINE Driver 尚無有效 GPS，或該 Order 尚無可用 Pickup runtime 座標 → 該列 `distance_meters` 為 `null`（仍可列在清單中，與 P2-01 online-locations 缺座標語意一致）
+- Pickup 座標只經 `GeocodingService.getPickupCoordinates`；**不**新增公開 Geocoding endpoint；**不**在本 response 回傳 Pickup lat/lng
+- 本端點**不**影響搶單／Order State
+- **不**回傳道路距離／ETA
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "username": "driver001",
+      "license_plate": "ABC-1234",
+      "online_status": "ONLINE",
+      "latitude": 22.6870123,
+      "longitude": 120.3090456,
+      "location_updated_at": "2026-09-16T00:30:00.000Z",
+      "distance_meters": 2450.5
+    }
+  ]
+}
+```
+
+Dashboard `board_orders` **不**強制嵌入全量 Online Driver distances（避免 N×M payload；UI 於需要時對選定 Order 呼叫本端點）。畫面配置見 UI-UX／`PHASE-2-SPEC.md` open decisions。
 
 ---
 
@@ -1140,11 +1247,20 @@ Phase 3 — Advanced Dispatch & Communication
 - 同一 Order 的 Pickup 不得因多名 Driver 讀取而各自打一次 Google Geocoding
 - `pickup_location` 修改後必須重新 geocode；舊座標結果作廢
 - **不**新增 Google Routes／道路距離／ETA endpoint
-- Distance／Map 所需座標契約於 P2-03／P2-04 Spec 再細化；P2-02 只定義 geocoding 內部行為
+- Distance 所需座標：內部使用 `GeocodingService.getPickupCoordinates`（見 P2-03）；P2-02 不定義 Distance field shape
 
-**Phase 2 / P2-03–P2-04：**
+**Phase 2 / P2-03 Straight-line Distance（已定義）：**
 
-- 直線距離、地圖相關 contract 於後續同步時再定義
+- Backend `DistanceService`：Driver GPS（P2-01）+ Pickup transient coords（P2-02 `getPickupCoordinates`）→ great-circle／Haversine 公尺
+- Canonical field：`distance_meters: number | null`（缺任一座標 → `null`；UI 不顯示）
+- Driver：附加於 `GET /api/v1/driver/orders/open`、`GET /api/v1/driver/orders/:id`、`GET /api/v1/driver/orders`（visibility 見 §5C）
+- Admin：`GET /api/v1/orders/:id/online-driver-distances`（僅 ONLINE Drivers ↔ 該 Order Pickup）
+- **不**新增公開 Geocoding endpoint；**不**存 Distance／Pickup lat/lng 到 DB；**不**引入 Redis／Queue／Worker
+- **不**影響 Phase 1 claim／Order State；**不**新增道路距離／ETA／Routes endpoint
+
+**Phase 2 / P2-04：**
+
+- 地圖／導航 contract 於後續同步時再定義
 - Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
 **Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。

@@ -34,7 +34,8 @@ Known sync status:
 
 - **P2-01** — technical Specs synchronized for Driver GPS Location
 - **P2-02** — product + technical Specs synchronized for Google Geocoding **without** persisting Pickup lat/lng in the database
-- **P2-03 / P2-04** — product rules confirmed; detailed distance / map contracts follow in later Spec sync
+- **P2-03** — product + technical Specs synchronized for straight-line Distance (computed; not stored)
+- **P2-04** — product rules confirmed; map embedding / navigation handoff contracts follow in later Spec sync
 
 ---
 
@@ -326,10 +327,10 @@ Treat this file as the Phase 2 product authority for:
 - Runtime reuse of the same Order geocode result for Distance / Map (not per Driver)
 - Map + Google Maps navigation handoff
 
-**P2-01** and **P2-02** technical Specs are synchronized with this document.
+**P2-01**, **P2-02**, and **P2-03** technical Specs are synchronized with this document.
 
 Remaining technical Spec work:
 
-- P2-03 straight-line distance API / presentation contract
 - P2-04 map embedding (SDK must align with Google Geocoding map Terms) and Google Maps navigation handoff details
 - Related Technology / UI-UX detail updates as those slices are implemented
+- Display rounding / precision for meters and kilometers (unit threshold confirmed; exact rounding still open)
