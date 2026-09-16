@@ -84,7 +84,6 @@ Kubernetes
 - Cancel Order
 - Driver Management
 - 查看 ONLINE Driver 最新位置（Phase 2 / P2-01）
-- 查看 OrderEvent
 
 Admin Web 透過 REST API 與 Backend 溝通。
 
@@ -236,19 +235,18 @@ Controller 不直接處理核心 Business Logic。
 
 負責：
 
-- Order Timeline（**MVP UI 不顯示**；見 `UI-UX-SPEC.md`。Event 仍寫入 DB 作為 Audit／Troubleshooting）
-- Process History
+- Process History（寫入 `order_events`）
 - Audit Log
 - Troubleshooting
 
-主要 Event：
+MVP **不**提供 Order Events 讀取 API，也 **不**提供 Timeline UI。
+
+主要 Event（僅 lifecycle 成功寫入）：
 
 ```text
 ORDER_CREATED
 ORDER_PUBLISHED
-ORDER_VIEWED
 ORDER_ACCEPTED
-ORDER_ACCEPT_FAILED
 ORDER_STARTED
 ORDER_COMPLETED
 ORDER_CANCELLED
@@ -527,7 +525,7 @@ Admin
 ├─ View All Orders             ✅
 ├─ Manage Drivers              ✅
 ├─ View Online Driver Locations ✅
-└─ View Order Events           ✅
+└─ Cancel Order                ✅
 ```
 
 ---
@@ -993,13 +991,7 @@ Complete
 ORDER_COMPLETED
 ```
 
-失敗操作可以：
-
-```text
-ORDER_ACCEPT_FAILED
-```
-
-事件應在對應 Business Operation 成功或明確失敗後記錄。
+事件應在對應 Business Operation 成功後記錄。
 
 OrderEvent 不取代 Order Status。
 

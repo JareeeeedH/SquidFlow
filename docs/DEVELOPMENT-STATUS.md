@@ -183,7 +183,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Open Orders 僅在可接單時回傳 `status=OPEN`：ACTIVE + ONLINE + 無 ACCEPTED / IN_PROGRESS；否則空陣列
 - Order Detail：OPEN 或 `order.driver_id = current driver`（含 ACCEPTED / IN_PROGRESS / COMPLETED / CANCELLED）
 - 其他 Driver 已接單與不存在訂單一律 `404 NOT_FOUND`
-- GET 唯讀：不改 Order / Driver，不建立 `ORDER_VIEWED`
+- GET 唯讀：不改 Order / Driver，不新增 OrderEvent
 - 未實作 Accept / 搶單、Start / Complete、`GET /driver/orders`、Web Push、Frontend
 
 ---
@@ -230,7 +230,7 @@ Phase 3 — Advanced Dispatch & Communication
 - `GET /api/v1/orders/:id` Order Detail（唯讀）
 - `POST /api/v1/orders` 建立 Draft
 - `/orders/new` → 成功後進入 `/orders/:id`
-- 未實作 Edit / Delete / Publish / Cancel / Timeline / Drivers / Accept / Web Push
+- 未實作 Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
 
 ---
 
@@ -351,7 +351,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Invalid subscription（404 / 410）：移除 subscription，Notification → `FAILED`
 - Push failure 不影響 Publish / Order state；不做 retry / queue
 - Web Push title / body 不存入 Notification；VAPID 由 env 提供
-- 未實作 Frontend integration、`GET /notifications`、deployment
+- 未實作 Frontend integration、deployment
 
 ---
 
@@ -369,7 +369,7 @@ Phase 3 — Advanced Dispatch & Communication
 - 收到 Push 顯示通知；點擊進入 `/driver/orders/:id`
 - Permission 失敗不影響登入、Online/Offline、接單
 - VAPID public key 使用 `VITE_VAPID_PUBLIC_KEY`（與 Backend 同一組 public key）
-- 未實作 `GET /notifications`、deployment
+- 未實作 deployment
 
 ---
 
@@ -384,7 +384,7 @@ Phase 3 — Advanced Dispatch & Communication
 - 驗證 Push failure 不影響 Publish / Order
 - 瀏覽器：Notification Permission = granted、Service Worker `/sw.js` 已註冊、`showNotification` 可顯示、click message 可導向 `/driver/orders/:id`、Driver UI「我要接單」成功
 - Cursor 內建 Chromium 的 `PushManager.subscribe` 回 `AbortError: Registration failed - push service not available`，因此無法在此環境完成真實 Web Push 網路投遞 / FCM subscription
-- 未實作 Driver Start / Complete UI、Admin Cancel UI、`GET /notifications`、deployment（Start / Complete 以 Driver API 驗證）
+- 未實作 Driver Start / Complete UI、Admin Cancel UI、deployment（Start / Complete 以 Driver API 驗證）
 
 ---
 
@@ -399,7 +399,7 @@ Phase 3 — Advanced Dispatch & Communication
 - `POST /api/v1/driver/orders/:id/start`、`POST /api/v1/driver/orders/:id/complete`
 - Admin Order Detail：`OPEN` / `ACCEPTED` →「取消訂單」；`IN_PROGRESS` / `COMPLETED` / `CANCELLED` 唯讀
 - `POST /api/v1/orders/:id/cancel`
-- 未實作 `GET /notifications`、Order Events / Timeline、Dashboard、Security Hardening、deployment
+- 未實作 Dashboard、Security Hardening、deployment
 
 ---
 
@@ -416,7 +416,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Production Cookie 維持 HttpOnly / Secure / SameSite=Lax；`TRUST_PROXY` 供反代後取得真實 client IP
 - 明確 JSON body 上限 100kb
 - 未修改 Order business rules、Database Schema、API contract
-- 未實作 `GET /notifications`、Order Events / Timeline、Dashboard、deployment
+- 未實作 Dashboard、deployment
 
 ---
 
@@ -450,7 +450,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Dispatch Board 四欄卡片；點擊進入 Order Detail
 - 完整訂單列表仍在 `/orders`，含既有搜尋／篩選
 - 已同步 `API-SPEC`；未改 Schema、未做 WebSocket / SSE / 拖拉看板
-- 未實作 `GET /notifications`、Order Events / Timeline、deployment
+- 未實作 deployment
 
 ---
 
@@ -591,7 +591,7 @@ Phase 3 — Advanced Dispatch & Communication
 - Admin 訂單詳情改為置中 7:3 雙欄；左側訂單資訊 + 接單司機，右側狀態 / 操作 / 時間
 - 行程改為 `上車地點 → 目的地`，提高行程與價格層級
 - 未指派顯示尚無；已指派只顯示可點擊 username，進入既有 Driver Detail
-- 不顯示車牌 / 車輛 / 車色；未新增 Timeline、API、Schema 或 business action
+- 不顯示車牌 / 車輛 / 車色；未新增 API、Schema 或 business action
 
 ---
 
@@ -725,3 +725,17 @@ Phase 3 — Advanced Dispatch & Communication
 - 未改 Schema、PATCH contract、Order／Push rules
 
 ---
+
+---
+
+## TASK — Remove unused Notification list / OrderEvent read & unused event types
+
+**Status:** completed
+
+### 已完成
+
+- 自 Spec／Prisma enum 移除 ORDER_VIEWED、ORDER_ACCEPT_FAILED
+- 移除未實作契約：GET /notifications、GET /orders/:id/events
+- 保留 lifecycle OrderEvent 寫入與 Web Push subscription API
+- 未改 Order State、Accept concurrency、Auth、Push 發送、GPS／Geocoding／Distance／Map
+

@@ -545,7 +545,7 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
     expect(asBody<ApiErrorBody>(missingResponse).error.code).toBe('NOT_FOUND');
   });
 
-  it('does not mutate Order, Driver, or create ORDER_VIEWED on GET', async () => {
+  it('does not mutate Order, Driver, or create OrderEvents on GET', async () => {
     const cookie = await loginAs(users.viewer.username);
     const beforeOrder = await prisma.order.findUnique({
       where: { id: orders.open },
@@ -554,7 +554,7 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       where: { id: users.viewer.driverId },
     });
     const beforeEvents = await prisma.orderEvent.count({
-      where: { orderId: orders.open, eventType: 'ORDER_VIEWED' },
+      where: { orderId: orders.open },
     });
 
     await request(app.getHttpServer())
@@ -573,13 +573,12 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       where: { id: users.viewer.driverId },
     });
     const afterEvents = await prisma.orderEvent.count({
-      where: { orderId: orders.open, eventType: 'ORDER_VIEWED' },
+      where: { orderId: orders.open },
     });
 
     expect(afterOrder).toEqual(beforeOrder);
     expect(afterDriver).toEqual(beforeDriver);
     expect(afterEvents).toBe(beforeEvents);
-    expect(afterEvents).toBe(0);
   });
 
   it('returns 401 when unauthenticated driver accepts', async () => {

@@ -525,40 +525,6 @@ Admin-only。Driver 回 `403 FORBIDDEN`。
 
 ---
 
-## Get Order Events
-
-> **MVP 實作狀態：** 本端點契約已定義，但 **尚未實作**。`order_events` 於 Create／Publish／Accept／Start／Complete／Cancel 時寫入 DB；Admin Order Detail UI 依 `UI-UX-SPEC.md` **不顯示 Timeline**。讀取 API／Timeline UI 屬後續決策，不阻塞核心派車流程。
-
-```http
-GET /api/v1/orders/:id/events
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "event_type": "ORDER_CREATED",
-      "actor_user_id": "uuid",
-      "metadata": {},
-      "created_at": "2026-09-15T07:00:00Z"
-    },
-    {
-      "id": "uuid",
-      "event_type": "ORDER_PUBLISHED",
-      "actor_user_id": "uuid",
-      "metadata": {},
-      "created_at": "2026-09-15T07:02:00Z"
-    }
-  ]
-}
-```
-
----
-
 # 4. Driver — Order
 
 ## List My Orders
@@ -1103,33 +1069,6 @@ pickup_longitude: number | null
 
 # 6. Notification
 
-## List Notifications
-
-> **MVP 實作狀態：** 本端點契約已定義，但 **尚未實作**。MVP 通知以 Web Push（`POST`／`DELETE /notifications/subscription`）為準；Inbox 列表屬後續決策，不阻塞核心派車流程。
-
-```http
-GET /api/v1/notifications
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "order_id": "order-uuid",
-      "status": "SENT",
-      "created_at": "2026-09-15T07:02:00Z",
-      "sent_at": "2026-09-15T07:02:01Z"
-    }
-  ]
-}
-```
-
----
-
 ## Create Push Subscription
 
 ```http
@@ -1213,7 +1152,7 @@ Start
 Complete
 Online / Offline
 Own Location
-Notifications
+Push Subscription
 ```
 
 ### Admin
@@ -1223,7 +1162,6 @@ Driver Management
 Online Driver Locations
 Order Management
 Dashboard
-Order Events
 ```
 
 ---

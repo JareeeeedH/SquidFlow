@@ -427,9 +427,7 @@ OrderEvent
 ```text
 ORDER_CREATED
 ORDER_PUBLISHED
-ORDER_VIEWED
 ORDER_ACCEPTED
-ORDER_ACCEPT_FAILED
 ORDER_STARTED
 ORDER_COMPLETED
 ORDER_CANCELLED
@@ -440,10 +438,7 @@ ORDER_CANCELLED
 ```text
 10:00 ORDER_CREATED
 10:02 ORDER_PUBLISHED
-10:03 ORDER_VIEWED        Driver A
-10:03 ORDER_VIEWED        Driver B
 10:04 ORDER_ACCEPTED      Driver A
-10:04 ORDER_ACCEPT_FAILED Driver B
 10:30 ORDER_STARTED       Driver A
 11:20 ORDER_COMPLETED     Driver A
 ```
@@ -549,7 +544,6 @@ Driver 不可以查看其他 Driver 的已接單。
 | 查看接單司機 | ✅ | 僅自己 |
 | 管理 Driver | ✅ | ❌ |
 | 切換 Online / Offline | ❌ | ✅ |
-| 查看 OrderEvent | ✅ | ❌ |
 
 ---
 
