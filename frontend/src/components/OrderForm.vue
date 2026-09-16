@@ -24,10 +24,13 @@ const props = defineProps<{
   initialValues?: OrderFormValues | null
   showCancel?: boolean
   grouped?: boolean
+  hideActions?: boolean
+  secondaryLabel?: string
 }>()
 
 const emit = defineEmits<{
   submit: [input: CreateOrderInput]
+  publish: [input: CreateOrderInput]
   cancel: []
 }>()
 
@@ -52,9 +55,9 @@ watch(
   },
 )
 
-async function onSubmit() {
+async function validateInput(): Promise<CreateOrderInput | null> {
   if (props.submitting || locked.value) {
-    return
+    return null
   }
 
   locked.value = true
@@ -63,17 +66,38 @@ async function onSubmit() {
     await formRef.value?.validate()
   } catch {
     locked.value = false
-    return
+    return null
   }
 
   const input = formValuesToInput(form)
   if (!input) {
     locked.value = false
-    return
+    return null
   }
 
+  return input
+}
+
+async function onSubmit() {
+  const input = await validateInput()
+  if (!input) {
+    return
+  }
   emit('submit', input)
 }
+
+async function onPublish() {
+  const input = await validateInput()
+  if (!input) {
+    return
+  }
+  emit('publish', input)
+}
+
+defineExpose({
+  submitDraft: onSubmit,
+  submitPublish: onPublish,
+})
 </script>
 
 <template>
@@ -149,7 +173,7 @@ async function onSubmit() {
       </NFormItem>
     </section>
 
-    <div class="actions">
+    <div v-if="!hideActions" class="actions">
       <NButton
         v-if="showCancel"
         quaternary
@@ -157,6 +181,15 @@ async function onSubmit() {
         @click="emit('cancel')"
       >
         取消
+      </NButton>
+      <NButton
+        v-if="secondaryLabel"
+        secondary
+        :disabled="submitting"
+        :loading="submitting"
+        @click="onPublish"
+      >
+        {{ secondaryLabel }}
       </NButton>
       <NButton
         type="primary"

@@ -11,6 +11,7 @@ import { groupBoardOrders } from '../lib/dashboard'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 import {
   DASHBOARD_BOARD_STATUSES,
+  OPERATIONAL_ORDER_STATUSES,
   ORDER_STATUSES,
   isOperationalStatus,
 } from '../lib/order-status'
@@ -29,6 +30,15 @@ const groupedBoardOrders = computed(() =>
 
 const boardColumns = computed(() =>
   DASHBOARD_BOARD_STATUSES.map((status) => ({
+    status,
+    count: dashboard.value?.summary[status] ?? 0,
+    orders: groupedBoardOrders.value[status],
+  })),
+)
+
+/** Mobile focus board: OPEN / ACCEPTED / IN_PROGRESS only (DRAFT stays on desktop board). */
+const mobileFocusColumns = computed(() =>
+  OPERATIONAL_ORDER_STATUSES.map((status) => ({
     status,
     count: dashboard.value?.summary[status] ?? 0,
     orders: groupedBoardOrders.value[status],
@@ -153,7 +163,7 @@ void loadDashboard()
         </div>
       </section>
 
-      <section class="board" aria-label="派車看板">
+      <section class="board board-desktop" aria-label="派車看板">
         <h2 class="section-title">派車看板</h2>
         <div class="board-grid">
           <div
@@ -206,6 +216,61 @@ void loadDashboard()
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="board board-mobile" aria-label="重點訂單">
+        <div class="mobile-board-header">
+          <h2 class="section-title">重點訂單</h2>
+          <NButton text type="primary" size="small" @click="router.push({ name: 'orders' })">
+            完整訂單
+          </NButton>
+        </div>
+        <p class="mobile-board-hint">僅顯示搶單中／已接單／行程中。草稿與完整列表請至訂單。</p>
+        <div class="focus-list">
+          <template v-for="column in mobileFocusColumns" :key="column.status">
+            <div class="focus-group" :data-status="column.status">
+              <header class="focus-group-header">
+                <OrderStatusTag :status="column.status" />
+                <span class="column-count">{{ column.count }}</span>
+              </header>
+              <p
+                v-if="!loading && column.orders.length === 0"
+                class="column-empty focus-empty"
+              >
+                目前沒有訂單
+              </p>
+              <button
+                v-for="order in column.orders"
+                :key="order.id"
+                class="order-card"
+                type="button"
+                @click="openOrder(order.id)"
+              >
+                <div class="card-row">
+                  <span class="identity">{{ order.order_no }}<template v-if="order.customer_name"> · {{ order.customer_name }}</template></span>
+                  <span class="price">{{ formatPrice(order.price) }}</span>
+                </div>
+                <p class="route">
+                  {{ order.pickup_location }}
+                  <span class="arrow">→</span>
+                  {{ formatOptionalText(order.destination) }}
+                </p>
+                <p class="meta">
+                  <span class="time">{{ formatScheduledAt(order.created_at) }}</span>
+                  <span class="sep">·</span>
+                  <span
+                    class="driver"
+                    :class="isAssigned(order) ? 'is-assigned' : 'is-unassigned'"
+                  >
+                    <User v-if="isAssigned(order)" :size="12" />
+                    <UserX v-else :size="12" />
+                    {{ driverLabel(order) }}
+                  </span>
+                </p>
+              </button>
+            </div>
+          </template>
         </div>
       </section>
     </NSpin>
@@ -270,22 +335,26 @@ h1 {
 
 .summary-card,
 .column,
+.focus-group,
 .order-card {
   --status-color: var(--color-muted-text);
 }
 
 .summary-card[data-status='OPEN'],
-.column[data-status='OPEN'] {
+.column[data-status='OPEN'],
+.focus-group[data-status='OPEN'] {
   --status-color: var(--color-warning);
 }
 
 .summary-card[data-status='ACCEPTED'],
-.column[data-status='ACCEPTED'] {
+.column[data-status='ACCEPTED'],
+.focus-group[data-status='ACCEPTED'] {
   --status-color: var(--color-info);
 }
 
 .summary-card[data-status='IN_PROGRESS'],
-.column[data-status='IN_PROGRESS'] {
+.column[data-status='IN_PROGRESS'],
+.focus-group[data-status='IN_PROGRESS'] {
   --status-color: var(--color-primary);
 }
 
@@ -487,6 +556,56 @@ h1 {
   color: var(--color-muted-text);
 }
 
+.board-mobile {
+  display: none;
+}
+
+.mobile-board-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-bottom: var(--space-4);
+}
+
+.mobile-board-header .section-title {
+  margin: 0;
+}
+
+.mobile-board-hint {
+  margin: 0 0 var(--space-12);
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
+.focus-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.focus-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+}
+
+.focus-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+
+.focus-empty {
+  padding: var(--space-12) var(--space-8);
+}
+
 @media (max-width: 1280px) {
   .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -506,16 +625,27 @@ h1 {
     gap: var(--space-16);
   }
 
-  .summary-grid,
-  .board-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-8);
   }
-}
 
-@media (max-width: 640px) {
-  .summary-grid,
-  .board-grid {
-    grid-template-columns: 1fr;
+  .summary-card {
+    min-height: 72px;
+    padding: var(--space-12);
+    gap: var(--space-8);
+  }
+
+  .summary-count {
+    font-size: 18px;
+  }
+
+  .board-desktop {
+    display: none;
+  }
+
+  .board-mobile {
+    display: block;
   }
 }
 </style>

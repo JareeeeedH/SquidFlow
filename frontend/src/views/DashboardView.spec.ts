@@ -211,4 +211,13 @@ describe('DashboardView', () => {
 
     expect(wrapper.text()).toContain('ORD-20260915-001')
   })
+
+  it('shows mobile focus board entry for full orders list', async () => {
+    const { wrapper } = await mountDashboard()
+
+    expect(wrapper.text()).toContain('重點訂單')
+    expect(wrapper.text()).toContain('完整訂單')
+    expect(wrapper.find('.board-mobile').exists()).toBe(true)
+    expect(wrapper.find('.board-desktop').exists()).toBe(true)
+  })
 })

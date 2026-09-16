@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { Plus, RotateCcw, Search } from 'lucide-vue-next'
+import { Filter, Plus, RotateCcw, Search } from 'lucide-vue-next'
 import {
   NButton,
   NDataTable,
   NDatePicker,
+  NDrawer,
+  NDrawerContent,
   NEmpty,
   NInput,
   NResult,
   NSelect,
+  NSpin,
   type DataTableColumns,
 } from 'naive-ui'
 import { computed, h, ref, watch } from 'vue'
@@ -36,6 +39,7 @@ const orders = ref<OrderListItem[]>([])
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const forbidden = ref(false)
+const filterOpen = ref(false)
 
 let requestSeq = 0
 
@@ -52,9 +56,18 @@ const query = computed<OrderListQuery>(() => ({
 const hasFilters = computed(
   () =>
     Boolean(searchInput.value.trim()) ||
+    Boolean(appliedSearch.value) ||
     status.value !== null ||
     dateValue.value !== null,
 )
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (appliedSearch.value) count += 1
+  if (status.value) count += 1
+  if (dateValue.value !== null) count += 1
+  return count
+})
 
 const columns: DataTableColumns<OrderListItem> = [
   {
@@ -143,6 +156,15 @@ function clearFilters() {
   dateValue.value = null
 }
 
+function applyDrawerFilters() {
+  applySearch()
+  filterOpen.value = false
+}
+
+function openOrder(id: string) {
+  void router.push({ name: 'order-detail', params: { id } })
+}
+
 watch(
   () => route.query.status,
   (raw) => {
@@ -222,7 +244,7 @@ watch(query, () => {
       </div>
     </header>
 
-    <div class="toolbar">
+    <div class="toolbar toolbar-desktop">
       <NInput
         v-model:value="searchInput"
         class="search"
@@ -260,6 +282,55 @@ watch(query, () => {
       </NButton>
     </div>
 
+    <div class="toolbar toolbar-mobile">
+      <NInput
+        v-model:value="searchInput"
+        class="search"
+        clearable
+        placeholder="搜尋訂單編號或客戶"
+        @keyup.enter="applySearch"
+        @clear="applySearch"
+      >
+        <template #prefix>
+          <Search :size="16" class="search-icon" />
+        </template>
+      </NInput>
+      <NButton secondary @click="filterOpen = true">
+        <template #icon>
+          <Filter :size="16" />
+        </template>
+        篩選
+        <span v-if="activeFilterCount" class="filter-badge">{{ activeFilterCount }}</span>
+      </NButton>
+    </div>
+
+    <NDrawer v-model:show="filterOpen" placement="bottom" :height="360">
+      <NDrawerContent title="篩選訂單" closable>
+        <div class="drawer-filters">
+          <NSelect
+            v-model:value="status"
+            :options="STATUS_OPTIONS"
+            clearable
+            placeholder="全部狀態"
+          />
+          <NDatePicker
+            v-model:value="dateValue"
+            type="date"
+            clearable
+            format="yyyy/MM/dd"
+            placeholder="建立日期"
+            style="width: 100%"
+          />
+          <div class="drawer-actions">
+            <NButton quaternary :disabled="!hasFilters" @click="clearFilters">
+              清除
+            </NButton>
+            <NButton type="primary" @click="applyDrawerFilters">套用</NButton>
+          </div>
+        </div>
+      </NDrawerContent>
+    </NDrawer>
+
     <div class="panel">
       <NResult
         v-if="forbidden"
@@ -291,24 +362,59 @@ watch(query, () => {
         </template>
       </NResult>
 
-      <NDataTable
-        v-else
-        :columns="columns"
-        :data="orders"
-        :loading="loading"
-        :bordered="false"
-        :single-line="false"
-        :scroll-x="960"
-        size="small"
-      >
-        <template #empty>
-          <NEmpty
-            :description="
-              hasFilters ? '沒有符合條件的訂單' : '目前沒有訂單'
-            "
-          />
-        </template>
-      </NDataTable>
+      <template v-else>
+        <NDataTable
+          class="orders-table"
+          :columns="columns"
+          :data="orders"
+          :loading="loading"
+          :bordered="false"
+          :single-line="false"
+          :scroll-x="960"
+          size="small"
+        >
+          <template #empty>
+            <NEmpty
+              :description="
+                hasFilters ? '沒有符合條件的訂單' : '目前沒有訂單'
+              "
+            />
+          </template>
+        </NDataTable>
+
+        <NSpin :show="loading" class="orders-cards-wrap">
+          <div class="orders-cards">
+            <NEmpty
+              v-if="!loading && orders.length === 0"
+              :description="
+                hasFilters ? '沒有符合條件的訂單' : '目前沒有訂單'
+              "
+            />
+            <button
+              v-for="order in orders"
+              :key="order.id"
+              class="order-card"
+              type="button"
+              @click="openOrder(order.id)"
+            >
+              <div class="card-top">
+                <span class="order-no">{{ order.order_no }}</span>
+                <OrderStatusTag :status="order.status" />
+              </div>
+              <p class="card-customer">{{ formatOptionalText(order.customer_name) }}</p>
+              <p class="card-route">
+                {{ order.pickup_location }}
+                <span class="arrow">→</span>
+                {{ formatOptionalText(order.destination) }}
+              </p>
+              <div class="card-bottom">
+                <span class="card-price">{{ formatPrice(order.price) }}</span>
+                <span class="card-time">{{ formatScheduledAt(order.created_at) }}</span>
+              </div>
+            </button>
+          </div>
+        </NSpin>
+      </template>
     </div>
   </section>
 </template>
@@ -358,6 +464,10 @@ h1 {
   gap: var(--space-12);
 }
 
+.toolbar-mobile {
+  display: none;
+}
+
 .search {
   flex: 1 1 240px;
   max-width: 360px;
@@ -373,6 +483,33 @@ h1 {
 
 .date-filter {
   width: 168px;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: var(--space-4);
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font: var(--font-caption);
+  font-size: 11px;
+}
+
+.drawer-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
 }
 
 .panel {
@@ -404,17 +541,120 @@ h1 {
   color: var(--color-muted-text);
 }
 
-@media (max-width: 900px) {
-  .search,
-  .status-filter,
-  .date-filter {
-    max-width: none;
-    width: 100%;
-    flex: 1 1 100%;
-  }
+.orders-cards-wrap {
+  display: none;
+}
 
+.orders-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-4);
+}
+
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+}
+
+.order-card:hover,
+.order-card:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.order-no {
+  font: var(--font-label);
+}
+
+.card-customer,
+.card-route {
+  margin: 0;
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+.card-price {
+  font: var(--font-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-time {
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
+.arrow {
+  margin: 0 var(--space-4);
+}
+
+@media (max-width: 900px) {
   h1 {
     font-size: 24px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    justify-content: space-between;
+  }
+
+  .toolbar-desktop {
+    display: none;
+  }
+
+  .toolbar-mobile {
+    display: flex;
+    flex-wrap: nowrap;
+  }
+
+  .toolbar-mobile .search {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .orders-table {
+    display: none;
+  }
+
+  .orders-cards-wrap {
+    display: block;
+  }
+
+  .panel {
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-height: 0;
   }
 }
 </style>

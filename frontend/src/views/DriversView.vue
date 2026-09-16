@@ -5,6 +5,7 @@ import {
   NDataTable,
   NEmpty,
   NResult,
+  NSpin,
   type DataTableColumns,
 } from 'naive-ui'
 import { h, ref } from 'vue'
@@ -191,21 +192,52 @@ void loadDrivers()
         </template>
       </NResult>
 
-      <NDataTable
-        v-else
-        class="drivers-table"
-        :columns="columns"
-        :data="drivers"
-        :loading="loading"
-        :bordered="false"
-        :single-line="false"
-        :scroll-x="980"
-        size="small"
-      >
-        <template #empty>
-          <NEmpty description="目前沒有司機" />
-        </template>
-      </NDataTable>
+      <template v-else>
+        <NDataTable
+          class="drivers-table"
+          :columns="columns"
+          :data="drivers"
+          :loading="loading"
+          :bordered="false"
+          :single-line="false"
+          :scroll-x="980"
+          size="small"
+        >
+          <template #empty>
+            <NEmpty description="目前沒有司機" />
+          </template>
+        </NDataTable>
+
+        <NSpin :show="loading" class="drivers-cards-wrap">
+          <div class="drivers-cards">
+            <NEmpty
+              v-if="!loading && drivers.length === 0"
+              description="目前沒有司機"
+            />
+            <button
+              v-for="driver in drivers"
+              :key="driver.id"
+              class="driver-card"
+              type="button"
+              @click="openDriver(driver.id)"
+            >
+              <div class="card-top">
+                <span class="username-cell">{{ driver.username }}</span>
+                <OnlineStatusTag :status="driver.online_status" />
+              </div>
+              <p class="plate-cell">{{ driver.license_plate }}</p>
+              <p class="vehicle-line">
+                {{ driver.vehicle_brand }} {{ driver.vehicle_model }}
+                <span class="sep">·</span>
+                {{ driver.vehicle_color }}
+              </p>
+              <div class="card-bottom">
+                <AccountStatusTag :status="driver.status" />
+              </div>
+            </button>
+          </div>
+        </NSpin>
+      </template>
     </div>
   </section>
 </template>
@@ -291,6 +323,7 @@ h1 {
 }
 
 .plate-cell {
+  margin: 0;
   font: var(--font-label);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
@@ -324,6 +357,60 @@ h1 {
   gap: var(--space-4);
 }
 
+.drivers-cards-wrap {
+  display: none;
+}
+
+.drivers-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-4);
+}
+
+.driver-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-12);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+}
+
+.driver-card:hover,
+.driver-card:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.vehicle-line {
+  margin: 0;
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sep {
+  margin: 0 var(--space-4);
+}
+
+.card-bottom {
+  margin-top: var(--space-4);
+}
+
 @media (max-width: 900px) {
   h1 {
     font-size: 24px;
@@ -340,6 +427,21 @@ h1 {
 
   .header-actions {
     justify-content: space-between;
+  }
+
+  .drivers-table {
+    display: none;
+  }
+
+  .drivers-cards-wrap {
+    display: block;
+  }
+
+  .panel {
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-height: 0;
   }
 }
 </style>

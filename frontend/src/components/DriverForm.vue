@@ -25,6 +25,7 @@ const props = defineProps<{
   initialValues?: DriverFormValues | null
   showCancel?: boolean
   grouped?: boolean
+  hideActions?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -80,6 +81,10 @@ async function onSubmit() {
 
   emit('submit', input)
 }
+
+defineExpose({
+  submit: onSubmit,
+})
 </script>
 
 <template>
@@ -157,7 +162,7 @@ async function onSubmit() {
       </NFormItem>
     </section>
 
-    <div class="actions">
+    <div v-if="!hideActions" class="actions">
       <NButton
         v-if="showCancel"
         quaternary

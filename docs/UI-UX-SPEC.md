@@ -122,6 +122,10 @@ Driver
 
 # 3. Admin Navigation
 
+## Desktop
+
+左側固定導覽：
+
 ```text
 派車管理
 
@@ -133,6 +137,16 @@ Driver
 管理員
 登出
 ```
+
+## Mobile（≤900px）
+
+Compact header + hamburger drawer：
+
+```text
+[☰]  Brand          username
+```
+
+Drawer 內為相同導覽項目與登出。Desktop sidebar 維持不變。
 
 ---
 
@@ -159,7 +173,12 @@ CANCELLED    0
 
 點擊 status → `/orders?status=<status>`。
 
+- **Desktop：** 一列六格（窄螢幕可 3 欄）。
+- **Mobile：** **3×2 compact grid**（六個 status 皆顯示）。
+
 ## 4.2 Dispatch Board
+
+### Desktop
 
 四欄呈現目前派車狀況：
 
@@ -175,7 +194,19 @@ CANCELLED    0
 
 `COMPLETED` / `CANCELLED` 只出現在 Status Summary，不進入 Board。
 
-Board card：
+### Mobile
+
+不使用四欄 Kanban。改為 **重點訂單** 列表，僅顯示：
+
+```text
+OPEN
+ACCEPTED
+IN_PROGRESS
+```
+
+草稿不進 Mobile 重點區。完整訂單（含草稿／已完成／已取消與搜尋篩選）維持 `/orders`。提供「完整訂單」入口。
+
+Board card（Desktop／Mobile 共用資訊）：
 
 ```text
 ORD-20260915-026 · 王先生        NT$ 1,200
@@ -191,7 +222,7 @@ ORD-20260915-026 · 王先生        NT$ 1,200
 
 - 快速掌握目前訂單狀況
 - 快速找出正在搶單與正在執行的訂單
-- 保留看板的視覺感，但不把所有操作都塞進 Kanban
+- Desktop 保留看板視覺；Mobile 聚焦執行中訂單，不把所有操作塞進 Kanban
 
 ## 4.3 不包含
 
@@ -237,6 +268,23 @@ Realtime
 
 可由 Dashboard Status Summary 帶入 `?status=<status>`。
 
+### Desktop
+
+DataTable 呈現。
+
+### Mobile
+
+改 **Card List**（不用橫向滑動 Table）。Card 顯示：
+
+```text
+訂單號 · Status
+客戶
+路線（上車 → 目的地）
+價格 · 時間
+```
+
+Search 置頂 compact；Status／Date 以 **Filter Drawer**（底部）操作，避免擠壓列表。
+
 ---
 
 # 6. Admin Create Order
@@ -271,6 +319,14 @@ Realtime
 → DRAFT
 → OPEN
 ```
+
+沿用既有 Create + Publish API；不新增 Backend。
+
+### Mobile
+
+- 單欄表單
+- 底部固定 CTA：`儲存草稿`／`發布搶單`
+- Desktop 維持既有欄位與雙 CTA（底部 sticky／頁尾操作列）
 
 ---
 
@@ -316,6 +372,10 @@ Realtime
 
 ## Driver List
 
+### Desktop
+
+DataTable：
+
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │ 司機管理                                  [+ 新增司機] │
@@ -324,6 +384,17 @@ Realtime
 │ driver01  ABC-1234  Toyota Camry    ONLINE      │
 │ driver02  DEF-5678  Toyota Sienta   OFFLINE     │
 └─────────────────────────────────────────────────────────┘
+```
+
+### Mobile
+
+改 **Card List**（不用橫向滑動 Table）。Card 顯示：
+
+```text
+username · Online/Offline
+車牌
+車輛（品牌 型號）· 車色
+帳號狀態
 ```
 
 ## Driver Detail
@@ -369,6 +440,14 @@ Realtime
 User
 Driver
 ```
+
+保留「帳號資訊 / 車輛資訊」分組、既有 validation、密碼 show-hide。
+
+### Mobile
+
+- 單欄表單
+- 底部固定 CTA：`建立司機`
+- Desktop 維持分組與操作列
 
 ---
 
@@ -636,11 +715,12 @@ OFFLINE      Muted
 
 - 首頁以 Dashboard 為主
 - Status Summary 點擊後到 `/orders?status=<status>`
-- Dispatch Board 提供看板感
-- 完整 Order List 在 `/orders`
-- 建單盡量單頁完成
+- Desktop Dispatch Board 提供看板感；Mobile 重點訂單僅 OPEN／ACCEPTED／IN_PROGRESS
+- 完整 Order List 在 `/orders`（Desktop Table／Mobile Card）
+- 建單盡量單頁完成；Create 提供儲存草稿與發布搶單
 - 發布後訂單唯讀
 - 只顯示目前狀態可執行的操作
+- Mobile Navigation：compact header + hamburger
 
 ### Driver
 
@@ -660,13 +740,16 @@ OFFLINE      Muted
 
 ### Admin
 
-主要支援：
+支援：
 
 ```text
 Desktop
 Laptop
 Tablet
+Mobile
 ```
+
+Admin 採 **Responsive + Mobile-priority** 強化（compact header／Card List／sticky CTA），Desktop 維持 Dispatch Console DataTable／四欄看板。斷點參考：`≤900px` 為 Mobile 佈局。
 
 ### Driver
 

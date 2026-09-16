@@ -7,9 +7,10 @@ import OrderCreateView from './OrderCreateView.vue'
 
 vi.mock('../api/orders', () => ({
   createOrder: vi.fn(),
+  publishOrder: vi.fn(),
 }))
 
-import { createOrder } from '../api/orders'
+import { createOrder, publishOrder } from '../api/orders'
 
 async function mountCreate() {
   const router = createRouter({
@@ -29,6 +30,24 @@ async function mountCreate() {
   return { wrapper, router }
 }
 
+async function fillValidForm(
+  wrapper: Awaited<ReturnType<typeof mountCreate>>['wrapper'],
+) {
+  await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
+  await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
+  await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
+  await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
+}
+
+function clickNamed(
+  wrapper: Awaited<ReturnType<typeof mountCreate>>['wrapper'],
+  name: string,
+) {
+  const button = wrapper.findAll('button').find((node) => node.text().includes(name))
+  expect(button).toBeTruthy()
+  return button!.trigger('click')
+}
+
 describe('OrderCreateView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -38,20 +57,18 @@ describe('OrderCreateView', () => {
       status: 'DRAFT',
       dispatch_mode: 'OPEN',
     })
+    vi.mocked(publishOrder).mockResolvedValue({ id: 'order-new', status: 'OPEN' })
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('renders create draft fields without publish', async () => {
+  it('renders create fields with draft and publish actions', async () => {
     const { wrapper } = await mountCreate()
 
     expect(wrapper.text()).toContain('建立派車單')
     expect(wrapper.text()).toContain('行程資訊')
-    expect(wrapper.text()).not.toContain('上車地點為必填，其餘可留空。')
-    expect(wrapper.text()).not.toContain('費用與備註')
-    expect(wrapper.text()).not.toContain('價格與備註皆為選填。')
     expect(wrapper.text()).toContain('客戶姓名')
     expect(wrapper.text()).toContain('上車地點')
     expect(wrapper.text()).toContain('目的地')
@@ -60,13 +77,13 @@ describe('OrderCreateView', () => {
     expect(wrapper.text()).toContain('價格')
     expect(wrapper.text()).toContain('備註')
     expect(wrapper.text()).toContain('儲存草稿')
-    expect(wrapper.text()).not.toContain('發布搶單')
+    expect(wrapper.text()).toContain('發布搶單')
   })
 
   it('blocks submit when required fields are empty', async () => {
     const { wrapper } = await mountCreate()
 
-    await wrapper.get('form').trigger('submit')
+    await clickNamed(wrapper, '儲存草稿')
     await flushPromises()
 
     expect(createOrder).not.toHaveBeenCalled()
@@ -77,11 +94,8 @@ describe('OrderCreateView', () => {
     const { wrapper, router } = await mountCreate()
     const push = vi.spyOn(router, 'push')
 
-    await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
-    await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
-    await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
-    await wrapper.get('form').trigger('submit')
+    await fillValidForm(wrapper)
+    await clickNamed(wrapper, '儲存草稿')
     await flushPromises()
 
     expect(createOrder).toHaveBeenCalledTimes(1)
@@ -92,6 +106,23 @@ describe('OrderCreateView', () => {
       price: 1200,
       note: null,
     })
+    expect(publishOrder).not.toHaveBeenCalled()
+    expect(push).toHaveBeenCalledWith({
+      name: 'order-detail',
+      params: { id: 'order-new' },
+    })
+  })
+
+  it('creates then publishes when 發布搶單 is used', async () => {
+    const { wrapper, router } = await mountCreate()
+    const push = vi.spyOn(router, 'push')
+
+    await fillValidForm(wrapper)
+    await clickNamed(wrapper, '發布搶單')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledTimes(1)
+    expect(publishOrder).toHaveBeenCalledWith('order-new')
     expect(push).toHaveBeenCalledWith({
       name: 'order-detail',
       params: { id: 'order-new' },
@@ -112,13 +143,10 @@ describe('OrderCreateView', () => {
     )
 
     const { wrapper } = await mountCreate()
-    await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
-    await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
-    await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
+    await fillValidForm(wrapper)
 
-    await wrapper.get('form').trigger('submit')
-    await wrapper.get('form').trigger('submit')
+    await clickNamed(wrapper, '儲存草稿')
+    await clickNamed(wrapper, '儲存草稿')
     await flushPromises()
 
     expect(createOrder).toHaveBeenCalledTimes(1)
@@ -137,11 +165,8 @@ describe('OrderCreateView', () => {
     )
     const { wrapper } = await mountCreate()
 
-    await wrapper.get('input[placeholder="例如 王先生"]').setValue('王先生')
-    await wrapper.get('input[placeholder="例如 左營高鐵站"]').setValue('左營高鐵站')
-    await wrapper.get('input[placeholder="例如 高雄小港機場"]').setValue('高雄小港機場')
-    await wrapper.findComponent({ name: 'InputNumber' }).vm.$emit('update:value', 1200)
-    await wrapper.get('form').trigger('submit')
+    await fillValidForm(wrapper)
+    await clickNamed(wrapper, '儲存草稿')
     await flushPromises()
 
     expect(wrapper.text()).toContain('VALIDATION_ERROR')

@@ -9,6 +9,7 @@ import type { CreateDriverInput, UpdateDriverInput } from '../api/types'
 import DriverForm from '../components/DriverForm.vue'
 
 const router = useRouter()
+const formRef = ref<{ submit: () => Promise<void> } | null>(null)
 const submitting = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 
@@ -59,15 +60,35 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
 
     <div class="panel">
       <DriverForm
+        ref="formRef"
         mode="create"
         submit-label="建立司機"
         grouped
+        hide-actions
         :submitting="submitting"
         :error="error"
-        show-cancel
         @submit="onSubmit"
-        @cancel="router.push({ name: 'drivers' })"
       />
+    </div>
+
+    <div class="cta-bar">
+      <NButton
+        quaternary
+        class="cta-cancel"
+        :disabled="submitting"
+        @click="router.push({ name: 'drivers' })"
+      >
+        取消
+      </NButton>
+      <NButton
+        class="cta"
+        type="primary"
+        :loading="submitting"
+        :disabled="submitting"
+        @click="formRef?.submit()"
+      >
+        建立司機
+      </NButton>
     </div>
   </section>
 </template>
@@ -81,6 +102,7 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
   max-width: 800px;
   min-width: 0;
   margin: 0 auto;
+  padding-bottom: 88px;
 }
 
 .page-header,
@@ -109,6 +131,54 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
   padding: var(--space-32);
+}
+
+.cta-bar {
+  display: flex;
+  gap: var(--space-8);
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 calc(-1 * var(--space-32));
+  padding: var(--space-12) var(--space-32);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border-top: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+.cta {
+  min-width: 120px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    max-width: none;
+    margin: 0;
+    padding-bottom: 96px;
+  }
+
+  .panel {
+    padding: var(--space-16);
+    border-radius: var(--radius-8);
+  }
+
+  .cta-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: var(--space-12) var(--space-16);
+  }
+
+  .cta-cancel {
+    display: none;
+  }
+
+  .cta {
+    flex: 1;
+  }
 }
 
 @media (max-width: 640px) {

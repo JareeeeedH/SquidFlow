@@ -3,16 +3,20 @@ import { ArrowLeft } from 'lucide-vue-next'
 import { NButton } from 'naive-ui'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { createOrder } from '../api/orders'
+import { createOrder, publishOrder } from '../api/orders'
 import { ApiClientError } from '../api/types'
 import type { CreateOrderInput } from '../api/types'
 import OrderForm from '../components/OrderForm.vue'
 
 const router = useRouter()
+const formRef = ref<{
+  submitDraft: () => Promise<void>
+  submitPublish: () => Promise<void>
+} | null>(null)
 const submitting = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 
-async function onSubmit(input: CreateOrderInput) {
+async function createThenNavigate(input: CreateOrderInput, publish: boolean) {
   if (submitting.value) {
     return
   }
@@ -22,6 +26,9 @@ async function onSubmit(input: CreateOrderInput) {
 
   try {
     const created = await createOrder(input)
+    if (publish) {
+      await publishOrder(created.id)
+    }
     await router.push({ name: 'order-detail', params: { id: created.id } })
   } catch (caught) {
     if (caught instanceof ApiClientError) {
@@ -32,6 +39,14 @@ async function onSubmit(input: CreateOrderInput) {
   } finally {
     submitting.value = false
   }
+}
+
+function onSubmit(input: CreateOrderInput) {
+  void createThenNavigate(input, false)
+}
+
+function onPublish(input: CreateOrderInput) {
+  void createThenNavigate(input, true)
 }
 </script>
 
@@ -55,12 +70,37 @@ async function onSubmit(input: CreateOrderInput) {
 
     <div class="panel">
       <OrderForm
+        ref="formRef"
         submit-label="儲存草稿"
+        secondary-label="發布搶單"
         grouped
+        hide-actions
         :submitting="submitting"
         :error="error"
         @submit="onSubmit"
+        @publish="onPublish"
       />
+    </div>
+
+    <div class="cta-bar">
+      <NButton
+        class="cta"
+        secondary
+        :loading="submitting"
+        :disabled="submitting"
+        @click="formRef?.submitDraft()"
+      >
+        儲存草稿
+      </NButton>
+      <NButton
+        class="cta"
+        type="primary"
+        :loading="submitting"
+        :disabled="submitting"
+        @click="formRef?.submitPublish()"
+      >
+        發布搶單
+      </NButton>
     </div>
   </section>
 </template>
@@ -73,6 +113,7 @@ async function onSubmit(input: CreateOrderInput) {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
+  padding-bottom: 88px;
 }
 
 .page-header,
@@ -89,12 +130,6 @@ async function onSubmit(input: CreateOrderInput) {
   font: var(--font-page-title);
 }
 
-.subtitle {
-  margin: var(--space-4) 0 0;
-  color: var(--color-muted-text);
-  font: var(--font-caption);
-}
-
 .panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -102,9 +137,50 @@ async function onSubmit(input: CreateOrderInput) {
   padding: var(--space-32);
 }
 
-@media (max-width: 640px) {
+.cta-bar {
+  display: flex;
+  gap: var(--space-8);
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 calc(-1 * var(--space-32));
+  padding: var(--space-12) var(--space-32);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  border-top: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+.cta {
+  flex: 0 1 auto;
+  min-width: 120px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    max-width: none;
+    margin: 0;
+    padding-bottom: 96px;
+  }
+
   .panel {
     padding: var(--space-16);
+    border-radius: var(--radius-8);
+  }
+
+  .cta-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: var(--space-12) var(--space-16);
+    justify-content: stretch;
+  }
+
+  .cta {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>
