@@ -1458,11 +1458,41 @@ Phase 3 — Advanced Dispatch & Communication
 - Backend 儲存最新位置 only
 - Admin 可讀 ONLINE Drivers 最新位置
 
-**Phase 2 / P2-02–P2-04（產品已定方向，技術細節後續同步）：**
+**Phase 2 / P2-02 Pickup Geocoding — BLOCKING（不得實作直到產品／法務解除）：**
 
-- Pickup Geocoding（建單不阻塞）
+產品已選定 **Google Geocoding API**，且產品意圖為：
+
+```text
+Create/Update Order 成功（文字 pickup_location 已存）
+        ↓
+立即回傳 API response（不等待第三方）
+        ↓
+Backend 非同步呼叫 Google Geocoding（server-side only）
+        ↓
+成功 → 寫入 Pickup 座標（供 Distance / Map）
+失敗 → Order 保留；不清空文字地址；不 rollback
+```
+
+架構約束（產品意圖，實作仍 blocked）：
+
+- **不**由 Browser 呼叫 Provider
+- **不**引入獨立 queue / worker 系統（現有架構無 queue）；解除 BLOCKING 後採 process-local async（例如 fire-and-forget + 簡單延遲重試）即可
+- `pickup_location` 修改必須重新 geocode；舊座標不得繼續視為有效
+- Secrets 僅存 Environment Variables；錯誤不得外洩 API key
+
+**BLOCKING 原因（官方事實 + 技術判斷）：**
+
+- `[Official]` Google Geocoding Service Specific Terms §6.3.1：lat/lng 暫存最多 30 天後須刪除。
+- `[Official]` §6.3.2：無限期快取須隔離單一 End User，且不得跨多 End User、不得用來替代再次呼叫。
+- `[Official]` §6.2：不得與 non-Google map 併用 Geocoding 內容。
+- `[判斷]` Order 上長期保存並供 Admin／多名 Driver 共用，與上述儲存模型衝突風險高；P2-04 內嵌非 Google 地圖亦會觸發 §6.2。詳見 `PHASE-2-SPEC.md` §5.5。
+
+在產品／法務解除 BLOCKING 前：**不得實作** Google Geocoding 寫入 Order 座標的流程。
+
+**Phase 2 / P2-03–P2-04（產品已定方向，技術細節後續同步）：**
+
 - SquidFlow 內部直線距離（非道路距離；無 ETA）
-- Web App 內地圖 + Google Maps 導航 handoff
+- Web App 內地圖 + Google Maps 導航 handoff（地圖 SDK 策略須與 Geocoding Terms 一致）
 
 Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn。
 

@@ -101,25 +101,47 @@ Map and distance are **assistive information only**. They do **not** change Phas
 
 - Order creation must **not** be blocked by geocoding.
 - Save the pickup address as **text first** (existing `pickup_location` meaning).
-- After Order creation, the system **automatically** performs geocoding.
+- After Order creation succeeds, the system **automatically** performs geocoding.
+- Geocoding must be handled **asynchronously** so third-party API latency does **not** block the Create Order response.
 - If geocoding fails, keep the text pickup address and allow the Order to continue normally.
-- When coordinates are obtained successfully, they are available for subsequent Distance and Map features.
+- When coordinates are obtained successfully, they are intended for subsequent Distance and Map features.
 
-## 5.2 Failure and retry
+## 5.2 Address update
 
-Detailed retry / failure implementation may be defined later in technical Specs. Product rules for Phase 2:
+- If `pickup_location` is modified, geocoding must be performed again.
+- Previous Pickup coordinates must **not** remain treated as valid for the new address.
+- If re-geocoding fails, keep the text address and do **not** reuse stale coordinates.
+
+## 5.3 Failure and retry
+
+Product rules:
 
 - Geocoding failure must not block Order create / publish / claim / execution flows.
 - Missing Pickup coordinates simply means distance / map Pickup point may be unavailable until coordinates exist.
+- Detailed retry intervals / caps are technical Spec work, but only after the blocking Terms decision below is resolved.
 
-## 5.3 Provider status (not finalized)
+## 5.4 Provider
 
-- The Geocoding Provider is **not finally decided**.
-- Public Nominatim is **not** a formal production provider candidate.
-- Mapbox Temporary does **not** meet the current need to **store** geocoding results.
-- Current research candidates may include: **Mapbox Permanent**, **HERE**, **TGOS**.
-- **Google** Geocoding remains contingent on confirming related Terms and the in-app Map strategy.
-- The final Provider is a **product decision** and is **not** selected by this document.
+- **Selected Provider:** Google Geocoding API.
+- Provider calls must be made from the **Backend**, not from the Browser.
+- API keys / secrets must follow existing Secrets / Environment Variable rules.
+
+## 5.5 BLOCKING — Google Geocoding storage / map Terms
+
+**Status: BLOCKING PRODUCT / LEGAL DECISION — P2-02 implementation must not proceed until resolved.**
+
+SquidFlow product intent stores Pickup latitude / longitude on the Order and shares them across Admin and Drivers for Distance / Map.
+
+Current Google Maps Platform Service Specific Terms for Geocoding API (non-EEA Service Specific Terms, §6, as published by Google) include, among other rules:
+
+- `[Official]` §6.3.1 — Customer may temporarily cache lat/lng for up to **30 consecutive calendar days**, after which Customer must delete the cached lat/lng.
+- `[Official]` §6.3.2 — Indefinite caching of lat/lng (and certain address fields) is allowed only to support the direct End User–facing functionality of the Customer Application that initiated the request, only where the cache is **not** used as a replacement for additional Service calls; cached data must be **logically isolated to the specific End User** and **must not be used across multiple End Users**.
+- `[Official]` §6.2 — Customer must **not** use Geocoding API content in conjunction with a **non-Google map**.
+- `[Official]` Geocoding policies — content pre-fetching / caching / storage is generally restricted; **place_id** may be stored indefinitely (place_id is not a substitute for product Pickup lat/lng storage needs).
+
+**Technical judgment (not legal advice):** SquidFlow’s intended model — persist Order Pickup coordinates in the database and reuse them for multiple roles / sessions as shared Order data — does **not** clearly fit §6.3.2’s End-User isolation rule, and unlimited retention does **not** fit §6.3.1’s 30-day temporary cache. In-app maps that are not Google Maps would additionally conflict with §6.2 if Geocoding results are shown on them.
+
+Until Product / Legal explicitly resolves this (for example: obtain compliant clearance, change Provider, change storage model, and/or lock Map strategy to Google Maps), technical Specs must **not** authorize implementing persistent multi-role Pickup coordinate storage from Google Geocoding, and engineers must **not** implement P2-02 geocoding against Google under an assumption that lat/lng may be kept permanently.
 
 ---
 
@@ -247,14 +269,17 @@ Reuse existing Spec terms:
 
 # 11. Open Product Decisions
 
-Still **not** decided in this document:
+Still **not** decided / blocked:
 
-1. Final **Geocoding Provider** (candidates may include Mapbox Permanent, HERE, TGOS; Google only after Terms + Map strategy confirmation).
-2. In-app **map SDK / map strategy** (must be consistent with the chosen Geocoding Provider Terms where applicable).
-3. Detailed geocoding **retry / failure** technical policy (product rule: failure must not block Orders; exact intervals / caps are technical Spec work).
-4. Exact UI layout for where Admin / Driver see distance and maps (product contexts above are confirmed; screen-level UI remains for UI/UX Spec).
-5. Whether editing `pickup_location` automatically re-triggers geocoding.
-6. Exact rounding / precision rules for meter and kilometer display beyond the unit threshold.
+1. **BLOCKING:** Whether SquidFlow may store Google Geocoding lat/lng on Orders for multi-role long-term reuse under current Google Terms (see §5.5). Legal / product clearance required before P2-02 implementation.
+2. **BLOCKING dependency:** In-app **map SDK / map strategy** must be consistent with Geocoding Terms (Google Geocoding content must not be used with a non-Google map per Google §6.2).
+3. Exact UI layout for where Admin / Driver see distance and maps (product contexts are confirmed; screen-level UI remains for UI/UX Spec).
+4. Exact rounding / precision rules for meter and kilometer display beyond the unit threshold.
+
+Resolved (no longer open):
+
+- Geocoding Provider selection → **Google Geocoding API** (implementation still blocked by §5.5).
+- Editing `pickup_location` → must re-geocode; stale coordinates must not be reused.
 
 ---
 
@@ -289,15 +314,17 @@ Treat this file as the Phase 2 product authority for:
 
 - P2-01–P2-04 product rules above
 - Straight-line distance only; no ETA; no Google Routes for distance / ETA
-- Non-blocking post-create Pickup geocoding
+- Non-blocking post-create Pickup geocoding (async)
 - Map + Google Maps navigation handoff
-- Geocoding Provider **not** finalized here
+- Geocoding Provider = **Google Geocoding API**, subject to **§5.5 BLOCKING** Terms / Legal decision before implementation
 
 **P2-01** technical Specs are already synchronized.
 
-Remaining technical Spec work (after product confirmation of open decisions where needed):
+**P2-02** technical Spec definition for persistent Order coordinates / async job details is **deferred** until the BLOCKING decision in §5.5 is resolved. Do not implement Google Geocoding storage under an assumption of permanent multi-role lat/lng retention.
 
-- P2-02 Pickup Geocoding storage / jobs / retry contract and Provider choice
+Remaining technical Spec work after clearance:
+
+- P2-02 Pickup Geocoding storage / jobs / retry contract (compliant model only)
 - P2-03 straight-line distance API / presentation contract
 - P2-04 map embedding and Google Maps navigation handoff details
 - Related Technology / Security / UI-UX updates

@@ -561,9 +561,17 @@ Phase 3 — Advanced Dispatch & Communication
 - 無 location history 資料表
 - 無道路距離 / ETA 相關欄位
 
-**Phase 2 / P2-02–P2-04：**
+**Phase 2 / P2-02 Pickup Geocoding — BLOCKING（不得實作直到產品／法務解除）：**
 
-- Pickup Geocoding 座標、直線距離計算與地圖所需欄位／契約於後續技術 Spec 同步時再補齊
+- 產品已選定 Provider：**Google Geocoding API**（見 `PHASE-2-SPEC.md` §5.4–§5.5）。
+- 產品意圖包含：建單後非同步 geocode、Order 保存 Pickup 座標供 Distance／Map、多角色共用。
+- **官方條款衝突（非法律意見）：** Google Geocoding Service Specific Terms §6.3.1（lat/lng 暫存最多 30 天後須刪除）與 §6.3.2（無限期快取須隔離於單一 End User、不得跨多 End User、不得用來替代再次呼叫 API）；以及 §6.2（不得與 non-Google map 併用 Geocoding 內容）。詳見 `PHASE-2-SPEC.md` §5.5。
+- **因此本 DATABASE-SPEC 目前不新增 Order Pickup 座標欄位、不新增 geocoding status Schema、不授權 Migration。**
+- 解除 BLOCKING 並確認合規儲存模型後，再以獨立 TASK 定義最小欄位（座標＋執行狀態）並同步 Migration。
+
+**Phase 2 / P2-03–P2-04：**
+
+- 直線距離不需獨立長期欄位；地圖／導航細節待後續同步
 - Phase 2 **不**儲存道路距離或 ETA
 
 **Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。

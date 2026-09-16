@@ -1131,9 +1131,17 @@ Phase 3 — Advanced Dispatch & Communication
 - `GET /api/v1/driver/location` — Driver 讀取自己的最新位置
 - `GET /api/v1/drivers/online-locations` — Admin 讀取 ONLINE Drivers 最新位置
 
-**Phase 2 / P2-02–P2-04：**
+**Phase 2 / P2-02 Pickup Geocoding — BLOCKING（不得實作直到產品／法務解除）：**
 
-- Pickup Geocoding、直線距離、地圖相關 contract 於後續同步時再定義
+- Provider 產品選定：**Google Geocoding API**；僅 Backend 呼叫；**不**新增 Driver 用的 Geocoding 公開 endpoint。
+- 產品意圖：Create／Update Order 成功後非同步 geocode；不阻塞 Create／Update response；失敗不 rollback Order。
+- **不**因 P2-02 新增 Google Routes／距離／ETA endpoint。
+- 因 Google Geocoding 儲存／地圖條款與「Order 座標長期多角色共用」產品模型衝突（見 `PHASE-2-SPEC.md` §5.5），**目前不定義** Order response 中的 Pickup 座標欄位契約，也**不授權**實作 geocoding side-effect。
+- 解除 BLOCKING 後，再以獨立 TASK 定義：既有 Order Admin API 的內部行為（無多餘公開 geocode API）、座標／狀態欄位呈現（若合規模型允許）。
+
+**Phase 2 / P2-03–P2-04：**
+
+- 直線距離、地圖相關 contract 於後續同步時再定義
 - Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
 **Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。
