@@ -188,4 +188,18 @@ describe('DriversView', () => {
 
     expect(push).toHaveBeenCalledWith({ name: 'driver-create' })
   })
+
+  it('renders compact mobile driver cards with merged vehicle line', async () => {
+    const { wrapper } = await mountDrivers()
+    const card = wrapper.find('.driver-card')
+
+    expect(card.exists()).toBe(true)
+    expect(card.find('.card-badges').exists()).toBe(true)
+    expect(card.text()).toContain('driver01')
+    expect(card.text()).toContain('ABC-1234')
+    expect(card.text()).toContain('Toyota Camry')
+    expect(card.text()).toContain('黑色')
+    expect(card.text()).toContain('啟用')
+    expect(card.text()).toContain('離線')
+  })
 })

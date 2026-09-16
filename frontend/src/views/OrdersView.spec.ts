@@ -77,6 +77,7 @@ describe('OrdersView', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.resetAllMocks()
   })
 
@@ -230,5 +231,35 @@ describe('OrdersView', () => {
     expect(card.text()).toContain('高雄小港機場')
     expect(card.text()).toContain('NT$ 1,200')
     expect(card.text()).toContain('搶單中')
+  })
+
+  it('polls orders and status counts every 30s with manual cooldown', async () => {
+    vi.useFakeTimers()
+    const { wrapper } = await mountOrders()
+    expect(listOrders).toHaveBeenCalledTimes(1)
+    expect(getAdminDashboard).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('更新')
+    expect(wrapper.text()).not.toContain('最後更新')
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    await flushPromises()
+    expect(listOrders).toHaveBeenCalledTimes(2)
+    expect(getAdminDashboard).toHaveBeenCalledTimes(2)
+
+    const refresh = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('更新'))
+    expect(refresh).toBeTruthy()
+    await refresh!.trigger('click')
+    await flushPromises()
+    expect(listOrders).toHaveBeenCalledTimes(3)
+    expect(wrapper.text()).not.toContain('已更新')
+
+    await refresh!.trigger('click')
+    await flushPromises()
+    expect(listOrders).toHaveBeenCalledTimes(3)
+
+    vi.useRealTimers()
+    wrapper.unmount()
   })
 })

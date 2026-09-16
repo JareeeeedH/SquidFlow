@@ -6,21 +6,32 @@ import { useRouter } from 'vue-router'
 import { getAdminDashboard } from '../api/dashboard'
 import { ApiClientError } from '../api/types'
 import type { AdminDashboard, DashboardBoardOrder, OrderStatus } from '../api/types'
+import AdminRefreshButton from '../components/AdminRefreshButton.vue'
+import AdminRefreshOverlay from '../components/AdminRefreshOverlay.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { groupBoardOrders } from '../lib/dashboard'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
+import { useListRefreshControl } from '../lib/list-refresh'
 import {
   DASHBOARD_BOARD_STATUSES,
   OPERATIONAL_ORDER_STATUSES,
   ORDER_STATUSES,
   isOperationalStatus,
 } from '../lib/order-status'
+import { useVisiblePolling } from '../lib/visible-polling'
 
 const router = useRouter()
 const dashboard = ref<AdminDashboard | null>(null)
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const forbidden = ref(false)
+
+const {
+  canManualRefresh,
+  refreshButtonLabel,
+  manualUpdating,
+  runRefresh,
+} = useListRefreshControl()
 
 /** Mobile focus sections: collapsed by default. */
 const mobileExpanded = reactive(
@@ -87,21 +98,30 @@ function openOrder(id: string) {
   void router.push({ name: 'order-detail', params: { id } })
 }
 
-async function loadDashboard() {
+async function loadDashboard(options: { silent?: boolean } = {}): Promise<boolean> {
+  const silent = Boolean(options.silent)
   const seq = ++requestSeq
-  loading.value = true
-  error.value = null
-  forbidden.value = false
+  if (!silent) {
+    loading.value = true
+    error.value = null
+    forbidden.value = false
+  }
 
   try {
     const data = await getAdminDashboard()
     if (seq !== requestSeq) {
-      return
+      return false
     }
     dashboard.value = data
+    error.value = null
+    forbidden.value = false
+    return true
   } catch (caught) {
     if (seq !== requestSeq) {
-      return
+      return false
+    }
+    if (silent) {
+      return false
     }
     dashboard.value = null
     if (caught instanceof ApiClientError) {
@@ -109,17 +129,32 @@ async function loadDashboard() {
         forbidden.value = true
       }
       error.value = { code: caught.code, message: caught.message }
-      return
+      return false
     }
     error.value = { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
+    return false
   } finally {
-    if (seq === requestSeq) {
+    if (seq === requestSeq && !silent) {
       loading.value = false
     }
   }
 }
 
-void loadDashboard()
+function manualRefresh() {
+  void runRefresh('manual', () =>
+    loadDashboard({ silent: Boolean(dashboard.value) }),
+  )
+}
+
+function retryLoad() {
+  void runRefresh('manual', () => loadDashboard())
+}
+
+useVisiblePolling((reason) => {
+  void runRefresh('auto', () =>
+    loadDashboard({ silent: reason !== 'immediate' }),
+  )
+})
 </script>
 
 <template>
@@ -129,8 +164,15 @@ void loadDashboard()
         <h1>Dashboard</h1>
         <p class="subtitle">派車管理</p>
       </div>
+      <AdminRefreshButton
+        :label="refreshButtonLabel"
+        :disabled="!canManualRefresh"
+        :spinning="manualUpdating"
+        @click="manualRefresh"
+      />
     </header>
 
+    <AdminRefreshOverlay :show="manualUpdating">
     <NResult
       v-if="forbidden"
       status="403"
@@ -152,7 +194,7 @@ void loadDashboard()
         <p class="error-detail">{{ error.code }} · {{ error.message }}</p>
       </template>
       <template #footer>
-        <NButton type="primary" @click="loadDashboard">
+        <NButton type="primary" :disabled="!canManualRefresh" @click="retryLoad">
           <template #icon>
             <RotateCcw :size="16" />
           </template>
@@ -161,7 +203,7 @@ void loadDashboard()
       </template>
     </NResult>
 
-    <NSpin v-else :show="loading">
+    <NSpin v-else :show="loading && !manualUpdating">
       <section class="summary" aria-label="訂單狀態統計">
         <h2 class="section-title">狀態總覽</h2>
         <div class="summary-grid">
@@ -240,6 +282,15 @@ void loadDashboard()
 
       <section class="board board-mobile" aria-label="執行中訂單">
         <div class="mobile-board-actions">
+          <AdminRefreshButton
+            text
+            primary
+            size="small"
+            :label="refreshButtonLabel"
+            :disabled="!canManualRefresh"
+            :spinning="manualUpdating"
+            @click="manualRefresh"
+          />
           <NButton text type="primary" size="small" @click="router.push({ name: 'orders' })">
             完整訂單
           </NButton>
@@ -268,55 +319,64 @@ void loadDashboard()
                 :size="18"
               />
             </button>
-            <div v-if="column.expanded" class="focus-group-body">
-              <p
-                v-if="!loading && column.preview.length === 0"
-                class="column-empty focus-empty"
-              >
-                目前沒有訂單
-              </p>
-              <button
-                v-for="order in column.preview"
-                :key="order.id"
-                class="order-card"
-                type="button"
-                @click="openOrder(order.id)"
-              >
-                <div class="card-row">
-                  <span class="identity">{{ order.order_no }}<template v-if="order.customer_name"> · {{ order.customer_name }}</template></span>
-                  <span class="price">{{ formatPrice(order.price) }}</span>
-                </div>
-                <p class="route">
-                  {{ order.pickup_location }}
-                  <span class="arrow">→</span>
-                  {{ formatOptionalText(order.destination) }}
-                </p>
-                <p class="meta">
-                  <span class="time">{{ formatScheduledAt(order.created_at) }}</span>
-                  <span class="sep">·</span>
-                  <span
-                    class="driver"
-                    :class="isAssigned(order) ? 'is-assigned' : 'is-unassigned'"
+            <div
+              class="focus-accordion"
+              :class="{ 'is-open': column.expanded }"
+              :aria-hidden="column.expanded ? 'false' : 'true'"
+            >
+              <div class="focus-accordion-panel" :inert="!column.expanded">
+                <div class="focus-group-body">
+                  <p
+                    v-if="!loading && column.preview.length === 0"
+                    class="column-empty focus-empty"
                   >
-                    <User v-if="isAssigned(order)" :size="12" />
-                    <UserX v-else :size="12" />
-                    {{ driverLabel(order) }}
-                  </span>
-                </p>
-              </button>
-              <button
-                v-if="column.showViewAll"
-                class="view-all"
-                type="button"
-                @click="openOrders(column.status)"
-              >
-                查看全部 {{ column.count }} →
-              </button>
+                    目前沒有訂單
+                  </p>
+                  <button
+                    v-for="order in column.preview"
+                    :key="order.id"
+                    class="order-card"
+                    type="button"
+                    @click="openOrder(order.id)"
+                  >
+                    <div class="card-row">
+                      <span class="identity">{{ order.order_no }}<template v-if="order.customer_name"> · {{ order.customer_name }}</template></span>
+                      <span class="price">{{ formatPrice(order.price) }}</span>
+                    </div>
+                    <p class="route">
+                      {{ order.pickup_location }}
+                      <span class="arrow">→</span>
+                      {{ formatOptionalText(order.destination) }}
+                    </p>
+                    <p class="meta">
+                      <span class="time">{{ formatScheduledAt(order.created_at) }}</span>
+                      <span class="sep">·</span>
+                      <span
+                        class="driver"
+                        :class="isAssigned(order) ? 'is-assigned' : 'is-unassigned'"
+                      >
+                        <User v-if="isAssigned(order)" :size="12" />
+                        <UserX v-else :size="12" />
+                        {{ driverLabel(order) }}
+                      </span>
+                    </p>
+                  </button>
+                  <button
+                    v-if="column.showViewAll"
+                    class="view-all"
+                    type="button"
+                    @click="openOrders(column.status)"
+                  >
+                    查看全部 {{ column.count }} →
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
-    </NSpin>
+      </NSpin>
+    </AdminRefreshOverlay>
   </section>
 </template>
 
@@ -606,6 +666,8 @@ h1 {
 .mobile-board-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-8);
   margin-bottom: var(--space-8);
 }
 
@@ -660,11 +722,32 @@ h1 {
 .focus-chevron {
   flex-shrink: 0;
   color: var(--color-muted-text);
-  transition: transform 0.15s ease;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .focus-chevron.is-open {
   transform: rotate(180deg);
+}
+
+.focus-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-accordion.is-open {
+  grid-template-rows: 1fr;
+}
+
+.focus-accordion-panel {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.focus-accordion.is-open .focus-accordion-panel {
+  opacity: 1;
 }
 
 .focus-group-body {
@@ -676,6 +759,14 @@ h1 {
 
 .focus-empty {
   padding: var(--space-12) var(--space-8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-chevron,
+  .focus-accordion,
+  .focus-accordion-panel {
+    transition: none;
+  }
 }
 
 .view-all {

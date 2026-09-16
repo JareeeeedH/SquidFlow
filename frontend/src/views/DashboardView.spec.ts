@@ -93,6 +93,7 @@ describe('DashboardView', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.resetAllMocks()
   })
 
@@ -230,8 +231,9 @@ describe('DashboardView', () => {
     expect(openGroup.find('.focus-group-header').attributes('aria-expanded')).toBe(
       'false',
     )
-    expect(openGroup.findAll('.order-card')).toHaveLength(0)
-    expect(openGroup.text()).not.toContain('ORD-20260915-003')
+    expect(openGroup.classes()).not.toContain('is-expanded')
+    expect(openGroup.find('.focus-accordion').classes()).not.toContain('is-open')
+    expect(openGroup.find('.focus-accordion').attributes('aria-hidden')).toBe('true')
   })
 
   it('expands mobile focus to 5 latest orders and links to filtered list', async () => {
@@ -269,11 +271,18 @@ describe('DashboardView', () => {
     expect(openGroup.find('.focus-group-header').attributes('aria-expanded')).toBe(
       'true',
     )
+    expect(openGroup.classes()).toContain('is-expanded')
+    expect(openGroup.find('.focus-accordion').classes()).toContain('is-open')
     expect(openGroup.findAll('.order-card')).toHaveLength(5)
     expect(openGroup.text()).toContain('ORD-OPEN-0')
     expect(openGroup.text()).toContain('ORD-OPEN-4')
     expect(openGroup.text()).not.toContain('ORD-OPEN-5')
     expect(openGroup.text()).toContain('查看全部 7 →')
+
+    await openGroup.find('.focus-group-header').trigger('click')
+    expect(openGroup.find('.focus-accordion').classes()).not.toContain('is-open')
+    await openGroup.find('.focus-group-header').trigger('click')
+    expect(openGroup.find('.focus-accordion').classes()).toContain('is-open')
 
     const viewAll = openGroup.find('.view-all')
     await viewAll.trigger('click')
@@ -291,5 +300,66 @@ describe('DashboardView', () => {
 
     expect(openGroup.text()).toContain('ORD-20260915-003')
     expect(openGroup.text()).not.toContain('查看全部')
+  })
+
+  it('polls dashboard every 30s without clearing data on silent failure', async () => {
+    vi.useFakeTimers()
+    const { wrapper } = await mountDashboard()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('ORD-20260915-001')
+    expect(wrapper.text()).toContain('更新')
+    expect(wrapper.text()).not.toContain('最後更新')
+    expect(wrapper.text()).not.toContain('已更新')
+
+    vi.mocked(getAdminDashboard).mockResolvedValueOnce({
+      ...sampleDashboard,
+      summary: { ...sampleDashboard.summary, OPEN: 9 },
+    })
+    await vi.advanceTimersByTimeAsync(30_000)
+    await flushPromises()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('9')
+
+    vi.mocked(getAdminDashboard).mockRejectedValueOnce(
+      new ApiClientError('INTERNAL_ERROR', '暫時失敗', 500),
+    )
+    await vi.advanceTimersByTimeAsync(30_000)
+    await flushPromises()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(3)
+    expect(wrapper.text()).toContain('ORD-20260915-001')
+    expect(wrapper.text()).not.toContain('暫時失敗')
+
+    vi.useRealTimers()
+    wrapper.unmount()
+  })
+
+  it('exposes a manual refresh control with cooldown feedback', async () => {
+    vi.useFakeTimers()
+    const { wrapper } = await mountDashboard()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(1)
+
+    const refresh = wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('更新'))
+    expect(refresh).toBeTruthy()
+    await refresh!.trigger('click')
+    await flushPromises()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(2)
+    expect(wrapper.text()).toContain('更新')
+    expect(wrapper.text()).not.toContain('最後更新')
+    expect(wrapper.find('.refresh-overlay').exists()).toBe(false)
+
+    await refresh!.trigger('click')
+    await flushPromises()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+    await flushPromises()
+    await refresh!.trigger('click')
+    await flushPromises()
+    expect(getAdminDashboard).toHaveBeenCalledTimes(3)
+
+    vi.useRealTimers()
+    wrapper.unmount()
   })
 })

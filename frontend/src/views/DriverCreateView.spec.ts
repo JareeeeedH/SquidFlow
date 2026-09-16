@@ -74,6 +74,7 @@ describe('DriverCreateView', () => {
     const { wrapper } = await mountCreate()
 
     expect(wrapper.text()).toContain('新增司機')
+    expect(wrapper.text()).toContain('上線狀態由系統決定')
     expect(wrapper.text()).toContain('帳號資訊')
     expect(wrapper.text()).toContain('車輛資訊')
     expect(wrapper.text()).toContain('帳號')
@@ -84,10 +85,16 @@ describe('DriverCreateView', () => {
     expect(wrapper.text()).toContain('車色')
     expect(wrapper.text()).toContain('取消')
     expect(wrapper.text()).toContain('建立司機')
+    expect(wrapper.find('.form-shell').exists()).toBe(true)
+    expect(wrapper.find('.cta-bar').exists()).toBe(true)
+    expect(wrapper.find('input[type="password"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('車型')
     expect(wrapper.text()).not.toContain('年份')
     expect(wrapper.text()).not.toContain('role')
     expect(wrapper.html()).not.toContain('online_status')
+    expect(wrapper.text()).not.toContain('Offline')
+    expect(wrapper.text()).not.toContain('ONLINE')
+    expect(wrapper.text()).not.toContain('OFFLINE')
   })
 
   it('blocks submit when required fields are empty', async () => {

@@ -40,6 +40,14 @@ const nextStatus = computed<AccountStatus | null>(() => {
   return driver.value.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE'
 })
 
+const vehicleLine = computed(() => {
+  if (!driver.value) {
+    return ''
+  }
+  const { license_plate, vehicle_brand, vehicle_model, vehicle_color } = driver.value
+  return `${license_plate} · ${vehicle_brand} · ${vehicle_model} · ${vehicle_color}`
+})
+
 function captureError(caught: unknown) {
   if (caught instanceof ApiClientError) {
     return { code: caught.code, message: caught.message }
@@ -213,6 +221,10 @@ watch(
           <div>
             <p class="kicker">司機詳情</p>
             <h1>{{ driver.username }}</h1>
+            <div class="header-badges">
+              <OnlineStatusTag :status="driver.online_status" />
+              <AccountStatusTag :status="driver.status" />
+            </div>
           </div>
         </header>
 
@@ -220,23 +232,23 @@ watch(
           {{ actionError.code }} · {{ actionError.message }}
         </p>
 
-        <div class="grid">
-          <div class="main">
-            <article v-if="editing && editValues" class="panel">
-              <h2>編輯司機</h2>
-              <DriverForm
-                mode="edit"
-                submit-label="儲存變更"
-                :initial-values="editValues"
-                :submitting="saving"
-                :error="actionError"
-                show-cancel
-                @submit="onSave"
-                @cancel="cancelEdit"
-              />
-            </article>
+        <article v-if="editing && editValues" class="panel edit-panel">
+          <h2>編輯司機</h2>
+          <DriverForm
+            mode="edit"
+            submit-label="儲存變更"
+            :initial-values="editValues"
+            :submitting="saving"
+            :error="actionError"
+            show-cancel
+            @submit="onSave"
+            @cancel="cancelEdit"
+          />
+        </article>
 
-            <template v-else>
+        <template v-else>
+          <div class="desktop-layout">
+            <div class="main">
               <article class="panel">
                 <h2>帳號資訊</h2>
                 <dl class="fields">
@@ -268,26 +280,91 @@ watch(
                   </div>
                 </dl>
               </article>
-            </template>
-          </div>
-
-          <aside class="panel status-panel">
-            <h2>狀態</h2>
-            <div class="status-block">
-              <div class="status-row">
-                <span class="status-label">帳號狀態</span>
-                <AccountStatusTag :status="driver.status" />
-              </div>
-              <div class="status-row">
-                <span class="status-label">上線狀態</span>
-                <OnlineStatusTag :status="driver.online_status" />
-                <p class="online-hint">上線狀態由司機端切換，此處僅顯示。</p>
-              </div>
             </div>
 
-            <div v-if="!editing" class="actions-block">
-              <h2 class="actions-title">操作</h2>
-              <div class="actions">
+            <aside class="panel status-panel">
+              <h2>狀態</h2>
+              <div class="status-block">
+                <div class="status-row">
+                  <span class="status-label">帳號狀態</span>
+                  <AccountStatusTag :status="driver.status" />
+                </div>
+                <div class="status-row">
+                  <span class="status-label">上線狀態</span>
+                  <OnlineStatusTag :status="driver.online_status" />
+                  <p class="online-hint">上線狀態由司機端切換，此處僅顯示。</p>
+                </div>
+              </div>
+
+              <div class="actions-block">
+                <h2 class="actions-title">操作</h2>
+                <div class="actions">
+                  <template v-if="confirmStatus">
+                    <p class="confirm-copy">
+                      {{
+                        confirmStatus === 'SUSPENDED'
+                          ? '確定停用此司機帳號？停用後不可登入。'
+                          : '確定重新啟用此司機帳號？'
+                      }}
+                    </p>
+                    <NButton
+                      block
+                      :disabled="changingStatus"
+                      @click="confirmStatus = null"
+                    >
+                      取消
+                    </NButton>
+                    <NButton
+                      :type="confirmStatus === 'SUSPENDED' ? 'error' : 'success'"
+                      block
+                      :loading="changingStatus"
+                      :disabled="changingStatus"
+                      @click="onChangeStatus"
+                    >
+                      {{ confirmStatus === 'SUSPENDED' ? '確認停用' : '確認啟用' }}
+                    </NButton>
+                  </template>
+                  <template v-else>
+                    <NButton type="primary" block :disabled="busy" @click="startEdit">
+                      編輯
+                    </NButton>
+                    <NButton
+                      v-if="nextStatus === 'SUSPENDED'"
+                      type="error"
+                      ghost
+                      block
+                      :disabled="busy"
+                      @click="confirmStatus = 'SUSPENDED'"
+                    >
+                      停用
+                    </NButton>
+                    <NButton
+                      v-else
+                      type="success"
+                      ghost
+                      block
+                      :disabled="busy"
+                      @click="confirmStatus = 'ACTIVE'"
+                    >
+                      啟用
+                    </NButton>
+                  </template>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="mobile-layout">
+            <div class="sheet">
+              <section class="section">
+                <h2>帳號</h2>
+                <p class="section-value">{{ driver.username }}</p>
+              </section>
+              <section class="section">
+                <h2>車輛</h2>
+                <p class="section-value vehicle-line">{{ vehicleLine }}</p>
+              </section>
+              <div class="mobile-actions">
                 <template v-if="confirmStatus">
                   <p class="confirm-copy">
                     {{
@@ -296,32 +373,30 @@ watch(
                         : '確定重新啟用此司機帳號？'
                     }}
                   </p>
-                  <NButton
-                    block
-                    :disabled="changingStatus"
-                    @click="confirmStatus = null"
-                  >
-                    取消
-                  </NButton>
-                  <NButton
-                    :type="confirmStatus === 'SUSPENDED' ? 'error' : 'success'"
-                    block
-                    :loading="changingStatus"
-                    :disabled="changingStatus"
-                    @click="onChangeStatus"
-                  >
-                    {{ confirmStatus === 'SUSPENDED' ? '確認停用' : '確認啟用' }}
-                  </NButton>
+                  <div class="mobile-actions-row">
+                    <NButton size="small" :disabled="changingStatus" @click="confirmStatus = null">
+                      取消
+                    </NButton>
+                    <NButton
+                      size="small"
+                      :type="confirmStatus === 'SUSPENDED' ? 'error' : 'success'"
+                      :loading="changingStatus"
+                      :disabled="changingStatus"
+                      @click="onChangeStatus"
+                    >
+                      {{ confirmStatus === 'SUSPENDED' ? '確認停用' : '確認啟用' }}
+                    </NButton>
+                  </div>
                 </template>
-                <template v-else>
-                  <NButton type="primary" block :disabled="busy" @click="startEdit">
+                <div v-else class="mobile-actions-row">
+                  <NButton size="small" type="primary" :disabled="busy" @click="startEdit">
                     編輯
                   </NButton>
                   <NButton
                     v-if="nextStatus === 'SUSPENDED'"
+                    size="small"
                     type="error"
                     ghost
-                    block
                     :disabled="busy"
                     @click="confirmStatus = 'SUSPENDED'"
                   >
@@ -329,19 +404,19 @@ watch(
                   </NButton>
                   <NButton
                     v-else
+                    size="small"
                     type="success"
                     ghost
-                    block
                     :disabled="busy"
                     @click="confirmStatus = 'ACTIVE'"
                   >
                     啟用
                   </NButton>
-                </template>
+                </div>
               </div>
             </div>
-          </aside>
-        </div>
+          </div>
+        </template>
       </template>
     </NSpin>
   </section>
@@ -369,6 +444,13 @@ watch(
   gap: var(--space-16);
 }
 
+.header-badges {
+  display: none;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
 .kicker,
 .error-detail,
 .status-label,
@@ -389,11 +471,15 @@ h1 {
   font: var(--font-page-title);
 }
 
-.grid {
+.desktop-layout {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr);
   gap: var(--space-16);
   align-items: start;
+}
+
+.mobile-layout {
+  display: none;
 }
 
 .main {
@@ -490,20 +576,114 @@ dd {
   font: var(--font-caption);
 }
 
+.sheet {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  overflow: hidden;
+}
+
+.section {
+  padding: var(--space-12) var(--space-16);
+}
+
+.section + .section {
+  border-top: 1px solid var(--color-border);
+}
+
+.section h2 {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: none;
+  font: var(--font-label);
+  color: var(--color-muted-text);
+}
+
+.section-value {
+  margin: 0;
+  font: var(--font-label);
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.vehicle-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-border));
+}
+
+.mobile-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.mobile-actions .confirm-copy {
+  margin: 0;
+}
+
+.mobile-actions :deep(.n-button) {
+  min-width: 72px;
+  min-height: 32px;
+}
+
 .state {
   padding: var(--space-32) 0;
 }
 
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .page {
+    gap: var(--space-12);
+  }
+
+  .page-header {
+    gap: var(--space-8);
+  }
+
+  .header-badges {
+    display: flex;
+  }
+
+  .header-badges :deep(.n-tag) {
+    height: 22px;
+    padding: 0 7px;
+    font-size: 12px;
+    line-height: 22px;
+  }
+
+  .kicker {
+    display: none;
   }
 
   h1 {
-    font-size: 24px;
+    margin-top: 0;
+    font-size: 22px;
+    line-height: 1.25;
   }
 
-  .actions :deep(.n-button) {
+  .desktop-layout {
+    display: none;
+  }
+
+  .mobile-layout {
+    display: block;
+  }
+
+  .edit-panel {
+    padding: var(--space-16);
+  }
+
+  .desktop-layout .actions :deep(.n-button) {
     min-height: 44px;
   }
 }

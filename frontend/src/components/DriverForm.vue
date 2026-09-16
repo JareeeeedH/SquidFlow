@@ -235,4 +235,45 @@ defineExpose({
   padding-top: var(--space-24);
   border-top: 1px solid var(--color-border);
 }
+
+@media (max-width: 900px) {
+  .alert {
+    margin-bottom: var(--space-12);
+  }
+
+  .grouped .section-header {
+    margin: 0 0 var(--space-8);
+    padding-bottom: var(--space-8);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .grouped .section-header h2 {
+    font: var(--font-label);
+    color: var(--color-muted-text);
+  }
+
+  .grouped .form-section + .form-section {
+    margin-top: var(--space-16);
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .grouped :deep(.n-form-item) {
+    margin-bottom: var(--space-8);
+  }
+
+  .grouped :deep(.n-form-item-label) {
+    padding-bottom: 2px !important;
+  }
+
+  .grouped :deep(.n-form-item-feedback-wrapper) {
+    min-height: 18px;
+    font-size: 12px;
+  }
+
+  .grouped .actions {
+    margin-top: var(--space-16);
+    padding-top: var(--space-12);
+  }
+}
 </style>

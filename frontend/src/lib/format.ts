@@ -61,6 +61,31 @@ export function formatDateTimeTaipei(iso: string): string {
   return `${get('year')}/${get('month')}/${get('day')} ${hour}:${get('minute')}`
 }
 
+export function formatClockTaipei(value: number | Date): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ''
+
+  let hour = get('hour')
+  if (hour === '24') {
+    hour = '00'
+  }
+
+  return `${hour}:${get('minute')}:${get('second')}`
+}
+
 export function toScheduledAtIso(value: number): string {
   const date = new Date(value)
   const parts = new Intl.DateTimeFormat('en-US', {

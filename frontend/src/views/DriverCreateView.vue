@@ -55,10 +55,9 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
 
     <header class="page-header">
       <h1>新增司機</h1>
-      <p class="subtitle">建立帳號與車輛資料。上線狀態由系統決定。</p>
     </header>
 
-    <div class="panel">
+    <div class="form-shell">
       <DriverForm
         ref="formRef"
         mode="create"
@@ -106,7 +105,7 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
 }
 
 .page-header,
-.panel {
+.form-shell {
   width: 100%;
   min-width: 0;
 }
@@ -126,7 +125,7 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
   font: var(--font-caption);
 }
 
-.panel {
+.form-shell {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
@@ -153,14 +152,22 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
 
 @media (max-width: 900px) {
   .page {
+    gap: var(--space-12);
     max-width: none;
     margin: 0;
-    padding-bottom: 96px;
+    padding-bottom: 104px;
   }
 
-  .panel {
-    padding: var(--space-16);
-    border-radius: var(--radius-8);
+  .page-header h1 {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+
+  .form-shell {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
   }
 
   .cta-bar {
@@ -178,12 +185,7 @@ async function onSubmit(input: CreateDriverInput | UpdateDriverInput) {
 
   .cta {
     flex: 1;
-  }
-}
-
-@media (max-width: 640px) {
-  .panel {
-    padding: var(--space-16);
+    min-height: 44px;
   }
 }
 </style>

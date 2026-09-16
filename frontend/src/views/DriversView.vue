@@ -221,19 +221,22 @@ void loadDrivers()
               type="button"
               @click="openDriver(driver.id)"
             >
-              <div class="card-top">
+              <div class="card-row card-row-top">
                 <span class="username-cell">{{ driver.username }}</span>
-                <OnlineStatusTag :status="driver.online_status" />
+                <span class="card-badges">
+                  <OnlineStatusTag :status="driver.online_status" />
+                  <AccountStatusTag :status="driver.status" />
+                </span>
               </div>
-              <p class="plate-cell">{{ driver.license_plate }}</p>
-              <p class="vehicle-line">
-                {{ driver.vehicle_brand }} {{ driver.vehicle_model }}
+              <p class="card-meta">
+                <span class="plate-cell">{{ driver.license_plate }}</span>
                 <span class="sep">·</span>
-                {{ driver.vehicle_color }}
+                <span class="vehicle-inline">
+                  {{ driver.vehicle_brand }} {{ driver.vehicle_model }}
+                </span>
+                <span class="sep">·</span>
+                <span class="vehicle-color">{{ driver.vehicle_color }}</span>
               </p>
-              <div class="card-bottom">
-                <AccountStatusTag :status="driver.status" />
-              </div>
             </button>
           </div>
         </NSpin>
@@ -371,10 +374,13 @@ h1 {
 .driver-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  justify-content: center;
+  gap: 4px;
   width: 100%;
-  padding: var(--space-12);
-  background: var(--color-background);
+  min-height: 72px;
+  max-height: 80px;
+  padding: 10px 12px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-8);
   cursor: pointer;
@@ -387,33 +393,67 @@ h1 {
   border-color: var(--color-primary);
 }
 
-.card-top {
+.card-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-8);
+  min-width: 0;
 }
 
-.vehicle-line {
+.card-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+
+.card-badges :deep(.n-tag) {
+  height: 22px;
+  padding: 0 7px;
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
   color: var(--color-muted-text);
   font: var(--font-caption);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.card-meta .plate-cell {
+  flex-shrink: 0;
+  font: var(--font-caption);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.vehicle-inline,
+.vehicle-color {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sep {
-  margin: 0 var(--space-4);
-}
-
-.card-bottom {
-  margin-top: var(--space-4);
+  flex-shrink: 0;
+  margin: 0;
 }
 
 @media (max-width: 900px) {
   h1 {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    display: none;
   }
 
   .page {
@@ -421,8 +461,7 @@ h1 {
   }
 
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
   }
 
   .header-actions {

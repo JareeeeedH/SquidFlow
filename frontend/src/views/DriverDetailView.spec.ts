@@ -103,6 +103,16 @@ describe('DriverDetailView', () => {
     expect(wrapper.text()).toContain('停用')
     expect(wrapper.text()).not.toContain('刪除')
     expect(wrapper.text()).not.toContain('帳號狀態與上線狀態分開管理')
+    expect(wrapper.find('.header-badges').exists()).toBe(true)
+    expect(wrapper.find('.mobile-layout .vehicle-line').text()).toBe(
+      'ABC-1234 · Toyota · Camry · 黑色',
+    )
+    expect(wrapper.find('.mobile-layout').text()).not.toContain('操作')
+    expect(wrapper.find('.mobile-layout').text()).not.toContain(
+      '上線狀態由司機端切換，此處僅顯示。',
+    )
+    expect(wrapper.find('.mobile-actions-row').exists()).toBe(true)
+    expect(wrapper.findAll('.mobile-actions-row .n-button')).toHaveLength(2)
   })
 
   it('edits a driver and uses the API response', async () => {

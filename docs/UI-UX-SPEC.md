@@ -232,7 +232,23 @@ ORD-20260915-026 · 王先生        NT$ 1,200
 - 快速找出正在搶單與正在執行的訂單
 - Desktop 保留看板視覺；Mobile 聚焦執行中訂單，不把所有操作塞進 Kanban
 
-## 4.3 不包含
+## 4.3 自動刷新
+
+Dashboard 與 Orders 共用下列規則（HTTP polling，非推播）：
+
+- 頁面可見且使用者停留在該頁時，每 **30 秒** 自動重新取得最新資料
+- 進入頁面時立即取得一次，不等待 30 秒
+- 離開頁面或瀏覽器分頁不可見時停止 polling；回到頁面時立即 refresh
+- 保留手動刷新（與自動刷新共用同一套 fetch／reload）
+- 手動刷新 UI：正常顯示簡潔「**更新**」按鈕；進行中改為「**更新中...**」、icon **緩慢旋轉**、按鈕 disabled
+- 手動刷新進行中：主內容區顯示**輕量 loading overlay**（保留頁面結構、不整頁跳轉、避免明顯 layout shift）
+- 手動刷新完成後進入 **10 秒** cooldown；cooldown 期間不可再次手動刷新（**不**顯示倒數／Toast／「已更新」／「最後更新」等時間文字）
+- 自動 polling：**靜默**更新資料；**不**顯示 Toast、overlay 或額外成功提示；不受手動 cooldown 影響
+- 若已有 refresh request 進行中，**不**重複發送 request
+- 只更新資料：不整頁 reload、不造成明顯閃爍
+- **不**使用 WebSocket／SSE／Push 或其他即時通訊架構
+
+## 4.4 不包含
 
 Dashboard 不包含：
 
@@ -240,10 +256,10 @@ Dashboard 不包含：
 完整 Order List
 搜尋 / 日期篩選
 BI / 報表
-Realtime
+WebSocket / SSE / Push realtime
 ```
 
-完整訂單搜尋 / 篩選 / 管理維持在 `/orders`。
+完整訂單搜尋 / 篩選 / 管理維持在 `/orders`。允許 §4.3 的 HTTP polling（30 秒）。
 
 ---
 
@@ -280,6 +296,8 @@ Realtime
 
 可由 Dashboard Status Summary 帶入 `?status=<status>`。
 
+自動刷新規則同 §4.3（30 秒 HTTP polling；可見時執行；離開／隱藏停止；回頁立即 refresh；手動刷新 cooldown／回饋；不整頁 reload／明顯閃爍）。
+
 ### Desktop
 
 DataTable 呈現。
@@ -295,7 +313,8 @@ DataTable 呈現。
 ```
 
 - Search 置頂保留
-- Status Filter：單行水平可滑動 Chips（**全部** + 六種 Order Status），顯示各狀態數量（數量來自既有 Dashboard `summary`）；預設「全部」；點擊即過濾列表（同步 `?status=`）
+- Status Filter：**全部** + 六種 Order Status 以 Chips 呈現，顯示各狀態數量（數量來自既有 Dashboard `summary`）；預設「全部」；點擊即過濾列表（同步 `?status=`）
+- Chips **自動換行**，不使用左右滑動
 - **不**使用獨立「篩選」按鈕／Filter Drawer（Mobile）
 - 排序維持 `created_at` 降序（既有 API）
 - Desktop 維持 DataTable + Search／Status Select／Date Filter
@@ -403,16 +422,20 @@ DataTable：
 
 ### Mobile
 
-改 **Card List**（不用橫向滑動 Table）。Card 顯示：
+改 **Card List**（不用橫向滑動 Table）。Compact card（約 **70–80px**），高資訊密度：
 
 ```text
-username · Online/Offline
-車牌
-車輛（品牌 型號）· 車色
-帳號狀態
+username                    [上線/離線] [啟用/停用]
+車牌 · 品牌 型號 · 車色
 ```
 
+- Status 使用緊湊 Badge，不額外拉高卡片
+- 次要資訊併行，避免每欄各佔一行
+- Desktop DataTable 維持不變
+
 ## Driver Detail
+
+### Desktop
 
 採置中雙欄，約 7:3。左側為 Driver Profile，右側為狀態 / 操作。
 
@@ -430,6 +453,28 @@ username · Online/Offline
 ```
 
 帳號狀態與上線狀態分開顯示。上線狀態只讀，由司機端切換。
+
+### Mobile
+
+保留返回入口。緊湊 Section + 分隔線（不使用過大多 Card 堆疊）：
+
+```text
+← 返回…
+driver01
+[上線/離線]  [啟用/停用]
+
+帳號
+driver01
+────────────────
+車輛
+車牌 · 品牌 · 型號 · 車色
+────────────────
+[編輯]  [停用/啟用]
+```
+
+- CTA 為 compact 並排，不另設「操作」標題或上線狀態說明文案（狀態已由 Header Badge 表達）
+- 上線狀態仍只讀；帳號狀態操作維持既有確認流程
+- Desktop 雙欄不變
 
 ---
 

@@ -11,7 +11,7 @@ import {
   NSpin,
   type DataTableColumns,
 } from 'naive-ui'
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getAdminDashboard } from '../api/dashboard'
 import { listOrders } from '../api/orders'
@@ -22,9 +22,13 @@ import type {
   OrderListQuery,
   OrderStatus,
 } from '../api/types'
+import AdminRefreshButton from '../components/AdminRefreshButton.vue'
+import AdminRefreshOverlay from '../components/AdminRefreshOverlay.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { useListRefreshControl } from '../lib/list-refresh'
 import { ORDER_STATUS_LABELS, ORDER_STATUSES, parseOrderStatus } from '../lib/order-status'
+import { useVisiblePolling } from '../lib/visible-polling'
 
 const STATUS_OPTIONS: { label: string; value: OrderStatus }[] = ORDER_STATUSES.map(
   (value) => ({
@@ -44,6 +48,13 @@ const statusSummary = ref<AdminDashboard['summary'] | null>(null)
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const forbidden = ref(false)
+
+const {
+  canManualRefresh,
+  refreshButtonLabel,
+  manualUpdating,
+  runRefresh,
+} = useListRefreshControl()
 
 let requestSeq = 0
 
@@ -192,6 +203,72 @@ function chipCountLabel(count: number | null) {
   return count == null ? '—' : String(count)
 }
 
+async function loadStatusCounts() {
+  try {
+    const data = await getAdminDashboard()
+    statusSummary.value = data.summary
+  } catch {
+    // Chip counts are supplementary; keep last known summary on failure.
+  }
+}
+
+async function loadOrders(options: { silent?: boolean } = {}): Promise<boolean> {
+  const silent = Boolean(options.silent)
+  const seq = ++requestSeq
+  if (!silent) {
+    loading.value = true
+    error.value = null
+    forbidden.value = false
+  }
+
+  try {
+    const data = await listOrders(query.value)
+    if (seq !== requestSeq) {
+      return false
+    }
+    orders.value = data
+    error.value = null
+    forbidden.value = false
+    return true
+  } catch (caught) {
+    if (seq !== requestSeq) {
+      return false
+    }
+    if (silent) {
+      return false
+    }
+    orders.value = []
+    if (caught instanceof ApiClientError) {
+      if (caught.status === 403 && caught.code === 'FORBIDDEN') {
+        forbidden.value = true
+      }
+      error.value = { code: caught.code, message: caught.message }
+      return false
+    }
+    error.value = { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
+    return false
+  } finally {
+    if (seq === requestSeq && !silent) {
+      loading.value = false
+    }
+  }
+}
+
+async function refreshOrders(options: { silent?: boolean } = {}): Promise<boolean> {
+  const [ordersOk] = await Promise.all([loadOrders(options), loadStatusCounts()])
+  return ordersOk
+}
+
+function manualRefresh() {
+  void runRefresh('manual', () =>
+    refreshOrders({ silent: orders.value.length > 0 && !error.value }),
+  )
+}
+
+function retryLoad() {
+  void runRefresh('manual', () => refreshOrders())
+}
+
 watch(
   () => route.query.status,
   (raw) => {
@@ -216,53 +293,14 @@ watch(status, (value) => {
   void router.replace({ query: nextQuery })
 })
 
-async function loadStatusCounts() {
-  try {
-    const data = await getAdminDashboard()
-    statusSummary.value = data.summary
-  } catch {
-    statusSummary.value = null
-  }
-}
-
-async function loadOrders() {
-  const seq = ++requestSeq
-  loading.value = true
-  error.value = null
-  forbidden.value = false
-
-  try {
-    const data = await listOrders(query.value)
-    if (seq !== requestSeq) {
-      return
-    }
-    orders.value = data
-  } catch (caught) {
-    if (seq !== requestSeq) {
-      return
-    }
-    orders.value = []
-    if (caught instanceof ApiClientError) {
-      if (caught.status === 403 && caught.code === 'FORBIDDEN') {
-        forbidden.value = true
-      }
-      error.value = { code: caught.code, message: caught.message }
-      return
-    }
-    error.value = { code: 'INTERNAL_ERROR', message: '系統發生錯誤' }
-  } finally {
-    if (seq === requestSeq) {
-      loading.value = false
-    }
-  }
-}
-
 watch(query, () => {
   void loadOrders()
-}, { immediate: true })
+})
 
-onMounted(() => {
-  void loadStatusCounts()
+useVisiblePolling((reason) => {
+  void runRefresh('auto', () =>
+    refreshOrders({ silent: reason !== 'immediate' }),
+  )
 })
 </script>
 
@@ -274,6 +312,13 @@ onMounted(() => {
       </div>
       <div class="header-actions">
         <p v-if="!error && !loading" class="count count-desktop">{{ orders.length }} 筆</p>
+        <AdminRefreshButton
+          class="refresh-btn"
+          :label="refreshButtonLabel"
+          :disabled="!canManualRefresh"
+          :spinning="manualUpdating"
+          @click="manualRefresh"
+        />
         <NButton type="primary" @click="router.push({ name: 'order-create' })">
           <template #icon>
             <Plus :size="16" />
@@ -283,6 +328,7 @@ onMounted(() => {
       </div>
     </header>
 
+    <AdminRefreshOverlay :show="manualUpdating">
     <div class="toolbar toolbar-desktop">
       <NInput
         v-model:value="searchInput"
@@ -375,12 +421,8 @@ onMounted(() => {
         <template #footer>
           <NButton
             type="primary"
-            @click="
-              () => {
-                void loadOrders()
-                void loadStatusCounts()
-              }
-            "
+            :disabled="!canManualRefresh"
+            @click="retryLoad"
           >
             <template #icon>
               <RotateCcw :size="16" />
@@ -395,7 +437,7 @@ onMounted(() => {
           class="orders-table"
           :columns="columns"
           :data="orders"
-          :loading="loading"
+          :loading="loading && !manualUpdating"
           :bordered="false"
           :single-line="false"
           :scroll-x="960"
@@ -410,7 +452,7 @@ onMounted(() => {
           </template>
         </NDataTable>
 
-        <NSpin :show="loading" class="orders-cards-wrap">
+        <NSpin :show="loading && !manualUpdating" class="orders-cards-wrap">
           <div class="orders-cards">
             <NEmpty
               v-if="!loading && orders.length === 0"
@@ -447,6 +489,7 @@ onMounted(() => {
         </NSpin>
       </template>
     </div>
+    </AdminRefreshOverlay>
   </section>
 </template>
 
@@ -640,16 +683,11 @@ h1 {
 
 .status-chips {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--space-8);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-}
-
-.status-chips::-webkit-scrollbar {
-  display: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .status-chip {
@@ -709,12 +747,21 @@ h1 {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-8);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .toolbar-mobile .search {
     flex: none;
     width: 100%;
-    max-width: none;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .page {
+    overflow-x: hidden;
   }
 
   .orders-table {
