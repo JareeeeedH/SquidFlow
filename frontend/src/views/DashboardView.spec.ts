@@ -212,17 +212,30 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('ORD-20260915-001')
   })
 
-  it('shows mobile focus board entry for full orders list', async () => {
+  it('shows mobile focus board without title chrome and keeps full-orders entry', async () => {
     const { wrapper } = await mountDashboard()
 
-    expect(wrapper.text()).toContain('重點訂單')
+    expect(wrapper.text()).not.toContain('重點訂單')
+    expect(wrapper.text()).not.toContain('僅顯示搶單中')
     expect(wrapper.text()).toContain('完整訂單')
     expect(wrapper.find('.board-mobile').exists()).toBe(true)
     expect(wrapper.find('.board-desktop').exists()).toBe(true)
+    expect(wrapper.find('.page-header-desktop').exists()).toBe(true)
   })
 
-  it('limits mobile focus preview to 3 latest orders and links to filtered list', async () => {
-    const openOrders = Array.from({ length: 5 }, (_, index) => ({
+  it('keeps mobile status sections collapsed by default', async () => {
+    const { wrapper } = await mountDashboard()
+    const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
+
+    expect(openGroup.find('.focus-group-header').attributes('aria-expanded')).toBe(
+      'false',
+    )
+    expect(openGroup.findAll('.order-card')).toHaveLength(0)
+    expect(openGroup.text()).not.toContain('ORD-20260915-003')
+  })
+
+  it('expands mobile focus to 5 latest orders and links to filtered list', async () => {
+    const openOrders = Array.from({ length: 7 }, (_, index) => ({
       id: `open-${index}`,
       order_no: `ORD-OPEN-${index}`,
       customer_name: null,
@@ -237,7 +250,7 @@ describe('DashboardView', () => {
     vi.mocked(getAdminDashboard).mockResolvedValue({
       summary: {
         DRAFT: 0,
-        OPEN: 5,
+        OPEN: 7,
         ACCEPTED: 0,
         IN_PROGRESS: 0,
         COMPLETED: 0,
@@ -251,12 +264,16 @@ describe('DashboardView', () => {
     const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
 
     expect(openGroup.exists()).toBe(true)
-    expect(openGroup.findAll('.order-card')).toHaveLength(3)
+    await openGroup.find('.focus-group-header').trigger('click')
+
+    expect(openGroup.find('.focus-group-header').attributes('aria-expanded')).toBe(
+      'true',
+    )
+    expect(openGroup.findAll('.order-card')).toHaveLength(5)
     expect(openGroup.text()).toContain('ORD-OPEN-0')
-    expect(openGroup.text()).toContain('ORD-OPEN-1')
-    expect(openGroup.text()).toContain('ORD-OPEN-2')
-    expect(openGroup.text()).not.toContain('ORD-OPEN-3')
-    expect(openGroup.text()).toContain('查看全部 5 →')
+    expect(openGroup.text()).toContain('ORD-OPEN-4')
+    expect(openGroup.text()).not.toContain('ORD-OPEN-5')
+    expect(openGroup.text()).toContain('查看全部 7 →')
 
     const viewAll = openGroup.find('.view-all')
     await viewAll.trigger('click')
@@ -267,10 +284,12 @@ describe('DashboardView', () => {
     })
   })
 
-  it('hides mobile view-all when status has at most 3 orders', async () => {
+  it('hides mobile view-all when status has at most 5 orders', async () => {
     const { wrapper } = await mountDashboard()
     const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
+    await openGroup.find('.focus-group-header').trigger('click')
 
+    expect(openGroup.text()).toContain('ORD-20260915-003')
     expect(openGroup.text()).not.toContain('查看全部')
   })
 })

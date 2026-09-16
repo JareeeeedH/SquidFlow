@@ -63,7 +63,7 @@ UX 原則：
 - Dashboard = Status Summary + Dispatch Board
 - 完整 Order List 在 `/orders`
 - 快速建單、派單、查看狀態
-- Dashboard 與訂單管理分頁，不把所有操作塞進同一畫面
+- Dashboard 與訂單分頁，不把所有操作塞進同一畫面
 
 ### Driver
 
@@ -196,7 +196,7 @@ CANCELLED    0
 
 ### Mobile
 
-不使用四欄 Kanban。改為 **重點訂單** 列表，僅顯示：
+不使用四欄 Kanban。改為可收合狀態區，僅涵蓋：
 
 ```text
 OPEN
@@ -204,9 +204,15 @@ ACCEPTED
 IN_PROGRESS
 ```
 
-每個 Status 最多顯示**最新 3 筆**（依 `board_orders` 的 `created_at` 降序）。若該 Status 還有更多訂單，顯示「查看全部 N →」，導向 `/orders?status=<status>`（N 為 summary 數量）。
+Mobile Dashboard：
 
-草稿不進 Mobile 重點區。完整訂單（含草稿／已完成／已取消與搜尋篩選）維持 `/orders`。提供「完整訂單」入口。
+- 不顯示頁面標題「Dashboard」與副標「派車管理」
+- 不顯示「重點訂單」區塊標題與說明文字
+- Status Summary（3×2）後接可收合狀態區；保留「完整訂單」入口
+- 各狀態區**預設收合**；展開後顯示該狀態**最新 5 筆**（依 `board_orders` 的 `created_at` 降序）
+- 若該 Status 還有更多訂單，展開後顯示「查看全部 N →」，導向 `/orders?status=<status>`（N 為 summary 數量）
+
+草稿不進 Mobile 此區。完整訂單（含草稿／已完成／已取消與搜尋篩選）維持 `/orders`。
 
 Board card（Desktop／Mobile 共用資訊）：
 
@@ -245,7 +251,11 @@ Realtime
 
 路徑：`/orders`
 
-完整訂單搜尋 / 篩選 / 管理。不是 Dashboard 的一部分。
+頁面標題：**訂單**（不再使用「Orders」／「訂單列表」作為標題或副標）。
+
+完整訂單搜尋 / 篩選 / 管理。與「訂單管理」為同一功能，導覽與 UI 用語統一為 **訂單**。不是 Dashboard 的一部分。
+
+從 Order Detail／Create 返回時使用：**返回訂單**。
 
 欄位：
 
@@ -276,16 +286,19 @@ DataTable 呈現。
 
 ### Mobile
 
-改 **Card List**（不用橫向滑動 Table）。Card 顯示：
+改 **Card List**（不用橫向滑動 Table）。Compact card（約 80–90px）顯示：
 
 ```text
-訂單號 · Status
-客戶
-路線（上車 → 目的地）
+訂單號                         Status
+客戶 · 路線（上車 → 目的地）
 價格 · 時間
 ```
 
-Search 置頂 compact；Status／Date 以 **Filter Drawer**（底部）操作，避免擠壓列表。
+- Search 置頂保留
+- Status Filter：單行水平可滑動 Chips（**全部** + 六種 Order Status），顯示各狀態數量（數量來自既有 Dashboard `summary`）；預設「全部」；點擊即過濾列表（同步 `?status=`）
+- **不**使用獨立「篩選」按鈕／Filter Drawer（Mobile）
+- 排序維持 `created_at` 降序（既有 API）
+- Desktop 維持 DataTable + Search／Status Select／Date Filter
 
 ---
 
@@ -717,8 +730,8 @@ OFFLINE      Muted
 
 - 首頁以 Dashboard 為主
 - Status Summary 點擊後到 `/orders?status=<status>`
-- Desktop Dispatch Board 提供看板感；Mobile 重點訂單僅 OPEN／ACCEPTED／IN_PROGRESS
-- 完整 Order List 在 `/orders`（Desktop Table／Mobile Card）
+- Desktop Dispatch Board 提供看板感；Mobile 為 OPEN／ACCEPTED／IN_PROGRESS 可收合狀態區（預設收合，展開最多 5 筆）
+- 完整訂單在 `/orders`（頁面標題「訂單」；Desktop Table／Mobile Card）
 - 建單盡量單頁完成；Create 提供儲存草稿與發布搶單
 - 發布後訂單唯讀
 - 只顯示目前狀態可執行的操作

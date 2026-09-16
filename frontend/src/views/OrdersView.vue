@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { Filter, Plus, RotateCcw, Search } from 'lucide-vue-next'
+import { Plus, RotateCcw, Search } from 'lucide-vue-next'
 import {
   NButton,
   NDataTable,
   NDatePicker,
-  NDrawer,
-  NDrawerContent,
   NEmpty,
   NInput,
   NResult,
@@ -13,11 +11,17 @@ import {
   NSpin,
   type DataTableColumns,
 } from 'naive-ui'
-import { computed, h, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getAdminDashboard } from '../api/dashboard'
 import { listOrders } from '../api/orders'
 import { ApiClientError } from '../api/types'
-import type { OrderListItem, OrderListQuery, OrderStatus } from '../api/types'
+import type {
+  AdminDashboard,
+  OrderListItem,
+  OrderListQuery,
+  OrderStatus,
+} from '../api/types'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
 import { ORDER_STATUS_LABELS, ORDER_STATUSES, parseOrderStatus } from '../lib/order-status'
@@ -36,10 +40,10 @@ const appliedSearch = ref('')
 const status = ref<OrderStatus | null>(parseOrderStatus(route.query.status))
 const dateValue = ref<number | null>(null)
 const orders = ref<OrderListItem[]>([])
+const statusSummary = ref<AdminDashboard['summary'] | null>(null)
 const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const forbidden = ref(false)
-const filterOpen = ref(false)
 
 let requestSeq = 0
 
@@ -61,12 +65,32 @@ const hasFilters = computed(
     dateValue.value !== null,
 )
 
-const activeFilterCount = computed(() => {
-  let count = 0
-  if (appliedSearch.value) count += 1
-  if (status.value) count += 1
-  if (dateValue.value !== null) count += 1
-  return count
+const totalOrderCount = computed(() => {
+  if (!statusSummary.value) {
+    return null
+  }
+  return ORDER_STATUSES.reduce(
+    (sum, key) => sum + (statusSummary.value?.[key] ?? 0),
+    0,
+  )
+})
+
+const statusChips = computed(() => {
+  const summary = statusSummary.value
+  return [
+    {
+      key: 'ALL' as const,
+      label: '全部',
+      count: totalOrderCount.value,
+      value: null as OrderStatus | null,
+    },
+    ...ORDER_STATUSES.map((value) => ({
+      key: value,
+      label: ORDER_STATUS_LABELS[value],
+      count: summary ? summary[value] : null,
+      value,
+    })),
+  ]
 })
 
 const columns: DataTableColumns<OrderListItem> = [
@@ -156,13 +180,16 @@ function clearFilters() {
   dateValue.value = null
 }
 
-function applyDrawerFilters() {
-  applySearch()
-  filterOpen.value = false
+function selectStatusChip(next: OrderStatus | null) {
+  status.value = next
 }
 
 function openOrder(id: string) {
   void router.push({ name: 'order-detail', params: { id } })
+}
+
+function chipCountLabel(count: number | null) {
+  return count == null ? '—' : String(count)
 }
 
 watch(
@@ -188,6 +215,15 @@ watch(status, (value) => {
   }
   void router.replace({ query: nextQuery })
 })
+
+async function loadStatusCounts() {
+  try {
+    const data = await getAdminDashboard()
+    statusSummary.value = data.summary
+  } catch {
+    statusSummary.value = null
+  }
+}
 
 async function loadOrders() {
   const seq = ++requestSeq
@@ -224,17 +260,20 @@ async function loadOrders() {
 watch(query, () => {
   void loadOrders()
 }, { immediate: true })
+
+onMounted(() => {
+  void loadStatusCounts()
+})
 </script>
 
 <template>
   <section class="page">
     <header class="page-header">
-      <div>
-        <h1>Orders</h1>
-        <p class="subtitle">訂單列表</p>
+      <div class="page-header-copy">
+        <h1>訂單</h1>
       </div>
       <div class="header-actions">
-        <p v-if="!error && !loading" class="count">{{ orders.length }} 筆</p>
+        <p v-if="!error && !loading" class="count count-desktop">{{ orders.length }} 筆</p>
         <NButton type="primary" @click="router.push({ name: 'order-create' })">
           <template #icon>
             <Plus :size="16" />
@@ -295,41 +334,22 @@ watch(query, () => {
           <Search :size="16" class="search-icon" />
         </template>
       </NInput>
-      <NButton secondary @click="filterOpen = true">
-        <template #icon>
-          <Filter :size="16" />
-        </template>
-        篩選
-        <span v-if="activeFilterCount" class="filter-badge">{{ activeFilterCount }}</span>
-      </NButton>
+      <div class="status-chips" role="tablist" aria-label="訂單狀態篩選">
+        <button
+          v-for="chip in statusChips"
+          :key="chip.key"
+          class="status-chip"
+          type="button"
+          role="tab"
+          :aria-selected="status === chip.value"
+          :class="{ 'is-active': status === chip.value }"
+          @click="selectStatusChip(chip.value)"
+        >
+          <span class="chip-label">{{ chip.label }}</span>
+          <span class="chip-count">{{ chipCountLabel(chip.count) }}</span>
+        </button>
+      </div>
     </div>
-
-    <NDrawer v-model:show="filterOpen" placement="bottom" :height="360">
-      <NDrawerContent title="篩選訂單" closable>
-        <div class="drawer-filters">
-          <NSelect
-            v-model:value="status"
-            :options="STATUS_OPTIONS"
-            clearable
-            placeholder="全部狀態"
-          />
-          <NDatePicker
-            v-model:value="dateValue"
-            type="date"
-            clearable
-            format="yyyy/MM/dd"
-            placeholder="建立日期"
-            style="width: 100%"
-          />
-          <div class="drawer-actions">
-            <NButton quaternary :disabled="!hasFilters" @click="clearFilters">
-              清除
-            </NButton>
-            <NButton type="primary" @click="applyDrawerFilters">套用</NButton>
-          </div>
-        </div>
-      </NDrawerContent>
-    </NDrawer>
 
     <div class="panel">
       <NResult
@@ -353,7 +373,15 @@ watch(query, () => {
           <p class="error-detail">{{ error.code }} · {{ error.message }}</p>
         </template>
         <template #footer>
-          <NButton type="primary" @click="loadOrders">
+          <NButton
+            type="primary"
+            @click="
+              () => {
+                void loadOrders()
+                void loadStatusCounts()
+              }
+            "
+          >
             <template #icon>
               <RotateCcw :size="16" />
             </template>
@@ -397,17 +425,20 @@ watch(query, () => {
               type="button"
               @click="openOrder(order.id)"
             >
-              <div class="card-top">
+              <div class="card-row card-row-top">
                 <span class="order-no">{{ order.order_no }}</span>
                 <OrderStatusTag :status="order.status" />
               </div>
-              <p class="card-customer">{{ formatOptionalText(order.customer_name) }}</p>
-              <p class="card-route">
-                {{ order.pickup_location }}
-                <span class="arrow">→</span>
-                {{ formatOptionalText(order.destination) }}
+              <p class="card-mid">
+                <span class="card-customer">{{ formatOptionalText(order.customer_name) }}</span>
+                <span class="card-sep">·</span>
+                <span class="card-route">
+                  {{ order.pickup_location }}
+                  <span class="arrow">→</span>
+                  {{ formatOptionalText(order.destination) }}
+                </span>
               </p>
-              <div class="card-bottom">
+              <div class="card-row card-row-bottom">
                 <span class="card-price">{{ formatPrice(order.price) }}</span>
                 <span class="card-time">{{ formatScheduledAt(order.created_at) }}</span>
               </div>
@@ -485,33 +516,6 @@ h1 {
   width: 168px;
 }
 
-.filter-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  margin-left: var(--space-4);
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--color-primary);
-  color: #fff;
-  font: var(--font-caption);
-  font-size: 11px;
-}
-
-.drawer-filters {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-16);
-}
-
-.drawer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-8);
-}
-
 .panel {
   min-height: 360px;
   background: var(--color-surface);
@@ -555,10 +559,13 @@ h1 {
 .order-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  justify-content: center;
+  gap: 2px;
   width: 100%;
-  padding: var(--space-12);
-  background: var(--color-background);
+  min-height: 84px;
+  max-height: 90px;
+  padding: 10px 12px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-8);
   cursor: pointer;
@@ -571,33 +578,49 @@ h1 {
   border-color: var(--color-primary);
 }
 
-.card-top {
+.card-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-8);
+  min-width: 0;
 }
 
 .order-no {
   font: var(--font-label);
-}
-
-.card-customer,
-.card-route {
-  margin: 0;
-  color: var(--color-muted-text);
-  font: var(--font-caption);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card-bottom {
+.card-mid {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  margin-top: var(--space-4);
+  align-items: baseline;
+  gap: var(--space-4);
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-muted-text);
+  font: var(--font-caption);
+}
+
+.card-customer {
+  flex-shrink: 0;
+  max-width: 28%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-sep {
+  flex-shrink: 0;
+}
+
+.card-route {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-price {
@@ -608,24 +631,73 @@ h1 {
 .card-time {
   color: var(--color-muted-text);
   font: var(--font-caption);
+  flex-shrink: 0;
 }
 
 .arrow {
-  margin: 0 var(--space-4);
+  margin: 0 2px;
+}
+
+.status-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-8);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.status-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: var(--font-caption);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.status-chip.is-active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  color: var(--color-primary);
+}
+
+.chip-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted-text);
+}
+
+.status-chip.is-active .chip-count {
+  color: var(--color-primary);
 }
 
 @media (max-width: 900px) {
   h1 {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    display: none;
   }
 
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
   }
 
-  .header-actions {
-    justify-content: space-between;
+  .count-desktop {
+    display: none;
   }
 
   .toolbar-desktop {
@@ -634,11 +706,14 @@ h1 {
 
   .toolbar-mobile {
     display: flex;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
   }
 
   .toolbar-mobile .search {
-    flex: 1 1 auto;
+    flex: none;
+    width: 100%;
     max-width: none;
   }
 

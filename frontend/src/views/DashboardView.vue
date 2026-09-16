@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { RotateCcw, User, UserX } from 'lucide-vue-next'
+import { ChevronDown, RotateCcw, User, UserX } from 'lucide-vue-next'
 import { NButton, NResult, NSpin } from 'naive-ui'
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAdminDashboard } from '../api/dashboard'
 import { ApiClientError } from '../api/types'
@@ -22,6 +22,13 @@ const loading = ref(false)
 const error = ref<{ code: string; message: string } | null>(null)
 const forbidden = ref(false)
 
+/** Mobile focus sections: collapsed by default. */
+const mobileExpanded = reactive(
+  Object.fromEntries(
+    OPERATIONAL_ORDER_STATUSES.map((status) => [status, false]),
+  ) as Record<(typeof OPERATIONAL_ORDER_STATUSES)[number], boolean>,
+)
+
 let requestSeq = 0
 
 const groupedBoardOrders = computed(() =>
@@ -37,7 +44,7 @@ const boardColumns = computed(() =>
 )
 
 /** Mobile focus board: OPEN / ACCEPTED / IN_PROGRESS only (DRAFT stays on desktop board). */
-const MOBILE_FOCUS_PREVIEW_LIMIT = 3
+const MOBILE_FOCUS_PREVIEW_LIMIT = 5
 
 const mobileFocusColumns = computed(() =>
   OPERATIONAL_ORDER_STATUSES.map((status) => {
@@ -48,9 +55,14 @@ const mobileFocusColumns = computed(() =>
       count,
       preview: orders.slice(0, MOBILE_FOCUS_PREVIEW_LIMIT),
       showViewAll: count > MOBILE_FOCUS_PREVIEW_LIMIT,
+      expanded: mobileExpanded[status],
     }
   }),
 )
+
+function toggleMobileFocus(status: (typeof OPERATIONAL_ORDER_STATUSES)[number]) {
+  mobileExpanded[status] = !mobileExpanded[status]
+}
 
 function driverLabel(order: DashboardBoardOrder) {
   return order.driver?.username ?? '未指派'
@@ -112,7 +124,7 @@ void loadDashboard()
 
 <template>
   <section class="page">
-    <header class="page-header">
+    <header class="page-header page-header-desktop">
       <div>
         <h1>Dashboard</h1>
         <p class="subtitle">派車管理</p>
@@ -226,21 +238,37 @@ void loadDashboard()
         </div>
       </section>
 
-      <section class="board board-mobile" aria-label="重點訂單">
-        <div class="mobile-board-header">
-          <h2 class="section-title">重點訂單</h2>
+      <section class="board board-mobile" aria-label="執行中訂單">
+        <div class="mobile-board-actions">
           <NButton text type="primary" size="small" @click="router.push({ name: 'orders' })">
             完整訂單
           </NButton>
         </div>
-        <p class="mobile-board-hint">僅顯示搶單中／已接單／行程中。草稿與完整列表請至訂單。</p>
         <div class="focus-list">
-          <template v-for="column in mobileFocusColumns" :key="column.status">
-            <div class="focus-group" :data-status="column.status">
-              <header class="focus-group-header">
+          <div
+            v-for="column in mobileFocusColumns"
+            :key="column.status"
+            class="focus-group"
+            :class="{ 'is-expanded': column.expanded }"
+            :data-status="column.status"
+          >
+            <button
+              class="focus-group-header"
+              type="button"
+              :aria-expanded="column.expanded"
+              @click="toggleMobileFocus(column.status)"
+            >
+              <span class="focus-header-main">
                 <OrderStatusTag :status="column.status" />
                 <span class="column-count">{{ column.count }}</span>
-              </header>
+              </span>
+              <ChevronDown
+                class="focus-chevron"
+                :class="{ 'is-open': column.expanded }"
+                :size="18"
+              />
+            </button>
+            <div v-if="column.expanded" class="focus-group-body">
               <p
                 v-if="!loading && column.preview.length === 0"
                 class="column-empty focus-empty"
@@ -285,7 +313,7 @@ void loadDashboard()
                 查看全部 {{ column.count }} →
               </button>
             </div>
-          </template>
+          </div>
         </div>
       </section>
     </NSpin>
@@ -575,35 +603,23 @@ h1 {
   display: none;
 }
 
-.mobile-board-header {
+.mobile-board-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  margin-bottom: var(--space-4);
-}
-
-.mobile-board-header .section-title {
-  margin: 0;
-}
-
-.mobile-board-hint {
-  margin: 0 0 var(--space-12);
-  color: var(--color-muted-text);
-  font: var(--font-caption);
+  justify-content: flex-end;
+  margin-bottom: var(--space-8);
 }
 
 .focus-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
+  gap: var(--space-8);
 }
 
 .focus-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-8);
+  padding: var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-12);
@@ -614,7 +630,48 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-8);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  width: 100%;
+  padding: var(--space-8);
+  border: none;
+  border-radius: var(--radius-8);
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.focus-group-header:hover,
+.focus-group-header:focus-visible {
+  background: color-mix(in srgb, var(--status-color) 8%, transparent);
+}
+
+.focus-group-header:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.focus-header-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.focus-chevron {
+  flex-shrink: 0;
+  color: var(--color-muted-text);
+  transition: transform 0.15s ease;
+}
+
+.focus-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.focus-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .focus-empty {
@@ -654,12 +711,12 @@ h1 {
 }
 
 @media (max-width: 900px) {
-  h1 {
-    font-size: 24px;
-  }
-
   .page {
     gap: var(--space-16);
+  }
+
+  .page-header-desktop {
+    display: none;
   }
 
   .summary-grid {

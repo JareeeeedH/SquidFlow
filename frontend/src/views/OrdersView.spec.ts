@@ -3,13 +3,18 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { ApiClientError } from '../api/types'
-import type { OrderListItem } from '../api/types'
+import type { AdminDashboard, OrderListItem } from '../api/types'
 import OrdersView from './OrdersView.vue'
 
 vi.mock('../api/orders', () => ({
   listOrders: vi.fn(),
 }))
 
+vi.mock('../api/dashboard', () => ({
+  getAdminDashboard: vi.fn(),
+}))
+
+import { getAdminDashboard } from '../api/dashboard'
 import { listOrders } from '../api/orders'
 
 const sampleOrder: OrderListItem = {
@@ -23,6 +28,18 @@ const sampleOrder: OrderListItem = {
   note: null,
   status: 'OPEN',
   driver_id: null,
+}
+
+const sampleSummary: AdminDashboard = {
+  summary: {
+    DRAFT: 1,
+    OPEN: 2,
+    ACCEPTED: 3,
+    IN_PROGRESS: 0,
+    COMPLETED: 4,
+    CANCELLED: 5,
+  },
+  board_orders: [],
 }
 
 function makeRouter() {
@@ -39,9 +56,9 @@ function makeRouter() {
   })
 }
 
-async function mountOrders() {
+async function mountOrders(path = '/orders') {
   const router = makeRouter()
-  await router.push('/orders')
+  await router.push(path)
   await router.isReady()
   const wrapper = mount(OrdersView, {
     global: {
@@ -56,6 +73,7 @@ describe('OrdersView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(listOrders).mockResolvedValue([sampleOrder])
+    vi.mocked(getAdminDashboard).mockResolvedValue(sampleSummary)
   })
 
   afterEach(() => {
@@ -66,7 +84,8 @@ describe('OrdersView', () => {
     const { wrapper } = await mountOrders()
 
     expect(listOrders).toHaveBeenCalledWith({})
-    expect(wrapper.text()).toContain('Orders')
+    expect(wrapper.text()).toContain('訂單')
+    expect(wrapper.text()).not.toContain('訂單列表')
     expect(wrapper.text()).toContain('ORD-20260915-001')
     expect(wrapper.text()).toContain('NT$ 1,200')
     expect(wrapper.text()).toContain('搶單中')
@@ -156,15 +175,7 @@ describe('OrdersView', () => {
   })
 
   it('applies status from the route query on mount', async () => {
-    const router = makeRouter()
-    await router.push('/orders?status=OPEN')
-    await router.isReady()
-    const wrapper = mount(OrdersView, {
-      global: {
-        plugins: [router],
-      },
-    })
-    await flushPromises()
+    const { wrapper } = await mountOrders('/orders?status=OPEN')
 
     expect(listOrders).toHaveBeenCalledWith({ status: 'OPEN' })
     wrapper.unmount()
@@ -179,5 +190,45 @@ describe('OrdersView', () => {
 
     expect(router.currentRoute.value.query.status).toBe('COMPLETED')
     expect(listOrders).toHaveBeenLastCalledWith({ status: 'COMPLETED' })
+  })
+
+  it('renders mobile status chips with counts and filters on chip click', async () => {
+    const { wrapper, router } = await mountOrders()
+    await flushPromises()
+
+    expect(getAdminDashboard).toHaveBeenCalled()
+    expect(wrapper.find('.status-chips').exists()).toBe(true)
+    expect(wrapper.text()).toContain('全部')
+    expect(wrapper.text()).toContain('15')
+    expect(wrapper.text()).toContain('搶單中')
+    expect(wrapper.text()).toContain('2')
+    expect(wrapper.findAll('.status-chip')).toHaveLength(7)
+    expect(wrapper.find('.status-chip.is-active').text()).toContain('全部')
+    expect(wrapper.text()).not.toContain('篩選訂單')
+
+    const openChip = wrapper
+      .findAll('.status-chip')
+      .find((chip) => chip.text().includes('搶單中'))
+    expect(openChip).toBeTruthy()
+    vi.mocked(listOrders).mockClear()
+    await openChip!.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.status).toBe('OPEN')
+    expect(listOrders).toHaveBeenLastCalledWith({ status: 'OPEN' })
+    expect(openChip!.classes()).toContain('is-active')
+  })
+
+  it('keeps compact card fields for scan reading', async () => {
+    const { wrapper } = await mountOrders()
+    const card = wrapper.find('.order-card')
+
+    expect(card.exists()).toBe(true)
+    expect(card.text()).toContain('ORD-20260915-001')
+    expect(card.text()).toContain('王先生')
+    expect(card.text()).toContain('左營高鐵站')
+    expect(card.text()).toContain('高雄小港機場')
+    expect(card.text()).toContain('NT$ 1,200')
+    expect(card.text()).toContain('搶單中')
   })
 })

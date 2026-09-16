@@ -310,7 +310,7 @@ watch(
       <template #icon>
         <ArrowLeft :size="16" />
       </template>
-      返回訂單列表
+      返回訂單
     </NButton>
 
     <NSpin :show="loading">

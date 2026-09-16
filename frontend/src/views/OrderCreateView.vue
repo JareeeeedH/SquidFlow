@@ -61,7 +61,7 @@ function onPublish(input: CreateOrderInput) {
       <template #icon>
         <ArrowLeft :size="16" />
       </template>
-      返回訂單列表
+      返回訂單
     </NButton>
 
     <header class="page-header">
