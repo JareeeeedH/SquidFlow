@@ -134,11 +134,6 @@ void loadOrders()
 
 <template>
   <section class="page">
-    <header class="page-header">
-      <h1>我的訂單</h1>
-      <p class="subtitle">目前訂單與歷史訂單</p>
-    </header>
-
     <NSpin :show="loading">
       <NResult
         v-if="forbidden"
@@ -181,7 +176,7 @@ void loadOrders()
           <NEmpty
             v-if="!loading && grouped.current.length === 0"
             description="目前沒有進行中的訂單"
-            class="empty"
+            class="empty current-empty"
           />
           <ul v-else class="list">
             <li v-for="order in grouped.current" :key="order.id">
@@ -262,7 +257,7 @@ void loadOrders()
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
+  gap: var(--space-8);
   min-width: 0;
   max-width: 100%;
 }
@@ -272,19 +267,9 @@ void loadOrders()
   overflow: visible;
   min-width: 0;
   max-width: 100%;
-}
-
-.page-header {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-h1 {
-  margin: 0;
-  font: var(--font-page-title);
-  font-size: 24px;
+  gap: var(--space-8);
 }
 
 h2 {
@@ -294,7 +279,6 @@ h2 {
   color: var(--color-primary, #0b1f3a);
 }
 
-.subtitle,
 .error-detail,
 .order-no,
 .arrow {
@@ -325,12 +309,12 @@ h2 {
 .group {
   display: flex;
   flex-direction: column;
+  gap: 0;
   min-width: 0;
 }
 
 .history-group {
-  padding-top: var(--space-8);
-  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
 }
 
 .list {
@@ -507,6 +491,14 @@ h2 {
 .empty,
 .state {
   padding: var(--space-16) 0;
+}
+
+.current-empty {
+  padding: var(--space-8) 0;
+}
+
+.current-empty :deep(.n-empty__icon) {
+  margin-bottom: var(--space-4);
 }
 
 .state :deep(.n-button) {

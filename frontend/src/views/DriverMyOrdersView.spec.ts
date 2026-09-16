@@ -78,11 +78,15 @@ describe('DriverMyOrdersView', () => {
     vi.resetAllMocks()
   })
 
-  it('splits current and history orders', async () => {
+  it('splits current and history orders without page title', async () => {
     const { wrapper } = await mountMine()
 
-    expect(wrapper.text()).toContain('目前訂單')
-    expect(wrapper.text()).toContain('歷史訂單')
+    expect(wrapper.findAll('h1')).toHaveLength(0)
+    expect(wrapper.text()).not.toContain('目前訂單與歷史訂單')
+    expect(wrapper.findAll('h2').map((node) => node.text())).toEqual([
+      '目前訂單',
+      '歷史訂單',
+    ])
     expect(wrapper.text()).toContain('ORD-20260915-010')
     expect(wrapper.text()).toContain('ORD-20260915-009')
     expect(wrapper.text()).toContain('已接單')
