@@ -236,7 +236,7 @@ describe('DashboardView', () => {
     expect(openGroup.find('.focus-accordion').attributes('aria-hidden')).toBe('true')
   })
 
-  it('expands mobile focus to 5 latest orders and links to filtered list', async () => {
+  it('expands mobile focus to all orders for the status', async () => {
     const openOrders = Array.from({ length: 7 }, (_, index) => ({
       id: `open-${index}`,
       order_no: `ORD-OPEN-${index}`,
@@ -261,8 +261,7 @@ describe('DashboardView', () => {
       board_orders: openOrders,
     })
 
-    const { wrapper, router } = await mountDashboard()
-    const push = vi.spyOn(router, 'push')
+    const { wrapper } = await mountDashboard()
     const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
 
     expect(openGroup.exists()).toBe(true)
@@ -273,32 +272,25 @@ describe('DashboardView', () => {
     )
     expect(openGroup.classes()).toContain('is-expanded')
     expect(openGroup.find('.focus-accordion').classes()).toContain('is-open')
-    expect(openGroup.findAll('.order-card')).toHaveLength(5)
+    expect(openGroup.findAll('.order-card')).toHaveLength(7)
     expect(openGroup.text()).toContain('ORD-OPEN-0')
-    expect(openGroup.text()).toContain('ORD-OPEN-4')
-    expect(openGroup.text()).not.toContain('ORD-OPEN-5')
-    expect(openGroup.text()).toContain('查看全部 7 →')
+    expect(openGroup.text()).toContain('ORD-OPEN-6')
+    expect(openGroup.text()).not.toContain('查看全部')
+    expect(openGroup.find('.view-all').exists()).toBe(false)
 
     await openGroup.find('.focus-group-header').trigger('click')
     expect(openGroup.find('.focus-accordion').classes()).not.toContain('is-open')
     await openGroup.find('.focus-group-header').trigger('click')
     expect(openGroup.find('.focus-accordion').classes()).toContain('is-open')
-
-    const viewAll = openGroup.find('.view-all')
-    await viewAll.trigger('click')
-
-    expect(push).toHaveBeenCalledWith({
-      name: 'orders',
-      query: { status: 'OPEN' },
-    })
   })
 
-  it('hides mobile view-all when status has at most 5 orders', async () => {
+  it('keeps accordion header-only chrome when collapsed', async () => {
     const { wrapper } = await mountDashboard()
     const openGroup = wrapper.find('.board-mobile .focus-group[data-status="OPEN"]')
-    await openGroup.find('.focus-group-header').trigger('click')
 
-    expect(openGroup.text()).toContain('ORD-20260915-003')
+    expect(openGroup.find('.focus-group-header').text()).toContain('搶單中')
+    expect(openGroup.find('.focus-chevron').exists()).toBe(true)
+    expect(openGroup.find('.focus-accordion').classes()).not.toContain('is-open')
     expect(openGroup.text()).not.toContain('查看全部')
   })
 

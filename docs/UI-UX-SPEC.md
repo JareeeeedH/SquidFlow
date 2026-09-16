@@ -209,8 +209,7 @@ Mobile Dashboard：
 - 不顯示頁面標題「Dashboard」與副標「派車管理」
 - 不顯示「重點訂單」區塊標題與說明文字
 - Status Summary（3×2）後接可收合狀態區；保留「完整訂單」入口
-- 各狀態區**預設收合**；展開後顯示該狀態**最新 5 筆**（依 `board_orders` 的 `created_at` 降序）
-- 若該 Status 還有更多訂單，展開後顯示「查看全部 N →」，導向 `/orders?status=<status>`（N 為 summary 數量）
+- 各狀態區可收合／展開；展開後顯示該狀態全部訂單，預設收合（依 `board_orders` 的 `created_at` 降序）
 
 草稿不進 Mobile 此區。完整訂單（含草稿／已完成／已取消與搜尋篩選）維持 `/orders`。
 
@@ -775,7 +774,7 @@ OFFLINE      Muted
 
 - 首頁以 Dashboard 為主
 - Status Summary 點擊後到 `/orders?status=<status>`
-- Desktop Dispatch Board 提供看板感；Mobile 為 OPEN／ACCEPTED／IN_PROGRESS 可收合狀態區（預設收合，展開最多 5 筆）
+- Desktop Dispatch Board 提供看板感；Mobile 為 OPEN／ACCEPTED／IN_PROGRESS 可收合狀態區（預設收合；展開後顯示該狀態全部訂單）
 - 完整訂單在 `/orders`（頁面標題「訂單」；Desktop Table／Mobile Card）
 - 建單盡量單頁完成；Create 提供儲存草稿與發布搶單
 - 發布後訂單唯讀
