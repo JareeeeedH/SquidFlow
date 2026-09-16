@@ -264,6 +264,9 @@ describe('Admin Order CRUD / DRAFT (e2e)', () => {
   });
 
   it('starts a new date segment independently of another date prefix', async () => {
+    await prisma.order.deleteMany({
+      where: { orderNo: 'ORD-19990101-099' },
+    });
     await prisma.order.create({
       data: {
         orderNo: 'ORD-19990101-099',

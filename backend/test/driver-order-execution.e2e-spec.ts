@@ -48,6 +48,7 @@ type MyOrderItem = {
   destination: string | null;
   price: number | null;
   status: string;
+  distance_meters: number | null;
 };
 
 function asBody<T>(response: request.Response): T {
@@ -387,6 +388,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       price: 1200,
       status: 'CANCELLED',
       created_at: body.data[0].created_at,
+      distance_meters: null,
     });
     expect(typeof body.data[0].created_at).toBe('string');
     expect(JSON.stringify(body)).not.toMatch(/customer_name|driver_id|"note"/);

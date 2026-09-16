@@ -48,7 +48,7 @@ Phase 3 — Advanced Dispatch & Communication
 ### 啟動方式
 
 ```text
-1. 複製 backend/.env.example 為 backend/.env
+1. 複製 backend/.env.example 為 backend/.env（預設 PORT=3001，對齊 Vite proxy）
 2. 複製 frontend/.env.example 為 frontend/.env，並填入與 Backend 相同的 VAPID public key
 3. npm run db:up
 4. cd backend && npm install && npm run prisma:generate
@@ -57,7 +57,7 @@ Phase 3 — Advanced Dispatch & Communication
 7. npm run dev:frontend
 ```
 
-本機驗證時，host `5432` 與 `3000` 已被占用，因此 Docker PostgreSQL 對應 `localhost:5433`，Backend 使用 `PORT=3001`。
+本機預設：Docker PostgreSQL 對應 `localhost:5433`；Backend `PORT=3001`（與 Vite `/api` proxy 一致）。若 host `3001` 被占用，同時改 `backend/.env` 的 `PORT` 與 `frontend/vite.config.ts` proxy target。
 
 ---
 

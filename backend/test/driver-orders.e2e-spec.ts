@@ -48,6 +48,7 @@ type OpenOrderItem = {
   destination: string | null;
   price: number | null;
   note: string | null;
+  distance_meters: number | null;
 };
 
 type DriverOrderDetail = {
@@ -60,6 +61,9 @@ type DriverOrderDetail = {
   price: number | null;
   note: string | null;
   status: string;
+  distance_meters: number | null;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
 };
 
 function asBody<T>(response: request.Response): T {
@@ -359,12 +363,14 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
       price: 1200,
       note: '2件行李',
       created_at: openItem?.created_at,
+      distance_meters: null,
     });
     expect(typeof openItem?.created_at).toBe('string');
     expect(Object.keys(openItem as OpenOrderItem).sort()).toEqual(
       [
         'created_at',
         'destination',
+        'distance_meters',
         'id',
         'note',
         'order_no',
@@ -446,6 +452,9 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         note: '2件行李',
         status: 'OPEN',
         created_at: body.data.created_at,
+        distance_meters: null,
+        pickup_latitude: null,
+        pickup_longitude: null,
       },
     });
     expect(typeof body.data.created_at).toBe('string');
@@ -455,10 +464,13 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         'created_at',
         'customer_name',
         'destination',
+        'distance_meters',
         'id',
         'note',
         'order_no',
+        'pickup_latitude',
         'pickup_location',
+        'pickup_longitude',
         'price',
         'status',
       ].sort(),
