@@ -83,6 +83,7 @@ Kubernetes
 - Publish Order
 - Cancel Order
 - Driver Management
+- 查看 ONLINE Driver 最新位置（Phase 2 / P2-01）
 - 查看 OrderEvent
 
 Admin Web 透過 REST API 與 Backend 溝通。
@@ -95,6 +96,7 @@ Admin Web 透過 REST API 與 Backend 溝通。
 
 - Driver Login
 - ONLINE / OFFLINE
+- GPS location reporting while ONLINE（Browser Geolocation）
 - 查看 OPEN Orders
 - 查看 Order Detail
 - Accept Order
@@ -123,6 +125,7 @@ Base Path：
 - Order Management
 - Driver Order Operations
 - Driver Status
+- Driver Location（latest GPS only）
 - Notification
 
 Frontend 只負責：
@@ -189,6 +192,7 @@ User 是登入帳號。
 - Driver Profile
 - Vehicle Data
 - ONLINE / OFFLINE Status
+- Latest GPS location（`latitude` / `longitude` / `location_updated_at`）
 - Driver Account Management
 
 Driver 與 User 為：
@@ -197,6 +201,7 @@ Driver 與 User 為：
 User 1 : 0..1 Driver
 ```
 
+Phase 2 / P2-01：只覆寫最新位置，不保存 location history。
 ---
 
 ### 3.4 Orders Module
@@ -513,12 +518,15 @@ Driver
 ├─ View Own Order              ✅
 ├─ Start Own Order             ✅
 ├─ Complete Own Order          ✅
+├─ Update / Read Own Location  ✅
 ├─ View Other Driver Order     ❌
+├─ View Other Driver Location  ❌
 └─ Cancel Order                ❌
 
 Admin
 ├─ View All Orders             ✅
 ├─ Manage Drivers              ✅
+├─ View Online Driver Locations ✅
 └─ View Order Events           ✅
 ```
 
@@ -766,6 +774,49 @@ IN_PROGRESS
 仍然可以切換 OFFLINE。
 
 切換 OFFLINE 不會修改 Order Status。
+
+### 8.3.1 Driver GPS Location Lifecycle（Phase 2 / P2-01）
+
+產品規則見 `PHASE-2-SPEC.md`（P2-01）。
+
+座標來源：
+
+```text
+Browser Geolocation API
+        ↓
+Driver Web / PWA
+        ↓
+PATCH /api/v1/driver/location
+        ↓
+Backend 覆寫 drivers 最新位置
+```
+
+Lifecycle：
+
+```text
+Driver → ONLINE
+        ↓
+立即請求第一次 Geolocation
+        ↓
+之後每 30 秒更新一次
+        ↓
+Driver → OFFLINE
+        ↓
+停止 GPS 更新
+        ↓
+保留最後一次有效位置（不清空）
+```
+
+失敗規則：
+
+- GPS 權限拒絕、定位失敗，或 location API 失敗：**不得**改變 `ONLINE` / `OFFLINE`
+- 失敗時保留最後一次有效位置；於下一個 30 秒週期再重試
+
+範圍限制：
+
+- Backend 只儲存最新有效位置
+- Phase 2 **不**實作 location history
+- Phase 2 **不**實作 WebSocket / SSE 等 real-time tracking infrastructure
 
 ---
 
@@ -1398,14 +1449,22 @@ Phase 2 — Driver Location & Trip Information
 Phase 3 — Advanced Dispatch & Communication
 ```
 
-**Phase 2** 聚焦：
+產品範圍以 `PHASE-2-SPEC.md` 為準。
 
-- Driver GPS 位置更新與儲存
-- `Driver → Pickup` 距離 / ETA
-- 基本地圖視覺化（Driver 位置 + Pickup）
-- Pickup 地址 Geocoding
+**Phase 2 / P2-01（已對齊）：**
 
-不要求完整導航，不建立複雜 Dispatch Engine。
+- Browser Geolocation 取得 Driver GPS
+- ONLINE / OFFLINE 控制 GPS 更新 lifecycle
+- Backend 儲存最新位置 only
+- Admin 可讀 ONLINE Drivers 最新位置
+
+**Phase 2 / P2-02–P2-04（產品已定方向，技術細節後續同步）：**
+
+- Pickup Geocoding（建單不阻塞）
+- SquidFlow 內部直線距離（非道路距離；無 ETA）
+- Web App 內地圖 + Google Maps 導航 handoff
+
+Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn。
 
 **Phase 3** 為後續規劃（僅簡述）：
 

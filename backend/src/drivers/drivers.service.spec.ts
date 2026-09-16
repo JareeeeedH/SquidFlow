@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserStatus } from '@prisma/client';
+import { DriverOnlineStatus, Prisma, UserStatus } from '@prisma/client';
 import { PasswordService } from '../auth/password.service';
 import { SessionService } from '../auth/session.service';
+import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { DriversService } from './drivers.service';
 
@@ -10,6 +11,8 @@ describe('DriversService', () => {
   const prisma = {
     driver: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
     },
     user: {
       update: jest.fn(),
@@ -22,6 +25,8 @@ describe('DriversService', () => {
 
   beforeEach(async () => {
     prisma.driver.findUnique.mockReset();
+    prisma.driver.findMany.mockReset();
+    prisma.driver.update.mockReset();
     prisma.user.update.mockReset();
     prisma.$transaction.mockReset();
     sessionService.revokeActiveSessions.mockReset();
@@ -50,6 +55,15 @@ describe('DriversService', () => {
         username: 'driver-one',
         status,
       },
+    };
+  }
+
+  function activeDriverUser(): AuthenticatedUser {
+    return {
+      id: 'user-1',
+      username: 'driver-one',
+      role: 'DRIVER',
+      status: UserStatus.ACTIVE,
     };
   }
 
@@ -104,5 +118,107 @@ describe('DriversService', () => {
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(sessionService.revokeActiveSessions).not.toHaveBeenCalled();
+  });
+
+  it('updates only the authenticated driver location fields', async () => {
+    const updatedAt = new Date('2026-09-16T00:30:00.000Z');
+    prisma.driver.findUnique.mockResolvedValue({ id: 'driver-1' });
+    prisma.driver.update.mockResolvedValue({
+      latitude: new Prisma.Decimal('22.6870123'),
+      longitude: new Prisma.Decimal('120.3090456'),
+      locationUpdatedAt: updatedAt,
+    });
+
+    const result = await service.updateOwnLocation(activeDriverUser(), {
+      latitude: 22.6870123,
+      longitude: 120.3090456,
+    });
+    expect(result).toEqual({
+      latitude: 22.6870123,
+      longitude: 120.3090456,
+      location_updated_at: updatedAt.toISOString(),
+    });
+
+    expect(prisma.driver.findUnique).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      select: { id: true },
+    });
+    expect(prisma.driver.update).toHaveBeenCalledTimes(1);
+    const updateCall = prisma.driver.update.mock.calls[0] as unknown as [
+      {
+        where: { id: string };
+        data: {
+          latitude: Prisma.Decimal;
+          longitude: Prisma.Decimal;
+          locationUpdatedAt: Date;
+          onlineStatus?: unknown;
+        };
+      },
+    ];
+    expect(updateCall[0].where).toEqual({ id: 'driver-1' });
+    expect(updateCall[0].data.latitude).toBeInstanceOf(Prisma.Decimal);
+    expect(updateCall[0].data.longitude).toBeInstanceOf(Prisma.Decimal);
+    expect(updateCall[0].data.locationUpdatedAt).toBeInstanceOf(Date);
+    expect(updateCall[0].data.onlineStatus).toBeUndefined();
+  });
+
+  it('returns null location when the driver has never reported GPS', async () => {
+    prisma.driver.findUnique.mockResolvedValue({
+      latitude: null,
+      longitude: null,
+      locationUpdatedAt: null,
+    });
+
+    await expect(service.getOwnLocation(activeDriverUser())).resolves.toEqual({
+      latitude: null,
+      longitude: null,
+      location_updated_at: null,
+    });
+  });
+
+  it('lists only ONLINE drivers for admin online locations', async () => {
+    prisma.driver.findMany.mockResolvedValue([
+      {
+        id: 'driver-1',
+        licensePlate: 'ABC-1234',
+        latitude: new Prisma.Decimal('22.6'),
+        longitude: new Prisma.Decimal('120.3'),
+        locationUpdatedAt: new Date('2026-09-16T00:30:00.000Z'),
+        user: { username: 'driver-one' },
+      },
+    ]);
+
+    await expect(service.listOnlineLocations()).resolves.toEqual([
+      {
+        id: 'driver-1',
+        username: 'driver-one',
+        license_plate: 'ABC-1234',
+        online_status: 'ONLINE',
+        latitude: 22.6,
+        longitude: 120.3,
+        location_updated_at: '2026-09-16T00:30:00.000Z',
+      },
+    ]);
+
+    expect(prisma.driver.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { onlineStatus: DriverOnlineStatus.ONLINE },
+      }),
+    );
+  });
+
+  it('rejects suspended drivers from updating location', async () => {
+    await expect(
+      service.updateOwnLocation(
+        {
+          id: 'user-1',
+          username: 'driver-one',
+          role: 'DRIVER',
+          status: UserStatus.SUSPENDED,
+        },
+        { latitude: 1, longitude: 2 },
+      ),
+    ).rejects.toMatchObject({ errorCode: 'ACCOUNT_SUSPENDED' });
+    expect(prisma.driver.update).not.toHaveBeenCalled();
   });
 });

@@ -818,6 +818,116 @@ OFFLINE
 
 ---
 
+# 5A. Driver — Location（Phase 2 / P2-01）
+
+Driver 以 Browser Geolocation 取得座標後，上報自己的最新位置。僅 `DRIVER`。`SUSPENDED` 回 `ACCOUNT_SUSPENDED`。
+
+位置上報**不得**改變 `online_status`。GPS／上報失敗由 Client 於下一個週期重試；Backend 不因此將 Driver 設為 `OFFLINE`。
+
+產品規則見 `PHASE-2-SPEC.md`（P2-01）。
+
+## Update Own Location
+
+```http
+PATCH /api/v1/driver/location
+```
+
+### Request
+
+```json
+{
+  "latitude": 22.6870123,
+  "longitude": 120.3090456
+}
+```
+
+### Validation
+
+- 只接受 `latitude`、`longitude`
+- 兩者皆必填，且必須為 number
+- `latitude` 範圍：`-90` ～ `90`
+- `longitude` 範圍：`-180` ～ `180`
+- 驗證失敗回 `VALIDATION_ERROR`
+
+Driver 只能更新**自己的**最新位置；不可指定其他 `driver_id` / `user_id`。
+
+成功時覆寫 `drivers.latitude`、`drivers.longitude`，並寫入 `location_updated_at`（server time）。
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "latitude": 22.6870123,
+    "longitude": 120.3090456,
+    "location_updated_at": "2026-09-16T00:30:00.000Z"
+  }
+}
+```
+
+---
+
+## Get Own Location
+
+```http
+GET /api/v1/driver/location
+```
+
+讀取目前登入 Driver 儲存的最新位置。僅 `DRIVER`。
+
+尚未有有效位置時，座標與時間為 `null`。
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "latitude": 22.6870123,
+    "longitude": 120.3090456,
+    "location_updated_at": "2026-09-16T00:30:00.000Z"
+  }
+}
+```
+
+---
+
+# 5B. Admin — Online Driver Locations（Phase 2 / P2-01）
+
+## List Online Driver Locations
+
+```http
+GET /api/v1/drivers/online-locations
+```
+
+僅 `ADMIN`。回傳目前 `online_status = ONLINE` 的 Drivers 及其最新位置。
+
+- 不含 `OFFLINE` Drivers（Online Drivers map 不需要顯示他們）
+- 若某 ONLINE Driver 尚未有有效位置，仍列入清單，`latitude` / `longitude` / `location_updated_at` 為 `null`
+- 不回傳道路距離、ETA，亦不呼叫 Google Routes API
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "username": "driver001",
+      "license_plate": "ABC-1234",
+      "online_status": "ONLINE",
+      "latitude": 22.6870123,
+      "longitude": 120.3090456,
+      "location_updated_at": "2026-09-16T00:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
 # 6. Notification
 
 ## List Notifications
@@ -918,15 +1028,6 @@ DELETE /api/v1/notifications/subscription
 
 所有 API 由 Backend 驗證角色與資源權限。
 
-### Admin
-
-```text
-Driver Management
-Order Management
-Dashboard
-Order Events
-```
-
 ### Driver
 
 ```text
@@ -936,7 +1037,18 @@ Accept
 Start
 Complete
 Online / Offline
+Own Location
 Notifications
+```
+
+### Admin
+
+```text
+Driver Management
+Online Driver Locations
+Order Management
+Dashboard
+Order Events
 ```
 
 ---
@@ -979,6 +1091,7 @@ Notifications
 UNAUTHORIZED
 FORBIDDEN
 NOT_FOUND
+VALIDATION_ERROR
 INVALID_CREDENTIALS
 ACCOUNT_SUSPENDED
 DRIVER_OFFLINE
@@ -1005,15 +1118,22 @@ INVALID_ORDER_STATUS
 # 11. Product Phase API Boundary
 
 ```text
-Phase 1 — 目前 API-SPEC 已定義的端點（核心派車 MVP）
+Phase 1 — 核心派車 MVP 端點
 Phase 2 — Driver Location & Trip Information
 Phase 3 — Advanced Dispatch & Communication
 ```
 
-**Phase 2**（進入該階段時再定義詳細 contract）：
+產品範圍以 `PHASE-2-SPEC.md` 為準。
 
-- Driver 位置上報 / 儲存
-- Distance / ETA（以 `Driver → Pickup` 為核心）
-- 支援地圖顯示所需的位置資料
+**Phase 2 / P2-01（已定義）：**
+
+- `PATCH /api/v1/driver/location` — Driver 上報最新位置
+- `GET /api/v1/driver/location` — Driver 讀取自己的最新位置
+- `GET /api/v1/drivers/online-locations` — Admin 讀取 ONLINE Drivers 最新位置
+
+**Phase 2 / P2-02–P2-04：**
+
+- Pickup Geocoding、直線距離、地圖相關 contract 於後續同步時再定義
+- Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
 **Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。

@@ -6,7 +6,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../common/types/authenticated-user';
 import { DriversService } from './drivers.service';
-import { parseUpdateOnlineStatusBody } from './drivers.validation';
+import {
+  parseUpdateDriverLocationBody,
+  parseUpdateOnlineStatusBody,
+} from './drivers.validation';
 
 @Controller('driver')
 @UseGuards(AuthGuard, RolesGuard)
@@ -31,6 +34,30 @@ export class DriverStatusController {
     const data = await this.driversService.updateOnlineStatus(
       user,
       parseUpdateOnlineStatusBody(body),
+    );
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Get('location')
+  async getOwnLocation(@CurrentUser() user: AuthenticatedUser) {
+    const data = await this.driversService.getOwnLocation(user);
+    return {
+      success: true,
+      data,
+    };
+  }
+
+  @Patch('location')
+  async updateOwnLocation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
+  ) {
+    const data = await this.driversService.updateOwnLocation(
+      user,
+      parseUpdateDriverLocationBody(body),
     );
     return {
       success: true,

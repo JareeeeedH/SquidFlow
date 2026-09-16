@@ -91,3 +91,33 @@ export function parseUpdateOnlineStatusBody(body: unknown): DriverOnlineStatus {
   }
   throw AppErrors.validation('status 必須為 ONLINE 或 OFFLINE');
 }
+
+export type UpdateDriverLocationInput = {
+  latitude: number;
+  longitude: number;
+};
+
+function requireCoordinate(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw AppErrors.validation(`${field} 必須為數字`);
+  }
+  if (value < min || value > max) {
+    throw AppErrors.validation(`${field} 超出有效範圍`);
+  }
+  return value;
+}
+
+export function parseUpdateDriverLocationBody(
+  body: unknown,
+): UpdateDriverLocationInput {
+  const data = asRecord(body);
+  return {
+    latitude: requireCoordinate(data.latitude, 'latitude', -90, 90),
+    longitude: requireCoordinate(data.longitude, 'longitude', -180, 180),
+  };
+}

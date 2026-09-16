@@ -706,11 +706,11 @@ Driver
 
 ```text
 Phase 1 — 目前 MVP UI Scope（上表）
-Phase 2 — Driver Location & Trip Information（地圖 / 距離 / ETA 相關 UI）
+Phase 2 — Driver Location & Trip Information（地圖 / 直線距離相關 UI）
 Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI）
 ```
 
-Phase 2 / Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 2 地圖頁或 Phase 3 通訊介面。
+產品範圍以 `PHASE-2-SPEC.md` 為準。Phase 2 / Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 2 地圖頁或 Phase 3 通訊介面。Phase 2 UI **不**呈現道路距離或 ETA。
 
 ---
 

@@ -78,19 +78,22 @@ model User {
 }
 
 model Driver {
-  id           String             @id @default(uuid()) @db.Uuid
-  userId       String             @unique @map("user_id") @db.Uuid
-  vehicleType  String?            @map("vehicle_type") @db.VarChar
-  licensePlate String             @unique @map("license_plate") @db.VarChar
-  vehicleBrand String             @map("vehicle_brand") @db.VarChar
-  vehicleModel String             @map("vehicle_model") @db.VarChar
-  vehicleColor String             @map("vehicle_color") @db.VarChar
-  vehicleYear  Int?               @map("vehicle_year") @db.SmallInt
-  onlineStatus DriverOnlineStatus @map("online_status")
-  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user         User               @relation(fields: [userId], references: [id])
-  orders       Order[]
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @unique @map("user_id") @db.Uuid
+  vehicleType        String?            @map("vehicle_type") @db.VarChar
+  licensePlate       String             @unique @map("license_plate") @db.VarChar
+  vehicleBrand       String             @map("vehicle_brand") @db.VarChar
+  vehicleModel       String             @map("vehicle_model") @db.VarChar
+  vehicleColor       String             @map("vehicle_color") @db.VarChar
+  vehicleYear        Int?               @map("vehicle_year") @db.SmallInt
+  onlineStatus       DriverOnlineStatus @map("online_status")
+  latitude           Decimal?           @db.Decimal(10, 7)
+  longitude          Decimal?           @db.Decimal(10, 7)
+  locationUpdatedAt  DateTime?          @map("location_updated_at") @db.Timestamptz(6)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               User               @relation(fields: [userId], references: [id])
+  orders             Order[]
 
   @@map("drivers")
 }

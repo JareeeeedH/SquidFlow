@@ -703,36 +703,41 @@ Phase 3 — Advanced Dispatch & Communication
 
 ## 18.2 Phase 2 — Driver Location & Trip Information
 
-Phase 2 只包含：
+產品範圍以 `PHASE-2-SPEC.md` 為準。
 
-### Driver Location
+Phase 2 包含：
 
-- Driver 可啟用 GPS
-- 取得目前經緯度
-- 定期更新位置
-- Backend 儲存 Driver 目前位置
-- Online / Offline 影響定位更新
+### Driver Location（P2-01）
 
-### Distance / ETA
+- Driver `ONLINE` 時以 Browser Geolocation 啟用 GPS
+- 進入 `ONLINE` 後立即取得第一次位置，之後每 30 秒更新
+- Backend 只儲存 Driver 最新位置
+- `OFFLINE` 停止更新，並保留最後一次有效位置
+- GPS／上報失敗不得改變 Online／Offline 狀態
+- 不做 location history
 
-- 使用 Driver 當前位置
-- 對應 Order Pickup Location
-- 計算距離
-- 計算 / 顯示預估到達時間（ETA）
+### Distance（P2-03）
 
-### Map
+- 使用 Driver 最新座標與 Pickup 座標
+- SquidFlow 內部計算**直線距離**
+- 不做道路距離，不做 ETA
+- 不使用 Google Routes API 做距離／ETA
 
-- 顯示 Driver 自己的位置
-- 顯示 Order Pickup 位置
-- 提供基本地圖視覺化
+### Map & Navigation（P2-04）
+
+- Web App 內顯示地圖（Driver 自己的位置、Pickup；Admin 查看 ONLINE Drivers）
+- 接單後「開始導航」交由 Google Maps；不做 App 內 turn-by-turn
+
+### Pickup Geocoding（P2-02）
+
+- 建單先存文字上車地址；建立後系統自動 Geocoding
+- Geocoding 失敗不阻塞訂單流程
 
 ### Phase 2 基本原則
 
-- Order Pickup 文字地址需要 Geocoding 成座標
-- Distance / ETA 以 `Driver → Pickup` 為核心
-- 第一版不要求完整導航
+- 先聚焦「司機在哪裡」與「到上車點的直線距離」
 - 不建立複雜 Dispatch Engine
-- Phase 2 先聚焦「司機在哪裡」與「距離訂單上車地點多遠」
+- 不做自動派車／AI Dispatch／通訊整合
 
 ## 18.3 Phase 3 — Advanced Dispatch & Communication
 

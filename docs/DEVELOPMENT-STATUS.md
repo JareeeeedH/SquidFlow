@@ -14,16 +14,16 @@ Phase 3 — Advanced Dispatch & Communication
 
 核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線 / 離線、Web Push、Admin / Driver UI。詳見下方已完成 TASK。
 
-### Phase 2（尚未開始）
+### Phase 2（尚未開始實作）
 
-只包含：
+產品範圍以 `PHASE-2-SPEC.md` 為準。包含：
 
-- Driver Location（GPS、定期更新、Backend 儲存；Online / Offline 影響更新）
-- Distance / ETA（`Driver → Pickup`）
-- Map（Driver 位置 + Pickup；基本視覺化）
-- Pickup Geocoding
+- Driver Location（P2-01：GPS、立即首次定位、每 30 秒更新、Backend 只存最新位置；Online / Offline 控制更新；失敗不改 Online 狀態）
+- Pickup Geocoding（P2-02：建單不阻塞；建立後自動 geocode）
+- Straight-line Distance（P2-03：SquidFlow 內部計算；無道路距離／ETA）
+- Map & Google Maps Navigation handoff（P2-04）
 
-不要求完整導航，不建立複雜 Dispatch Engine。
+不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA。
 
 ### Phase 3（後續規劃，僅簡述）
 
@@ -624,7 +624,20 @@ Phase 3 — Advanced Dispatch & Communication
 ### 已完成
 
 - 統一 Phase 1 / 2 / 3 邊界於 MVP / Architecture / API / Database / UI-UX / DEVELOPMENT-STATUS
-- Phase 2 限定 Location / Distance / ETA / Map；第三方通訊與進階派車移至 Phase 3
+- Phase 2 限定 Location / Distance / Map；第三方通訊與進階派車移至 Phase 3
+- 未改 Backend / Frontend / Schema / Migration / API 實作
+
+---
+
+## TASK — P2-01 Driver GPS Location Technical Spec Sync
+
+**Status:** completed
+
+### 已完成
+
+- 以 `PHASE-2-SPEC.md` 為產品準據，同步 P2-01 至 DATABASE / API / Architecture / Security
+- Driver 最新位置欄位、Driver location 上報／讀取 API、Admin ONLINE locations API、GPS lifecycle 與授權規則已寫入 Spec
+- 移除／更正與 finalized Phase 2 衝突的道路距離／ETA 描述（相關文件）
 - 未改 Backend / Frontend / Schema / Migration / API 實作
 
 ---

@@ -38,6 +38,7 @@
 - Backend 必須驗證 Resource Ownership。
 - 知道 `id` 不代表有權限存取 Resource。
 - Driver 不得存取其他 Driver 的受限 Order。
+- Driver 不得更新或讀取其他 Driver 的 GPS 位置。
 - 不得透過修改 `user_id`、`driver_id`、`order_id` 等參數繞過權限。
 
 ---
@@ -49,6 +50,9 @@
 - 所有 Request Body、Query、Path Parameters 必須由 Backend 驗證。
 - Create / Update 只接受明確允許的欄位。
 - 不得直接將整個 Request Body 映射至 Database Model。
+- Driver location 上報必須由 Backend 驗證座標範圍：
+  - `latitude`：`-90` ～ `90`
+  - `longitude`：`-180` ～ `180`
 
 ## Injection
 
@@ -135,6 +139,20 @@ Production Error 不得暴露：
 
 ---
 
+# 9A. Driver Location Security（Phase 2 / P2-01）
+
+產品規則見 `PHASE-2-SPEC.md`（P2-01）。沿用既有 `ADMIN` / `DRIVER` 授權模型，不新增 Role 或 Permission 體系。
+
+- Driver location update / read 必須通過 Authentication；僅 `DRIVER`。
+- Driver 只能更新／讀取**自己的**最新位置。
+- Admin 讀取 Online Driver locations 必須通過既有 Admin Authorization（僅 `ADMIN`）。
+- Admin Online locations API 只回傳 `ONLINE` Drivers；不因此開放其他 Driver 的受限資源。
+- 座標範圍必須由 Server-side Validation 強制執行。
+- Location update **不得**改變 `online_status`。
+- Location 相關 API 不引入道路距離、ETA，或 Google Routes API。
+
+---
+
 # 10. MVP Security Baseline
 
 SquidFlow MVP 必須至少具備：
@@ -156,6 +174,7 @@ SquidFlow MVP 必須至少具備：
 - Secrets Protection
 - Secure Error Handling
 - Order Business Logic / Concurrency Protection
+- Driver Location Ownership / Coordinate Validation（Phase 2 / P2-01）
 
 ---
 
@@ -172,3 +191,4 @@ SquidFlow MVP 必須至少具備：
 - Enterprise Security Monitoring
 - Advanced DDoS Protection
 - Distributed Security Infrastructure
+- Location history storage / real-time tracking infrastructure（Phase 2 亦不實作）

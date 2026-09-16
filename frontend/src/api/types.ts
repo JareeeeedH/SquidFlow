@@ -181,6 +181,22 @@ export type DriverOnlineStatusResult = {
   status: OnlineStatus
 }
 
+export type DriverLocationResult = {
+  latitude: number | null
+  longitude: number | null
+  location_updated_at: string | null
+}
+
+export type OnlineDriverLocationItem = {
+  id: string
+  username: string
+  license_plate: string
+  online_status: 'ONLINE'
+  latitude: number | null
+  longitude: number | null
+  location_updated_at: string | null
+}
+
 export type DriverOpenOrder = {
   id: string
   order_no: string

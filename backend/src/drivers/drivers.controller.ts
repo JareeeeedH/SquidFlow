@@ -42,6 +42,15 @@ export class DriversController {
     };
   }
 
+  @Get('online-locations')
+  async listOnlineLocations() {
+    const data = await this.driversService.listOnlineLocations();
+    return {
+      success: true,
+      data,
+    };
+  }
+
   @Post()
   @HttpCode(HttpStatus.OK)
   async create(@Body() body: unknown) {

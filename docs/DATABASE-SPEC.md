@@ -68,6 +68,9 @@ Driver
 ├─ vehicle_color
 ├─ vehicle_year
 ├─ online_status
+├─ latitude
+├─ longitude
+├─ location_updated_at
 ├─ created_at
 └─ updated_at
 ```
@@ -83,6 +86,9 @@ Driver
 | `vehicle_color` | VARCHAR | ✅ |
 | `vehicle_year` | SMALLINT | ❌ |
 | `online_status` | ENUM | ✅ |
+| `latitude` | DECIMAL(10,7) | ❌ |
+| `longitude` | DECIMAL(10,7) | ❌ |
+| `location_updated_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 
@@ -92,6 +98,15 @@ ONLINE / OFFLINE
 ```
 
 `vehicle_type` 與 `vehicle_year` 保留既有資料；新 Driver 不再寫入這兩欄，值為 `NULL`。
+
+### Driver latest location（Phase 2 / P2-01）
+
+- Driver 只儲存**最新一筆** GPS 位置（覆寫既有值）。
+- `latitude`、`longitude`、`location_updated_at` 皆可為 `NULL`（尚未取得有效位置時）。
+- 成功寫入有效位置時，三欄一併更新。
+- Driver 改為 `OFFLINE` 時**不清空**最後一次有效位置。
+- Phase 2 **不**新增 location history 資料表。
+- 不為 `latitude` / `longitude` 新增專用 Index；Online Driver 查詢沿用既有 `online_status` 語意與查詢方式。
 
 ---
 
@@ -467,13 +482,16 @@ OFFLINE
 ONLINE
 → 可收到新訂單通知
 → 可搶單
+→ Phase 2：Client 開始 GPS 更新（見 Architecture / PHASE-2-SPEC）
 
 OFFLINE
 → 不接收新訂單通知
 → 不可搶單
+→ Phase 2：Client 停止 GPS 更新；Database 保留最後一次有效位置
 ```
 
 Online Status 與 Order Status 分開管理。
+GPS 失敗不得改變 Online Status。
 
 ### Session
 
@@ -530,11 +548,22 @@ updated_at
 # 12. Product Phase Data Boundary
 
 ```text
-Phase 1 — 目前 DATABASE-SPEC 已定義的 Schema（核心派車 MVP）
+Phase 1 — 核心派車 MVP Schema
 Phase 2 — Driver Location & Trip Information
 Phase 3 — Advanced Dispatch & Communication
 ```
 
-**Phase 2** 可能需要儲存 Driver 目前位置，以及 Pickup Geocoding 座標，以支援距離 / ETA / 地圖。詳細 Schema 於進入 Phase 2 時再定義，目前不新增欄位或 Migration。
+產品範圍以 `PHASE-2-SPEC.md` 為準。
+
+**Phase 2 / P2-01（已定義）：**
+
+- `drivers` 儲存最新 GPS：`latitude`、`longitude`、`location_updated_at`
+- 無 location history 資料表
+- 無道路距離 / ETA 相關欄位
+
+**Phase 2 / P2-02–P2-04：**
+
+- Pickup Geocoding 座標、直線距離計算與地圖所需欄位／契約於後續技術 Spec 同步時再補齊
+- Phase 2 **不**儲存道路距離或 ETA
 
 **Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。

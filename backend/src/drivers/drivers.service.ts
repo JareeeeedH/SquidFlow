@@ -10,8 +10,17 @@ import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PasswordService } from '../auth/password.service';
 import { SessionService } from '../auth/session.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { DriverWithUser, toDriverResponse } from './drivers.mapper';
-import { CreateDriverInput, UpdateDriverInput } from './drivers.validation';
+import {
+  toDriverLocationResponse,
+  toOnlineDriverLocationResponse,
+  DriverWithUser,
+  toDriverResponse,
+} from './drivers.mapper';
+import {
+  CreateDriverInput,
+  UpdateDriverInput,
+  UpdateDriverLocationInput,
+} from './drivers.validation';
 
 const driverUserSelect = {
   username: true,
@@ -186,6 +195,86 @@ export class DriversService {
     return {
       status,
     };
+  }
+
+  async getOwnLocation(user: AuthenticatedUser) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId: user.id },
+      select: {
+        latitude: true,
+        longitude: true,
+        locationUpdatedAt: true,
+      },
+    });
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+
+    return toDriverLocationResponse(driver);
+  }
+
+  async updateOwnLocation(
+    user: AuthenticatedUser,
+    input: UpdateDriverLocationInput,
+  ) {
+    if (user.status === UserStatus.SUSPENDED) {
+      throw AppErrors.accountSuspended();
+    }
+
+    const driver = await this.prisma.driver.findUnique({
+      where: { userId: user.id },
+      select: {
+        id: true,
+      },
+    });
+    if (!driver) {
+      throw AppErrors.notFound('找不到司機');
+    }
+
+    const updated = await this.prisma.driver.update({
+      where: { id: driver.id },
+      data: {
+        latitude: new Prisma.Decimal(input.latitude),
+        longitude: new Prisma.Decimal(input.longitude),
+        locationUpdatedAt: new Date(),
+      },
+      select: {
+        latitude: true,
+        longitude: true,
+        locationUpdatedAt: true,
+      },
+    });
+
+    return toDriverLocationResponse(updated);
+  }
+
+  async listOnlineLocations() {
+    const drivers = await this.prisma.driver.findMany({
+      where: {
+        onlineStatus: DriverOnlineStatus.ONLINE,
+      },
+      select: {
+        id: true,
+        licensePlate: true,
+        latitude: true,
+        longitude: true,
+        locationUpdatedAt: true,
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    return drivers.map((driver) => toOnlineDriverLocationResponse(driver));
   }
 
   private async findDriverOrThrow(id: string): Promise<DriverWithUser> {
