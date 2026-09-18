@@ -599,4 +599,102 @@ describe('Admin Order Publish (e2e)', () => {
       'INVALID_ORDER_STATUS',
     );
   });
+
+  it('rejects concurrent PUT when publish wins the DRAFT race', async () => {
+    const cookie = await adminCookie();
+    const created = await createDraft(cookie);
+    const original = await prisma.order.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+
+    const racedName = `競態更新-${suffix}`;
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post(`/api/v1/orders/${created.id}/publish`)
+        .set('Cookie', cookie),
+      request(app.getHttpServer())
+        .put(`/api/v1/orders/${created.id}`)
+        .set('Cookie', cookie)
+        .send({
+          ...orderPayload(),
+          customer_name: racedName,
+        }),
+    ]);
+
+    const publishResponse = responses[0];
+    const putResponse = responses[1];
+    const order = await prisma.order.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+
+    expect(order.status).toBe('OPEN');
+    expect(
+      await prisma.orderEvent.count({
+        where: { orderId: created.id, eventType: 'ORDER_PUBLISHED' },
+      }),
+    ).toBe(1);
+
+    if (publishResponse.status === 200 && putResponse.status === 409) {
+      // Publish committed first — PUT must not rewrite OPEN fields.
+      expect(asBody<ApiErrorBody>(putResponse).error.code).toBe(
+        'INVALID_ORDER_STATUS',
+      );
+      expect(order.customerName).toBe(original.customerName);
+    } else if (publishResponse.status === 200 && putResponse.status === 200) {
+      // PUT committed first — Publish still valid on remaining DRAFT.
+      expect(order.customerName).toBe(racedName);
+    } else {
+      throw new Error(
+        `Unexpected race outcomes: publish=${publishResponse.status} put=${putResponse.status}`,
+      );
+    }
+  });
+
+  it('rejects concurrent DELETE when publish wins the DRAFT race', async () => {
+    const cookie = await adminCookie();
+    const created = await createDraft(cookie);
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post(`/api/v1/orders/${created.id}/publish`)
+        .set('Cookie', cookie),
+      request(app.getHttpServer())
+        .delete(`/api/v1/orders/${created.id}`)
+        .set('Cookie', cookie),
+    ]);
+
+    const publishResponse = responses[0];
+    const deleteResponse = responses[1];
+    const order = await prisma.order.findUnique({ where: { id: created.id } });
+
+    if (deleteResponse.status === 200) {
+      // Delete committed first — Publish must miss the row.
+      expect(order).toBeNull();
+      expect(publishResponse.status).toBe(404);
+      expect(asBody<ApiErrorBody>(publishResponse).error.code).toBe(
+        'NOT_FOUND',
+      );
+      expect(
+        await prisma.orderEvent.count({ where: { orderId: created.id } }),
+      ).toBe(0);
+    } else if (
+      publishResponse.status === 200 &&
+      deleteResponse.status === 409
+    ) {
+      // Publish committed first — DELETE must not remove OPEN order.
+      expect(asBody<ApiErrorBody>(deleteResponse).error.code).toBe(
+        'INVALID_ORDER_STATUS',
+      );
+      expect(order?.status).toBe('OPEN');
+      expect(
+        await prisma.orderEvent.count({
+          where: { orderId: created.id, eventType: 'ORDER_PUBLISHED' },
+        }),
+      ).toBe(1);
+    } else {
+      throw new Error(
+        `Unexpected race outcomes: publish=${publishResponse.status} delete=${deleteResponse.status}`,
+      );
+    }
+  });
 });

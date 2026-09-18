@@ -642,14 +642,14 @@ export class OrdersService {
 
   async update(id: string, input: OrderInput) {
     const existing = await this.findOrderOrThrow(id);
-    if (existing.status !== OrderStatus.DRAFT) {
-      throw AppErrors.invalidOrderStatus();
-    }
-
     const pickupChanged = existing.pickupLocation !== input.pickupLocation;
 
-    const order = await this.prisma.order.update({
-      where: { id },
+    // Atomic DRAFT gate — do not rely on the pre-read status check (TOCTOU vs publish).
+    const updated = await this.prisma.order.updateMany({
+      where: {
+        id,
+        status: OrderStatus.DRAFT,
+      },
       data: {
         customerName: input.customerName,
         pickupLocation: input.pickupLocation,
@@ -657,6 +657,18 @@ export class OrdersService {
         price: input.price,
         note: input.note,
       },
+    });
+
+    if (updated.count !== 1) {
+      const current = await this.prisma.order.findUnique({ where: { id } });
+      if (!current) {
+        throw AppErrors.notFound('找不到訂單');
+      }
+      throw AppErrors.invalidOrderStatus();
+    }
+
+    const order = await this.prisma.order.findUniqueOrThrow({
+      where: { id },
       include: assignedDriverInclude,
     });
 
@@ -676,15 +688,24 @@ export class OrdersService {
   }
 
   async remove(id: string) {
-    const existing = await this.findOrderOrThrow(id);
-    if (existing.status !== OrderStatus.DRAFT) {
-      throw AppErrors.invalidOrderStatus();
-    }
-
     await this.prisma.$transaction(async (tx) => {
       await tx.orderEvent.deleteMany({ where: { orderId: id } });
       await tx.notification.deleteMany({ where: { orderId: id } });
-      await tx.order.delete({ where: { id } });
+      // Atomic DRAFT gate — roll back child deletes if the order is no longer DRAFT.
+      const deleted = await tx.order.deleteMany({
+        where: {
+          id,
+          status: OrderStatus.DRAFT,
+        },
+      });
+
+      if (deleted.count !== 1) {
+        const current = await tx.order.findUnique({ where: { id } });
+        if (!current) {
+          throw AppErrors.notFound('找不到訂單');
+        }
+        throw AppErrors.invalidOrderStatus();
+      }
     });
     this.geocodingService.invalidateOrder(id);
   }

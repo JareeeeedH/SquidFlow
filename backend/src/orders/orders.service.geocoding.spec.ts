@@ -19,9 +19,12 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     order: {
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findMany: jest.fn(),
       delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
     orderEvent: {
       create: jest.fn(),
@@ -181,11 +184,14 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     expect(createData).not.toHaveProperty('pickupLongitude');
   });
 
-  it('invalidates and re-schedules when pickup_location changes', async () => {
+  function mockDraftUpdate(result = draftOrder()) {
     prisma.order.findUnique.mockResolvedValue(draftOrder());
-    prisma.order.update.mockResolvedValue(
-      draftOrder({ pickupLocation: '高雄車站' }),
-    );
+    prisma.order.updateMany.mockResolvedValue({ count: 1 });
+    prisma.order.findUniqueOrThrow.mockResolvedValue(result);
+  }
+
+  it('invalidates and re-schedules when pickup_location changes', async () => {
+    mockDraftUpdate(draftOrder({ pickupLocation: '高雄車站' }));
 
     const result = await service.update('order-1', {
       customerName: '王先生',
@@ -205,18 +211,29 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     expect(result.pickup_latitude).toBeNull();
     expect(result.pickup_longitude).toBeNull();
 
-    const updateCall = prisma.order.update.mock.calls[0] as
-      [{ data: Record<string, unknown> }] | undefined;
+    expect(prisma.order.updateMany).toHaveBeenCalledTimes(1);
+    const updateCall = prisma.order.updateMany.mock.calls[0] as
+      | [
+          {
+            where: { id: string; status: OrderStatus };
+            data: Record<string, unknown>;
+          },
+        ]
+      | undefined;
+    expect(updateCall?.[0].where).toEqual({
+      id: 'order-1',
+      status: OrderStatus.DRAFT,
+    });
     const updateData = updateCall?.[0].data;
+    expect(updateData).toMatchObject({
+      pickupLocation: '高雄車站',
+    });
     expect(updateData).not.toHaveProperty('latitude');
     expect(updateData).not.toHaveProperty('longitude');
   });
 
   it('does not await geocoding when pickup_location changes', async () => {
-    prisma.order.findUnique.mockResolvedValue(draftOrder());
-    prisma.order.update.mockResolvedValue(
-      draftOrder({ pickupLocation: '高雄車站' }),
-    );
+    mockDraftUpdate(draftOrder({ pickupLocation: '高雄車站' }));
 
     let resolveGeocode!: () => void;
     const geocodeDone = new Promise<void>((resolve) => {
@@ -255,8 +272,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
   });
 
   it('does not invalidate when pickup_location is unchanged', async () => {
-    prisma.order.findUnique.mockResolvedValue(draftOrder());
-    prisma.order.update.mockResolvedValue(draftOrder());
+    mockDraftUpdate(draftOrder());
 
     await service.update('order-1', {
       customerName: '王先生',
@@ -268,5 +284,22 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
 
     expect(geocodingService.invalidateOrder).not.toHaveBeenCalled();
     expect(geocodingService.scheduleGeocode).not.toHaveBeenCalled();
+  });
+
+  it('rejects update when atomic DRAFT gate does not match', async () => {
+    prisma.order.findUnique
+      .mockResolvedValueOnce(draftOrder())
+      .mockResolvedValueOnce(draftOrder({ status: OrderStatus.OPEN }));
+    prisma.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.update('order-1', {
+        customerName: '王先生',
+        pickupLocation: '左營高鐵站',
+        destination: '小港機場',
+        price: new Prisma.Decimal(1200),
+        note: null,
+      }),
+    ).rejects.toMatchObject({ errorCode: 'INVALID_ORDER_STATUS' });
   });
 });
