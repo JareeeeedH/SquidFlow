@@ -365,6 +365,8 @@ DataTable 呈現。
 
 # 7. Admin Order Detail
 
+## Desktop
+
 採置中雙欄，約 7:3。左側為訂單資訊與接單司機，右側為狀態 / 操作 / 時間。不提供 Order Events 讀取 API／Timeline UI。
 
 ```text
@@ -383,6 +385,50 @@ DataTable 呈現。
 ```
 
 未指派顯示尚無。已指派只顯示 Driver username，點擊進入 Driver Detail。車牌 / 車輛 / 車色不在此頁顯示。
+
+## Mobile（≤900px）
+
+Compact Detail View（高資訊密度；對齊 §9 Driver Detail Mobile 方向）。**不**使用多個大型 Card 堆疊。
+
+```text
+← 返回訂單
+訂單詳情
+ORD-…                          [Status]
+
+客戶
+王先生
+────────────────
+行程
+左營高鐵站 → 小港機場
+────────────────
+價格
+NT$ 1,200
+────────────────
+備註
+2件行李
+────────────────
+接單司機
+尚無 / driver01
+
+建立時間  …（次要、較小字）
+
+║ [編輯]  [發布] ║   ← sticky bottom（DRAFT）
+  刪除（次要 destructive）
+```
+
+規則：
+
+- Breakpoint 與 Admin Mobile 一致：**≤900px**
+- 頁面頂部保留：返回訂單、訂單詳情、Order No、**Status Badge**
+- **不再**重複顯示「訂單狀態」Card／Section（Status 只在頂部）
+- 訂單資訊：緊湊 Section + 分隔線（客戶／行程／價格／備註）
+- 接單司機：緊湊 Section；未指派顯示「尚無」；已指派僅 username 可點進 Driver Detail
+- 地圖（非 DRAFT 且有座標／Online Drivers 時）仍可顯示，採緊湊區塊，不另堆大型 Card 標題層級
+- 時間戳降為次要資訊，置於內容較下方；以較小字體呈現（至少含建立時間；其他有值時間可一併列出）
+- DRAFT 主要 CTA「編輯／發布」使用 **sticky bottom action bar**；「刪除」降為次要 destructive（較低視覺重量）
+- OPEN／ACCEPTED：「取消訂單」可置於 sticky／緊湊操作區；IN_PROGRESS／COMPLETED／CANCELLED 維持唯讀（無主 CTA）
+- Desktop 7:3 雙欄與右側狀態／操作／時間欄**不變**
+- 不改變 Order State、API、資料結構或業務邏輯
 
 ---
 

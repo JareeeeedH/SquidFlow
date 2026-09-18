@@ -113,6 +113,13 @@ const showDispatchMap = computed(
     (pickupPoint.value != null || driverPoints.value.length > 0),
 )
 
+const showMobileActionBar = computed(
+  () =>
+    order.value != null &&
+    !editing.value &&
+    (isDraft.value || canCancel.value),
+)
+
 const timestamps = computed(() => {
   if (!order.value) {
     return []
@@ -371,7 +378,7 @@ watch(
           {{ actionError.code }} · {{ actionError.message }}
         </p>
 
-        <div class="grid">
+        <div class="desktop-layout">
           <div class="main">
             <article class="panel">
               <h2>{{ editing ? '編輯草稿' : '訂單資訊' }}</h2>
@@ -527,6 +534,204 @@ watch(
             </dl>
           </aside>
         </div>
+
+        <div
+          class="mobile-layout"
+          :class="{ 'has-action-bar': showMobileActionBar }"
+        >
+          <div class="sheet">
+            <template v-if="editing && editValues">
+              <section class="section">
+                <h2>編輯草稿</h2>
+                <OrderForm
+                  submit-label="儲存變更"
+                  :initial-values="editValues"
+                  :submitting="saving"
+                  :error="actionError"
+                  show-cancel
+                  @submit="onSave"
+                  @cancel="cancelEdit"
+                />
+              </section>
+            </template>
+            <template v-else>
+              <section class="section">
+                <h2>客戶</h2>
+                <p class="section-value">
+                  {{ formatOptionalText(order.customer_name) }}
+                </p>
+              </section>
+              <section class="section">
+                <h2>行程</h2>
+                <p class="section-value route">
+                  <span>{{ order.pickup_location }}</span>
+                  <span class="route-arrow">→</span>
+                  <span>{{ formatOptionalText(order.destination) }}</span>
+                </p>
+              </section>
+              <section class="section">
+                <h2>價格</h2>
+                <p class="section-value price">{{ formatPrice(order.price) }}</p>
+              </section>
+              <section class="section">
+                <h2>備註</h2>
+                <p class="section-value">
+                  {{ formatOptionalText(order.note) }}
+                </p>
+              </section>
+              <section class="section">
+                <h2>接單司機</h2>
+                <RouterLink
+                  v-if="order.driver && order.driver_id"
+                  class="driver-link"
+                  :to="{
+                    name: 'driver-detail',
+                    params: { id: order.driver_id },
+                  }"
+                >
+                  {{ order.driver.username }}
+                </RouterLink>
+                <p v-else class="driver-empty">尚無</p>
+              </section>
+              <section v-if="showDispatchMap" class="section map-section">
+                <h2>地圖</h2>
+                <OrderMap :pickup="pickupPoint" :drivers="driverPoints" />
+                <ul
+                  v-if="onlineDriverDistanceRows.length"
+                  class="driver-distances"
+                >
+                  <li v-for="d in onlineDriverDistanceRows" :key="d.id">
+                    <span>{{ d.username }} · {{ d.license_plate }}</span>
+                    <span v-if="d.distanceLabel">{{ d.distanceLabel }}</span>
+                  </li>
+                </ul>
+              </section>
+              <section v-if="timestamps.length" class="section meta-section">
+                <dl class="mobile-meta">
+                  <div v-for="row in timestamps" :key="row.label">
+                    <dt>{{ row.label }}</dt>
+                    <dd>{{ formatDateTimeTaipei(row.value as string) }}</dd>
+                  </div>
+                </dl>
+              </section>
+            </template>
+          </div>
+
+          <div v-if="showMobileActionBar" class="mobile-action-bar">
+            <template v-if="isDraft">
+              <template v-if="confirmDelete">
+                <p class="confirm-copy">確定刪除此草稿？刪除後無法復原。</p>
+                <div class="mobile-action-row">
+                  <NButton
+                    secondary
+                    block
+                    :disabled="deleting"
+                    @click="confirmDelete = false"
+                  >
+                    取消
+                  </NButton>
+                  <NButton
+                    type="error"
+                    block
+                    :loading="deleting"
+                    :disabled="deleting"
+                    @click="onDelete"
+                  >
+                    確認刪除
+                  </NButton>
+                </div>
+              </template>
+              <template v-else-if="confirmPublish">
+                <p class="confirm-copy">
+                  確定發布這張草稿？發布後會進入搶單中，無法再編輯或刪除。
+                </p>
+                <div class="mobile-action-row">
+                  <NButton
+                    secondary
+                    block
+                    :disabled="publishing"
+                    @click="confirmPublish = false"
+                  >
+                    取消
+                  </NButton>
+                  <NButton
+                    type="warning"
+                    block
+                    :loading="publishing"
+                    :disabled="publishing"
+                    @click="onPublish"
+                  >
+                    確認發布
+                  </NButton>
+                </div>
+              </template>
+              <template v-else>
+                <div class="mobile-action-row">
+                  <NButton
+                    type="primary"
+                    block
+                    :disabled="busy"
+                    @click="startEdit"
+                  >
+                    編輯
+                  </NButton>
+                  <NButton
+                    type="warning"
+                    block
+                    :disabled="busy"
+                    @click="confirmPublish = true"
+                  >
+                    發布
+                  </NButton>
+                </div>
+                <NButton
+                  class="delete-secondary"
+                  text
+                  type="error"
+                  block
+                  :disabled="busy"
+                  @click="confirmDelete = true"
+                >
+                  刪除
+                </NButton>
+              </template>
+            </template>
+            <template v-else-if="canCancel">
+              <template v-if="confirmCancel">
+                <p class="confirm-copy">確定取消此訂單？取消後無法再搶單或接單。</p>
+                <div class="mobile-action-row">
+                  <NButton
+                    secondary
+                    block
+                    :disabled="cancelling"
+                    @click="confirmCancel = false"
+                  >
+                    返回
+                  </NButton>
+                  <NButton
+                    type="error"
+                    block
+                    :loading="cancelling"
+                    :disabled="cancelling"
+                    @click="onCancel"
+                  >
+                    確認取消
+                  </NButton>
+                </div>
+              </template>
+              <NButton
+                v-else
+                type="error"
+                ghost
+                block
+                :disabled="busy"
+                @click="confirmCancel = true"
+              >
+                取消訂單
+              </NButton>
+            </template>
+          </div>
+        </div>
       </template>
     </NSpin>
   </section>
@@ -577,11 +782,15 @@ h1 {
   margin-top: var(--space-4);
 }
 
-.grid {
+.desktop-layout {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(240px, 3fr);
   gap: var(--space-16);
   align-items: start;
+}
+
+.mobile-layout {
+  display: none;
 }
 
 .main {
@@ -693,28 +902,111 @@ dd {
   border-top: 1px solid var(--color-border);
 }
 
+.sheet {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-12);
+  overflow: hidden;
+}
+
+.section {
+  padding: var(--space-12) var(--space-16);
+}
+
+.section + .section {
+  border-top: 1px solid var(--color-border);
+}
+
+.section h2 {
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: none;
+  font: var(--font-caption);
+  color: var(--color-muted-text);
+  font-weight: 600;
+}
+
+.section-value {
+  margin: 0;
+  font: var(--font-label);
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.section-value.route {
+  font: var(--font-label);
+  font-weight: 600;
+}
+
+.section-value.price {
+  font: var(--font-price);
+  font-size: 18px;
+}
+
+.map-section h2 {
+  margin-bottom: var(--space-8);
+}
+
+.meta-section {
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-border));
+}
+
+.mobile-meta {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.mobile-meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  align-items: baseline;
+}
+
+.mobile-meta dt,
+.mobile-meta dd {
+  margin: 0;
+  font: var(--font-caption);
+  color: var(--color-muted-text);
+}
+
+.mobile-meta dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  padding-bottom: max(var(--space-12), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 94%, #ffffff);
+}
+
+.mobile-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+
+.mobile-action-bar :deep(.n-button) {
+  min-height: 44px;
+}
+
+.delete-secondary {
+  min-height: 36px !important;
+  font-weight: 500;
+}
+
 .state {
   padding: var(--space-32) 0;
-}
-
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  h1 {
-    font-size: 24px;
-  }
-
-  .draft-actions :deep(.n-button) {
-    min-height: 44px;
-  }
-}
-
-@media (max-width: 640px) {
-  .panel {
-    padding: var(--space-16);
-  }
 }
 
 .driver-distances {
@@ -729,7 +1021,38 @@ dd {
   display: flex;
   justify-content: space-between;
   gap: var(--space-12);
-  font: var(--font-label);
-  color: var(--color-text);
+  font: var(--font-caption);
+  color: var(--color-muted-text);
+}
+
+@media (max-width: 900px) {
+  .page {
+    gap: var(--space-12);
+  }
+
+  .mobile-layout.has-action-bar {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .desktop-layout {
+    display: none;
+  }
+
+  .mobile-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    min-width: 0;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 901px) {
+  .mobile-action-bar {
+    display: none;
+  }
 }
 </style>

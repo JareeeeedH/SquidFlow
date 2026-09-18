@@ -110,6 +110,11 @@ describe('OrderDetailView', () => {
     expect(wrapper.get('.route').text()).toContain('左營高鐵站')
     expect(wrapper.get('.route').text()).toContain('→')
     expect(wrapper.get('.route').text()).toContain('高雄小港機場')
+    expect(wrapper.find('.desktop-layout .status-panel').exists()).toBe(true)
+    expect(wrapper.find('.mobile-layout .sheet').exists()).toBe(true)
+    expect(wrapper.find('.mobile-action-bar .delete-secondary').exists()).toBe(
+      true,
+    )
   })
 
   it('links assigned driver username to driver detail and hides vehicle fields', async () => {
