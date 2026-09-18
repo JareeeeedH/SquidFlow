@@ -395,25 +395,20 @@ Compact Detail View（高資訊密度；對齊 §9 Driver Detail Mobile 方向�
 訂單詳情
 ORD-…                          [Status]
 
-客戶
-王先生
+客戶    王先生
+行程    左營高鐵站 → 小港機場
+價格    NT$ 1,200
+備註    2件行李
+接單司機  尚無 / driver01
 ────────────────
-行程
-左營高鐵站 → 小港機場
+[地圖：Pickup + Online Drivers]
+直線距離列（若有）
 ────────────────
-價格
-NT$ 1,200
-────────────────
-備註
-2件行李
-────────────────
-接單司機
-尚無 / driver01
-
 建立時間  …（次要、較小字）
 
 ║ [編輯]  [發布] ║   ← sticky bottom（DRAFT）
   刪除（次要 destructive）
+║ [取消訂單] ║       ← sticky（OPEN／ACCEPTED）
 ```
 
 規則：
@@ -421,12 +416,13 @@ NT$ 1,200
 - Breakpoint 與 Admin Mobile 一致：**≤900px**
 - 頁面頂部保留：返回訂單、訂單詳情、Order No、**Status Badge**
 - **不再**重複顯示「訂單狀態」Card／Section（Status 只在頂部）
-- 訂單資訊：緊湊 Section + 分隔線（客戶／行程／價格／備註）
-- 接單司機：緊湊 Section；未指派顯示「尚無」；已指派僅 username 可點進 Driver Detail
-- 地圖（非 DRAFT 且有座標／Online Drivers 時）仍可顯示，採緊湊區塊，不另堆大型 Card 標題層級
-- 時間戳降為次要資訊，置於內容較下方；以較小字體呈現（至少含建立時間；其他有值時間可一併列出）
+- **不**顯示「搶單中，可取消此訂單」等與 Status Badge 重複的狀態說明文案（頂欄 hint 與操作區旁白皆不需要）
+- 訂單資訊採 **左右 label／value Compact Summary**（客戶／行程／價格／備註／接單司機）+ 緊湊分隔；**不**讓每欄各自佔大型垂直區塊
+- 接單司機：標題維持「**接單司機**」；未指派顯示「尚無」；已指派僅 username 可點進 Driver Detail
+- **地圖提前**：Compact Summary 之後盡早呈現地圖（非 DRAFT 且有座標／Online Drivers 時），使地圖更早進入首屏可視區；採緊湊區塊
+- 時間戳降為次要資訊，置於地圖之後、內容較下方；以較小字體呈現（至少含建立時間；其他有值時間可一併列出）
 - DRAFT 主要 CTA「編輯／發布」使用 **sticky bottom action bar**；「刪除」降為次要 destructive（較低視覺重量）
-- OPEN／ACCEPTED：「取消訂單」可置於 sticky／緊湊操作區；IN_PROGRESS／COMPLETED／CANCELLED 維持唯讀（無主 CTA）
+- OPEN／ACCEPTED：「取消訂單」置於 sticky／緊湊操作區，**不**另附「可取消此訂單」說明；IN_PROGRESS／COMPLETED／CANCELLED 維持唯讀（無主 CTA）
 - Desktop 7:3 雙欄與右側狀態／操作／時間欄**不變**
 - 不改變 Order State、API、資料結構或業務邏輯
 
@@ -594,6 +590,8 @@ Driver 採簡化導覽。
 
 顯示可搶的 OPEN 訂單列表。採 compact card（約 3 行），不顯示 `customer_name`。
 
+頁面標題僅 **可搶訂單**；**不**顯示「點選卡片查看行程」等副標提示。
+
 ```text
 ┌──────────────────────────────┐
 │ 09/15 11:20  搶單中  NT$1,200 │
@@ -615,24 +613,46 @@ Driver 採簡化導覽。
 
 # 14. Driver Order Detail
 
-路線與價格為主要層級；Primary action 置底且清楚。
+路線與地圖為核心；價格／直線距離次之；Primary action 置底且清楚。
 
-OPEN／ACCEPTED／IN_PROGRESS 的主操作皆為 **滑動確認 Bar**（非點擊按鈕）：
+OPEN／ACCEPTED／IN_PROGRESS 的主操作皆為 **滑動確認 Bar**（非點擊按鈕）。
+
+## Mobile layout
+
+高資訊密度；減少大型 Card 與垂直留白。
 
 ```text
-┌─────────────────────┐
-│ ← 返回…              │
-├─────────────────────┤
-│ ORD-…        搶單中  │
-│ …                    │
-│ ║ 滑動接單 →        ║ │
-└─────────────────────┘
+← 返回
+ORD-…                 [Status]
+09/15 11:20
+
+左營高鐵站 → 高雄小港機場
+
+[地圖]
+
+直線距離    1.2 km
+價格        NT$ 1,200
+
+客戶        …
+備註        …
+
+║ 滑動接單 → ║
 ```
+
+規則：
+
+- 頂部：返回／Order No／Status／日期時間
+- 緊湊路線（上車 → 下車）；降低 padding；長文字不得造成 horizontal overflow（寬度約束／換行；`null` 下車地顯示「—」）
+- 路線後**立即**顯示地圖（功能維持：Pickup／自己位置 marker、開始導航等既有規則）
+- 地圖下方：直線距離＋價格的 **Compact Summary**（左右 label／value；不各自大型 Card）；`distance_meters` 為 null 時不顯示距離列
+- 客戶／備註降為次要 Compact 資訊，置於距離／價格之後
+- **不**重複顯示已在頂部呈現的 Order No／Status
+- 底部保留既有滑動確認（OPEN 接單／ACCEPTED 開始／IN_PROGRESS 完成）；未滑至末端不觸發；進行中 loading 鎖定；失敗後可再滑
+- 不改變 Order State、API、Map／Distance 業務邏輯
 
 - OPEN：滑動接單
 - ACCEPTED：滑動開始行程
 - IN_PROGRESS：滑動完成訂單
-- 未滑至末端不觸發；進行中顯示 loading 文案並鎖定；失敗後可再滑
 
 ---
 

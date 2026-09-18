@@ -16,7 +16,6 @@ import type {
   CreateOrderInput,
   OnlineDriverDistanceItem,
   OrderDetail,
-  OrderStatus,
 } from '../api/types'
 import OrderForm from '../components/OrderForm.vue'
 import OrderMap from '../components/OrderMap.vue'
@@ -24,14 +23,6 @@ import OrderStatusTag from '../components/OrderStatusTag.vue'
 import { formatStraightLineDistance } from '../lib/format-distance'
 import { formatDateTimeTaipei, formatOptionalText, formatPrice } from '../lib/format'
 import { orderDetailToFormValues, type OrderFormValues } from '../lib/order-form'
-
-const STATUS_HINT: Partial<Record<OrderStatus, string>> = {
-  OPEN: '搶單中，可取消此訂單',
-  ACCEPTED: '已接單，可取消此訂單',
-  IN_PROGRESS: '行程進行中，此訂單為唯讀',
-  COMPLETED: '已完成，此訂單為唯讀',
-  CANCELLED: '已取消，此訂單為唯讀',
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -367,9 +358,6 @@ watch(
           <div>
             <p class="kicker">訂單詳情</p>
             <h1>{{ order.order_no }}</h1>
-            <p v-if="STATUS_HINT[order.status]" class="readonly-hint">
-              {{ STATUS_HINT[order.status] }}
-            </p>
           </div>
           <OrderStatusTag :status="order.status" />
         </header>
@@ -555,46 +543,45 @@ watch(
               </section>
             </template>
             <template v-else>
-              <section class="section">
-                <h2>客戶</h2>
-                <p class="section-value">
-                  {{ formatOptionalText(order.customer_name) }}
-                </p>
-              </section>
-              <section class="section">
-                <h2>行程</h2>
-                <p class="section-value route">
-                  <span>{{ order.pickup_location }}</span>
-                  <span class="route-arrow">→</span>
-                  <span>{{ formatOptionalText(order.destination) }}</span>
-                </p>
-              </section>
-              <section class="section">
-                <h2>價格</h2>
-                <p class="section-value price">{{ formatPrice(order.price) }}</p>
-              </section>
-              <section class="section">
-                <h2>備註</h2>
-                <p class="section-value">
-                  {{ formatOptionalText(order.note) }}
-                </p>
-              </section>
-              <section class="section">
-                <h2>接單司機</h2>
-                <RouterLink
-                  v-if="order.driver && order.driver_id"
-                  class="driver-link"
-                  :to="{
-                    name: 'driver-detail',
-                    params: { id: order.driver_id },
-                  }"
-                >
-                  {{ order.driver.username }}
-                </RouterLink>
-                <p v-else class="driver-empty">尚無</p>
-              </section>
+              <dl class="compact-summary">
+                <div class="summary-row">
+                  <dt>客戶</dt>
+                  <dd>{{ formatOptionalText(order.customer_name) }}</dd>
+                </div>
+                <div class="summary-row">
+                  <dt>行程</dt>
+                  <dd class="route">
+                    <span>{{ order.pickup_location }}</span>
+                    <span class="route-arrow">→</span>
+                    <span>{{ formatOptionalText(order.destination) }}</span>
+                  </dd>
+                </div>
+                <div class="summary-row">
+                  <dt>價格</dt>
+                  <dd class="price">{{ formatPrice(order.price) }}</dd>
+                </div>
+                <div class="summary-row">
+                  <dt>備註</dt>
+                  <dd>{{ formatOptionalText(order.note) }}</dd>
+                </div>
+                <div class="summary-row">
+                  <dt>接單司機</dt>
+                  <dd>
+                    <RouterLink
+                      v-if="order.driver && order.driver_id"
+                      class="driver-link"
+                      :to="{
+                        name: 'driver-detail',
+                        params: { id: order.driver_id },
+                      }"
+                    >
+                      {{ order.driver.username }}
+                    </RouterLink>
+                    <span v-else class="driver-empty">尚無</span>
+                  </dd>
+                </div>
+              </dl>
               <section v-if="showDispatchMap" class="section map-section">
-                <h2>地圖</h2>
                 <OrderMap :pickup="pickupPoint" :drivers="driverPoints" />
                 <ul
                   v-if="onlineDriverDistanceRows.length"
@@ -760,7 +747,6 @@ watch(
 }
 
 .kicker,
-.readonly-hint,
 .error-detail {
   margin: 0;
   color: var(--color-muted-text);
@@ -776,10 +762,6 @@ watch(
 h1 {
   margin: var(--space-4) 0 0;
   font: var(--font-page-title);
-}
-
-.readonly-hint {
-  margin-top: var(--space-4);
 }
 
 .desktop-layout {
@@ -909,11 +891,62 @@ dd {
   overflow: hidden;
 }
 
+.compact-summary {
+  display: grid;
+  margin: 0;
+  padding: var(--space-4) var(--space-16);
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: start;
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-row:last-child {
+  border-bottom: 0;
+}
+
+.summary-row dt {
+  margin: 0;
+  font: var(--font-caption);
+  color: var(--color-muted-text);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.summary-row dd {
+  margin: 0;
+  min-width: 0;
+  font: var(--font-label);
+  color: var(--color-text);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.summary-row .route {
+  font: var(--font-label);
+  font-weight: 600;
+}
+
+.summary-row .price {
+  font: var(--font-price);
+  font-size: 16px;
+}
+
+.summary-row .driver-link {
+  min-height: 0;
+}
+
 .section {
   padding: var(--space-12) var(--space-16);
 }
 
-.section + .section {
+.section + .section,
+.compact-summary + .section {
   border-top: 1px solid var(--color-border);
 }
 
@@ -926,25 +959,9 @@ dd {
   font-weight: 600;
 }
 
-.section-value {
-  margin: 0;
-  font: var(--font-label);
-  color: var(--color-text);
-  line-height: 1.4;
-}
-
-.section-value.route {
-  font: var(--font-label);
-  font-weight: 600;
-}
-
-.section-value.price {
-  font: var(--font-price);
-  font-size: 18px;
-}
-
-.map-section h2 {
-  margin-bottom: var(--space-8);
+.map-section {
+  padding-top: var(--space-12);
+  padding-bottom: var(--space-12);
 }
 
 .meta-section {

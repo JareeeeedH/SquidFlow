@@ -162,13 +162,15 @@ describe('OrderDetailView', () => {
     expect(wrapper.text()).not.toContain('發布')
     expect(wrapper.text()).not.toContain('刪除')
     expect(wrapper.text()).toContain('取消訂單')
-    expect(wrapper.text()).toContain('可取消此訂單')
+    expect(wrapper.text()).not.toContain('可取消此訂單')
+    expect(wrapper.find('.compact-summary').exists()).toBe(true)
   })
 
   it('hides cancel on IN_PROGRESS, COMPLETED, and CANCELLED', async () => {
     vi.mocked(getOrder).mockResolvedValue({ ...openOrder, status: 'IN_PROGRESS' })
     const inProgress = await mountDetail()
-    expect(inProgress.wrapper.text()).toContain('此訂單為唯讀')
+    expect(inProgress.wrapper.text()).toContain('行程中')
+    expect(inProgress.wrapper.text()).not.toContain('此訂單為唯讀')
     expect(namedButtons(inProgress.wrapper, '取消訂單')).toHaveLength(0)
     expect(inProgress.wrapper.text()).not.toContain('編輯')
 

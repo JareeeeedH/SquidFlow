@@ -56,7 +56,6 @@ void loadOrders()
   <section class="page">
     <header class="page-header">
       <h1>可搶訂單</h1>
-      <p class="subtitle">點選卡片查看行程</p>
     </header>
 
     <NSpin :show="loading">
@@ -146,9 +145,6 @@ void loadOrders()
 }
 
 .page-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
@@ -158,7 +154,6 @@ h1 {
   font-size: 24px;
 }
 
-.subtitle,
 .error-detail,
 .order-no,
 .arrow {

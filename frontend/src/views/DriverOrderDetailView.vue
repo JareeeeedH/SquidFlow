@@ -316,25 +316,23 @@ watch(
       <article v-else-if="order" class="card">
         <header class="header">
           <div class="header-copy">
-            <p class="kicker">{{ order.order_no }}</p>
+            <p class="order-no">{{ order.order_no }}</p>
             <p class="time">{{ formatScheduledAt(order.created_at) }}</p>
           </div>
           <OrderStatusTag :status="order.status" />
         </header>
 
-        <div class="route">
-          <p class="place">{{ order.pickup_location }}</p>
-          <p class="arrow" aria-hidden="true">↓</p>
-          <p class="place">{{ formatOptionalText(order.destination) }}</p>
-        </div>
+        <p class="route">
+          <span class="place">{{ order.pickup_location }}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <span class="place">{{ formatOptionalText(order.destination) }}</span>
+        </p>
 
         <OrderMap
           class="map-block"
           :pickup="pickupPoint"
           :self-location="selfPoint"
         />
-
-        <p v-if="distanceLabel" class="distance">直線距離：{{ distanceLabel }}</p>
 
         <NButton
           v-if="canNavigate"
@@ -348,17 +346,23 @@ watch(
         </NButton>
         <p v-if="navHint" class="nav-hint">{{ navHint }}</p>
 
-        <div class="price-block">
-          <p class="price-label">價格</p>
-          <p class="price">{{ formatPrice(order.price) }}</p>
-        </div>
+        <dl class="compact-summary">
+          <div v-if="distanceLabel" class="summary-row">
+            <dt>直線距離</dt>
+            <dd>{{ distanceLabel }}</dd>
+          </div>
+          <div class="summary-row">
+            <dt>價格</dt>
+            <dd class="price">{{ formatPrice(order.price) }}</dd>
+          </div>
+        </dl>
 
-        <dl class="fields">
-          <div>
+        <dl class="secondary-fields">
+          <div class="summary-row">
             <dt>客戶</dt>
             <dd>{{ formatOptionalText(order.customer_name) }}</dd>
           </div>
-          <div class="note-row">
+          <div class="summary-row">
             <dt>備註</dt>
             <dd>{{ formatOptionalText(order.note) }}</dd>
           </div>
@@ -434,58 +438,62 @@ watch(
   gap: 2px;
 }
 
-.kicker,
+.order-no {
+  margin: 0;
+  font: var(--font-label);
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.time,
 .error-detail,
-.arrow,
-.price-label {
+.arrow {
   margin: 0;
   color: var(--color-muted-text);
   font: var(--font-caption);
 }
 
 .time {
-  margin: 0;
-  font: var(--font-label);
   font-weight: 600;
-  color: var(--color-text);
 }
 
 .route {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: var(--space-16) 0;
-  padding: var(--space-12);
-  background: var(--color-primary-soft, #e8eef5);
-  border-radius: var(--radius-8);
-  border: 1px solid color-mix(in srgb, var(--color-primary, #0b1f3a) 12%, var(--color-border));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 6px;
+  width: 100%;
+  min-width: 0;
+  margin: var(--space-8) 0;
+  padding: 0;
 }
 
 .place {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
-  font: var(--font-section-title);
+  font: var(--font-label);
+  font-weight: 700;
   line-height: 1.35;
   color: var(--color-primary, #0b1f3a);
   overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .arrow {
-  display: block;
-  margin: var(--space-4) 0;
-  line-height: 1.1;
-  color: var(--color-primary-muted, #1a3358);
+  margin-top: 1px;
+  line-height: 1.35;
   font-weight: 700;
+  color: var(--color-primary-muted, #1a3358);
 }
 
 .map-block {
-  margin: var(--space-12) 0;
-}
-
-.distance {
-  margin: 0 0 var(--space-12);
-  font: var(--font-label);
-  font-weight: 600;
-  color: var(--color-primary, #0b1f3a);
+  margin: 0 0 var(--space-8);
 }
 
 .nav-btn {
@@ -495,50 +503,62 @@ watch(
 }
 
 .nav-hint {
-  margin: 0 0 var(--space-12);
+  margin: 0 0 var(--space-8);
   font: var(--font-caption);
   color: var(--color-muted-text);
 }
 
-.price-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: var(--space-12);
-}
-
-.price {
-  margin: 0;
-  font: var(--font-price);
-  font-size: 24px;
-  color: var(--color-primary, #0b1f3a);
-}
-
-.fields {
+.compact-summary,
+.secondary-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-12) var(--space-16);
   margin: 0;
-  padding-top: var(--space-12);
+}
+
+.compact-summary {
+  margin-top: var(--space-4);
+  padding: var(--space-4) 0;
   border-top: 1px solid var(--color-border);
 }
 
-.fields > div {
+.secondary-fields {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.summary-row {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: start;
+  padding: var(--space-8) 0;
 }
 
-.note-row {
-  grid-column: 1 / -1;
+.summary-row + .summary-row {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
-dt {
-  font: var(--font-label);
-  color: var(--color-muted-text);
-}
-
-dd {
+.summary-row dt {
   margin: 0;
+  font: var(--font-caption);
+  font-weight: 600;
+  color: var(--color-muted-text);
+  line-height: 1.4;
+}
+
+.summary-row dd {
+  margin: 0;
+  min-width: 0;
+  font: var(--font-label);
+  color: var(--color-text);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.price {
+  font: var(--font-price);
+  font-size: 18px;
+  color: var(--color-primary, #0b1f3a);
 }
 
 .success,
@@ -573,11 +593,6 @@ dd {
   );
   border-top: 1px solid var(--color-border);
   border-radius: 0 0 var(--radius-12) var(--radius-12);
-}
-
-.accept {
-  min-height: 52px;
-  font-weight: 700;
 }
 
 .state {

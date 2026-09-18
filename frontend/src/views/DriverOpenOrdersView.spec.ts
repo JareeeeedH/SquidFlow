@@ -61,6 +61,8 @@ describe('DriverOpenOrdersView', () => {
   it('loads open orders as cards', async () => {
     const { wrapper } = await mountOpen()
 
+    expect(wrapper.text()).toContain('可搶訂單')
+    expect(wrapper.text()).not.toContain('點選卡片查看行程')
     expect(wrapper.text()).toContain('ORD-20260915-002')
     expect(wrapper.text()).toContain('左營高鐵站')
     expect(wrapper.text()).toContain('高雄小港機場')

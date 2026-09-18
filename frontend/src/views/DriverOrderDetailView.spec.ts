@@ -117,6 +117,8 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).not.toContain('滑動開始行程')
     expect(wrapper.text()).not.toContain('滑動完成訂單')
     expect(wrapper.text()).toContain('返回')
+    expect(wrapper.find('.compact-summary').exists()).toBe(true)
+    expect(wrapper.find('.secondary-fields').exists()).toBe(true)
   })
 
   it('accepts an OPEN order from the backend response then reloads detail', async () => {
