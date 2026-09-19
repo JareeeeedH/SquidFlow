@@ -18,6 +18,11 @@ vi.mock('../api/driver-location', () => ({
   getDriverLocation: vi.fn(),
 }))
 
+vi.mock('../lib/driver-gps', () => ({
+  syncDriverGps: vi.fn(),
+  stopDriverGps: vi.fn(),
+}))
+
 import {
   acceptDriverOrder,
   completeDriverOrder,

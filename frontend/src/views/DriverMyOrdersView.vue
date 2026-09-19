@@ -14,8 +14,10 @@ import OrderStatusTag from '../components/OrderStatusTag.vue'
 import SlideToConfirm from '../components/SlideToConfirm.vue'
 import { splitDriverMyOrders } from '../lib/driver-my-orders'
 import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { useDriverStatusStore } from '../stores/driver-status'
 
 const router = useRouter()
+const driverStatus = useDriverStatusStore()
 const orders = ref<DriverMyOrder[]>([])
 const loading = ref(false)
 const actingId = ref<string | null>(null)
@@ -56,6 +58,7 @@ async function loadOrders() {
       return
     }
     orders.value = data
+    driverStatus.syncInProgressFromOrders(data)
   } catch (caught) {
     if (seq !== requestSeq) {
       return
@@ -95,6 +98,7 @@ async function startOrder(order: DriverMyOrder) {
   try {
     await startDriverOrder(order.id)
     successMessage.value = '行程已開始'
+    driverStatus.setInProgressOrder(true)
     await loadOrders()
   } catch (caught) {
     actionError.value = captureError(caught)
@@ -118,6 +122,7 @@ async function completeOrder(order: DriverMyOrder) {
   try {
     await completeDriverOrder(order.id)
     successMessage.value = '訂單已完成'
+    driverStatus.setInProgressOrder(false)
     await loadOrders()
   } catch (caught) {
     actionError.value = captureError(caught)

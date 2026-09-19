@@ -74,7 +74,6 @@ describe('DriverCreateView', () => {
     const { wrapper } = await mountCreate()
 
     expect(wrapper.text()).toContain('新增司機')
-    expect(wrapper.text()).toContain('上線狀態由系統決定')
     expect(wrapper.text()).toContain('帳號資訊')
     expect(wrapper.text()).toContain('車輛資訊')
     expect(wrapper.text()).toContain('帳號')

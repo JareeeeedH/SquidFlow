@@ -18,9 +18,11 @@ import SlideToConfirm from '../components/SlideToConfirm.vue'
 import { formatStraightLineDistance } from '../lib/format-distance'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 import { openGoogleMapsNavigation } from '../lib/google-maps-nav'
+import { useDriverStatusStore } from '../stores/driver-status'
 
 const route = useRoute()
 const router = useRouter()
+const driverStatus = useDriverStatusStore()
 const order = ref<DriverOrderDetail | null>(null)
 const driverLat = ref<number | null>(null)
 const driverLng = ref<number | null>(null)
@@ -59,6 +61,7 @@ async function loadOrder() {
       return
     }
     order.value = data
+    driverStatus.syncInProgressFromOrderStatus(data.status)
     try {
       const location = await getDriverLocation()
       if (seq === requestSeq) {
@@ -198,6 +201,7 @@ async function startOrder() {
   try {
     await startDriverOrder(order.value.id)
     successMessage.value = '行程已開始'
+    driverStatus.setInProgressOrder(true)
     await loadOrder()
   } catch (caught) {
     actionError.value = captureError(caught)
@@ -221,6 +225,7 @@ async function completeOrder() {
   try {
     await completeDriverOrder(order.value.id)
     successMessage.value = '訂單已完成'
+    driverStatus.setInProgressOrder(false)
     await loadOrder()
   } catch (caught) {
     actionError.value = captureError(caught)

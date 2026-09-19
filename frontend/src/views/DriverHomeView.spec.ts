@@ -18,7 +18,7 @@ vi.mock('../api/driver-status', () => ({
 }))
 
 vi.mock('../lib/driver-gps', () => ({
-  syncDriverGpsWithOnlineStatus: vi.fn(),
+  syncDriverGps: vi.fn(),
   stopDriverGps: vi.fn(),
 }))
 
