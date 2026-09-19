@@ -8,10 +8,18 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
+import {
+  DEFAULT_WAVE_DISPATCH_OPTIONS,
+  WAVE_DISPATCH_OPTIONS,
+} from '../src/dispatch/wave-dispatch.constants';
+import { GeocodingService } from '../src/geocoding/geocoding.service';
 import { WebPushService } from '../src/notifications/web-push.service';
-import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 import { cleanupTestUsers } from './cleanup-test-data';
+import {
+  overrideGeocodingForWaveTests,
+  setDriverGps,
+} from './wave-dispatch-test-utils';
 
 config();
 
@@ -221,6 +229,9 @@ describe('Admin Order Publish (e2e)', () => {
     await createDriverUser(users.inProgressBusy, { onlineStatus: 'ONLINE' });
     await seedAssignedOrder(users.acceptedBusy.driverId, 'ACCEPTED');
     await seedAssignedOrder(users.inProgressBusy.driverId, 'IN_PROGRESS');
+    await setDriverGps(prisma, users.online.driverId, 0.001);
+    await setDriverGps(prisma, users.acceptedBusy.driverId, 0.002);
+    await setDriverGps(prisma, users.inProgressBusy.driverId, 0.003);
     await prisma.pushSubscription.create({
       data: {
         userId: users.online.id,
@@ -235,6 +246,10 @@ describe('Admin Order Publish (e2e)', () => {
     })
       .overrideProvider(WebPushService)
       .useValue({ send: webPushSend })
+      .overrideProvider(GeocodingService)
+      .useValue(overrideGeocodingForWaveTests().useValue)
+      .overrideProvider(WAVE_DISPATCH_OPTIONS)
+      .useValue({ ...DEFAULT_WAVE_DISPATCH_OPTIONS, intervalMs: 30 })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -380,7 +395,7 @@ describe('Admin Order Publish (e2e)', () => {
     expect(order?.cancelledAt).toBeNull();
   });
 
-  it('creates SENT notifications only for ACTIVE ONLINE drivers with a PushSubscription', async () => {
+  it('creates SENT notifications only for ACTIVE ONLINE free drivers with GPS and PushSubscription', async () => {
     const cookie = await adminCookie();
     const created = await createDraft(cookie);
 
@@ -409,7 +424,7 @@ describe('Admin Order Publish (e2e)', () => {
     expect(webPushSend).toHaveBeenCalled();
   });
 
-  it('notifies ACTIVE ONLINE drivers who already have ACCEPTED or IN_PROGRESS orders', async () => {
+  it('does not notify ACTIVE ONLINE drivers who already have ACCEPTED or IN_PROGRESS orders', async () => {
     await prisma.pushSubscription.createMany({
       data: [
         {
@@ -446,9 +461,8 @@ describe('Admin Order Publish (e2e)', () => {
     const userIds = notifications.map((item) => item.userId);
 
     expect(userIds).toContain(users.online.id);
-    expect(userIds).toContain(users.acceptedBusy.id);
-    expect(userIds).toContain(users.inProgressBusy.id);
-    expect(notifications.every((item) => item.status === 'SENT')).toBe(true);
+    expect(userIds).not.toContain(users.acceptedBusy.id);
+    expect(userIds).not.toContain(users.inProgressBusy.id);
 
     await prisma.pushSubscription.deleteMany({
       where: {
@@ -500,51 +514,29 @@ describe('Admin Order Publish (e2e)', () => {
     });
   });
 
-  it('rolls back order, event, and notifications if notification creation fails', async () => {
+  it('keeps Publish committed when later wave notification delivery fails', async () => {
     const cookie = await adminCookie();
     const created = await createDraft(cookie);
-    const prismaService = app.get(PrismaService);
-    type InteractiveTransaction = (
-      fn: (tx: Prisma.TransactionClient) => Promise<unknown>,
-    ) => Promise<unknown>;
-    const runTransaction = prismaService.$transaction.bind(
-      prismaService,
-    ) as InteractiveTransaction;
-    const spy = jest
-      .spyOn(prismaService, '$transaction')
-      .mockImplementation(
-        (fn: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
-          runTransaction(async (tx) => {
-            jest
-              .spyOn(tx.notification, 'createMany')
-              .mockRejectedValue(new Error('notification create failed'));
-            return fn(tx);
-          }),
-      );
+    webPushSend.mockRejectedValue(new Error('push provider down'));
 
-    try {
-      const response = await request(app.getHttpServer())
-        .post(`/api/v1/orders/${created.id}/publish`)
-        .set('Cookie', cookie)
-        .expect(500);
+    await request(app.getHttpServer())
+      .post(`/api/v1/orders/${created.id}/publish`)
+      .set('Cookie', cookie)
+      .expect(200);
 
-      expect(asBody<ApiErrorBody>(response).error.code).toBe('INTERNAL_ERROR');
-
-      const order = await prisma.order.findUnique({
-        where: { id: created.id },
-      });
-      expect(order?.status).toBe('DRAFT');
-      expect(
-        await prisma.orderEvent.count({
-          where: { orderId: created.id, eventType: 'ORDER_PUBLISHED' },
-        }),
-      ).toBe(0);
-      expect(
-        await prisma.notification.count({ where: { orderId: created.id } }),
-      ).toBe(0);
-    } finally {
-      spy.mockRestore();
-    }
+    const order = await prisma.order.findUnique({
+      where: { id: created.id },
+    });
+    expect(order?.status).toBe('OPEN');
+    expect(
+      await prisma.orderEvent.count({
+        where: { orderId: created.id, eventType: 'ORDER_PUBLISHED' },
+      }),
+    ).toBe(1);
+    const notification = await prisma.notification.findFirst({
+      where: { orderId: created.id, userId: users.online.id },
+    });
+    expect(notification?.status).toBe('FAILED');
   });
 
   it('allows only one concurrent publish of the same DRAFT order', async () => {

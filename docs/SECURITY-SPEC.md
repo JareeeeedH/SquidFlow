@@ -75,6 +75,8 @@
 
 目前不要求 Redis-based Distributed Rate Limiting。
 
+Wave Dispatch 僅由 Backend 在 Publish 後執行；不新增 Client 可控的 Dispatch／Notify API，避免繞過資格檢查或重送通知。
+
 ---
 
 # 6. CSRF & Browser Security

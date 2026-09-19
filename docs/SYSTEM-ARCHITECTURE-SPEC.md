@@ -1017,38 +1017,48 @@ MVP 使用：
 Web Push
 ```
 
-### 11.1 Publish Notification Flow
+### 11.1 Publish Notification Flow（Wave Dispatch）
 
 Admin Publish：
 
 ```text
 DRAFT
   ↓
-Publish Order
+Publish Order（transaction：OPEN + ORDER_PUBLISHED）
   ↓
 Order = OPEN
   ↓
-Find eligible Drivers
+Wave Dispatch（Backend authority；in-process）
+  ↓
+每波：重新檢查候選 → 依 Haversine 排序 → 最多 5 位
   ↓
 Create Notification
   ↓
-Send Web Push
+Send Web Push（僅當 Order 仍為 OPEN）
+  ↓
+（若需下一波）等待 10 秒後重跑
 ```
 
-通知對象：
+候選 Driver（每波）：
 
 ```text
 User role = DRIVER
 User status = ACTIVE
 Driver online_status = ONLINE
+無 ACCEPTED / IN_PROGRESS Order
+有效最新 GPS（latitude / longitude 非 null）
 有效 PushSubscription
+此 Order 尚無 Notification 列
+可計算到 Pickup 的直線距離
 ```
 
-即使 Driver 目前持有 `ACCEPTED` / `IN_PROGRESS` Order，仍建立 Notification 並發送 Web Push。
+同距離隨機；已通知不重複。
 
-Accept 資格維持既有規則，不因通知資格放寬而改變。
+Accept 資格與 atomic claim 維持既有規則，不因 Wave 改變。
 
 實際發送時，該 Order 必須仍為 `OPEN`。已不是 `OPEN` 的 PENDING Notification 不發送。
+
+Wave 排程不使用 Redis／Queue／Worker／WebSocket／SSE。Process 重啟後未完成波次不恢復；Order 仍為 `OPEN` 時 Driver 可從 Open Orders 查看並搶單。
 
 ---
 
@@ -1206,14 +1216,13 @@ Order = OPEN
   ↓
 ORDER_PUBLISHED
   ↓
-Find eligible ONLINE Drivers
-（ACTIVE + 有效 PushSubscription；
-可含已有未完成 Order 的 Driver）
+Wave Dispatch（Backend）
   ↓
-Create Notification
+波次通知合格 ONLINE Drivers
+（距離排序；每波 ≦5；間隔 10 秒；
+排除 busy／已通知／無 GPS／無 PushSubscription）
   ↓
-Web Push
-（僅當 Order 仍為 OPEN）
+Web Push（僅當 Order 仍為 OPEN）
 ```
 
 ---

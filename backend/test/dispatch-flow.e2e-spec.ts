@@ -8,9 +8,18 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
+import {
+  DEFAULT_WAVE_DISPATCH_OPTIONS,
+  WAVE_DISPATCH_OPTIONS,
+} from '../src/dispatch/wave-dispatch.constants';
+import { GeocodingService } from '../src/geocoding/geocoding.service';
 import { WebPushService } from '../src/notifications/web-push.service';
 import { setupApp } from '../src/setup-app';
 import { cleanupTestUsers } from './cleanup-test-data';
+import {
+  overrideGeocodingForWaveTests,
+  setDriverGps,
+} from './wave-dispatch-test-utils';
 
 config();
 
@@ -163,6 +172,8 @@ describe('Dispatch end-to-end flow (e2e)', () => {
     await createDriverUser(users.driver, 'ONLINE');
     await createDriverUser(users.offline, 'OFFLINE');
     await createDriverUser(users.rival, 'ONLINE');
+    await setDriverGps(prisma, users.driver.driverId, 0.001);
+    await setDriverGps(prisma, users.rival.driverId, 0.002);
     await subscribe(users.driver.id, 'driver');
     await subscribe(users.rival.id, 'rival');
 
@@ -171,6 +182,10 @@ describe('Dispatch end-to-end flow (e2e)', () => {
     })
       .overrideProvider(WebPushService)
       .useValue({ send: webPushSend })
+      .overrideProvider(GeocodingService)
+      .useValue(overrideGeocodingForWaveTests().useValue)
+      .overrideProvider(WAVE_DISPATCH_OPTIONS)
+      .useValue({ ...DEFAULT_WAVE_DISPATCH_OPTIONS, intervalMs: 30 })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -289,6 +304,18 @@ describe('Dispatch end-to-end flow (e2e)', () => {
   });
 
   it('keeps Order OPEN when push fails, then Admin can still cancel', async () => {
+    await prisma.order.updateMany({
+      where: {
+        driverId: { in: [users.driver.driverId, users.rival.driverId] },
+        status: { in: ['ACCEPTED', 'IN_PROGRESS', 'OPEN'] },
+      },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        driverId: null,
+      },
+    });
+
     webPushSend.mockRejectedValue(new Error('push provider down'));
     const adminCookie = await loginAs(users.admin.username);
     const orderId = await createAndPublish(adminCookie);

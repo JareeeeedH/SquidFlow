@@ -460,18 +460,55 @@ ORDER_CANCELLED
 Web Push / Browser Notification
 ```
 
+## 12.1 Wave Dispatch（分批距離派單）
+
+Admin 發布 Order（`DRAFT` → `OPEN`）後，由 **Backend** 啟動 Wave Dispatch。`dispatch_mode` 仍為 `OPEN`（開放搶單）；Wave 只控制「何時／通知誰」，不改變 Accept 的 atomic concurrency 規則。
+
+### 候選 Driver（每一波重新檢查）
+
+```text
+User.role = DRIVER
+User.status = ACTIVE
+Driver.online_status = ONLINE
+無 ACCEPTED / IN_PROGRESS Order
+latitude / longitude 皆非 null（有效最新 GPS）
+具有效 PushSubscription
+此 Order 尚無任何 Notification 紀錄（含 PENDING / SENT / FAILED）
+可計算到 Pickup 的 Haversine 直線距離（Pickup 座標來自 P2-02 runtime geocode）
+```
+
+### 排序與分波
+
+- 依 Driver → Pickup **Haversine 直線距離**由近到遠
+- 同距離時隨機排序
+- 每波最多通知 **5** 位
+- 第一波於 Publish 成功後立即執行；之後每波間隔 **10** 秒
+- 已建立 Notification 的 Driver 不重複通知
+- 不使用 Google Routes／道路距離／ETA
+- 不引入 Redis／WebSocket／SSE／Message Queue；波次排程為 **process 內 timer**
+
+### 停止條件
+
+任一成立即停止後續波次：
+
+- Order 成功被接單、取消，或不再是 `OPEN`
+- 當波無可通知候選（含 Pickup 座標不可用、無剩餘合格 Driver）
+- 當波通知人數 < 5（已無足夠剩餘候選）
+
+Notification 傳送失敗不影響 Order Status；Driver 仍可於 Open Orders 查看 `OPEN` 單。
+
 流程：
 
 ```text
 Admin 發布訂單
       ↓
-Backend
+Order = OPEN
       ↓
-Notification
+Wave Dispatch（Backend）
       ↓
-Web Push
+選 ≦5 位候選 → Notification → Web Push
       ↓
-Driver Browser
+（若仍 OPEN 且可能有剩餘）等待 10 秒 → 下一波
 ```
 
 ## Schema
@@ -717,7 +754,8 @@ Phase 2 包含：
 - API canonical field：`distance_meters: number | null`；缺任一座標 → `null` → UI 不顯示
 - Driver 只看自己的距離（相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS`）；Admin 可看 ONLINE Drivers ↔ Pickup
 - 顯示：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；必須標示「直線距離」
-- Distance 不存 DB；僅參考資訊；不影響搶單／Order State
+- Distance 不存 DB；UI 仍為參考資訊
+- **Accept／Order State 規則不因距離改變**；Wave Dispatch 僅用直線距離決定**通知順序與分批**
 - 不做道路距離，不做 ETA；不使用 Google Routes API
 
 ### Map & Navigation（P2-04）

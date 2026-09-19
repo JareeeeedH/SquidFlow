@@ -8,10 +8,19 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { SESSION_COOKIE_NAME } from '../src/common/cookie/cookie.config';
+import {
+  DEFAULT_WAVE_DISPATCH_OPTIONS,
+  WAVE_DISPATCH_OPTIONS,
+} from '../src/dispatch/wave-dispatch.constants';
+import { GeocodingService } from '../src/geocoding/geocoding.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
 import { WebPushService } from '../src/notifications/web-push.service';
 import { setupApp } from '../src/setup-app';
 import { cleanupTestUsers } from './cleanup-test-data';
+import {
+  overrideGeocodingForWaveTests,
+  setDriverGps,
+} from './wave-dispatch-test-utils';
 
 config();
 
@@ -190,6 +199,9 @@ describe('Web Push Notifications (e2e)', () => {
     await createDriverUser(users.offline, { onlineStatus: 'OFFLINE' });
     await createDriverUser(users.suspended, { onlineStatus: 'ONLINE' });
     await createDriverUser(users.acceptedBusy, { onlineStatus: 'ONLINE' });
+    await setDriverGps(prisma, users.otherDriver.driverId, 0.002);
+    await setDriverGps(prisma, users.online.driverId, 0.001);
+    await setDriverGps(prisma, users.acceptedBusy.driverId, 0.003);
     await prisma.order.create({
       data: {
         orderNo: `ORD-D12-BUSY-${suffix}`,
@@ -209,6 +221,10 @@ describe('Web Push Notifications (e2e)', () => {
     })
       .overrideProvider(WebPushService)
       .useValue({ send: webPushSend })
+      .overrideProvider(GeocodingService)
+      .useValue(overrideGeocodingForWaveTests().useValue)
+      .overrideProvider(WAVE_DISPATCH_OPTIONS)
+      .useValue({ ...DEFAULT_WAVE_DISPATCH_OPTIONS, intervalMs: 30 })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -453,7 +469,7 @@ describe('Web Push Notifications (e2e)', () => {
       });
     }
 
-    it('creates PENDING then SENT for eligible Drivers, including a busy Driver', async () => {
+    it('creates SENT for eligible free Drivers and excludes busy Drivers', async () => {
       await subscribe(users.online.id, 'online');
       await subscribe(users.acceptedBusy.id, 'busy');
       await subscribe(users.offline.id, 'offline');
@@ -471,13 +487,13 @@ describe('Web Push Notifications (e2e)', () => {
       const userIds = notifications.map((item) => item.userId);
 
       expect(userIds).toContain(users.online.id);
-      expect(userIds).toContain(users.acceptedBusy.id);
+      expect(userIds).not.toContain(users.acceptedBusy.id);
       expect(userIds).not.toContain(users.offline.id);
       expect(userIds).not.toContain(users.driver.id);
       expect(
         notifications.every((item) => item.status === 'SENT' && item.sentAt),
       ).toBe(true);
-      expect(webPushSend.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(webPushSend.mock.calls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('does not notify an ONLINE Driver without a PushSubscription', async () => {

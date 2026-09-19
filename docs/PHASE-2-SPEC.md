@@ -54,7 +54,9 @@ Phase 2 focuses on:
 - Straight-line distance from Driver to Pickup
 - In-app maps, plus navigation handled by Google Maps
 
-Map and distance are **assistive information only**. They do **not** change Phase 1 dispatch / accept / Order State rules.
+Map and distance remain **assistive for UI**. They do **not** change Phase 1 **Accept** conditions or Order State transitions.
+
+**Wave Dispatch** (product rule in `MVP-SPEC`) may use the same Backend Haversine straight-line distance to **batch and order Web Push notifications** after Publish. That does **not** assign Orders automatically and does **not** change atomic claim / Accept rules.
 
 ---
 
@@ -225,8 +227,9 @@ The value must be clearly labeled as **straight-line distance** (直線距離).
 
 ## 7.4 Relationship to Phase 1 rules
 
-- Map and distance are assistive information only.
-- They must **not** change Phase 1 dispatch / accept rules.
+- Map and distance remain assistive for UI.
+- They must **not** change Phase 1 **Accept** / Order State rules.
+- Wave Dispatch may use Haversine distance only to batch Web Push after Publish（見 `MVP-SPEC`）.
 
 ---
 
@@ -332,7 +335,7 @@ Geocode retry → max 2 attempts; 200ms once on provider error; no retry on ZERO
 Driver map → own location + Pickup
 Admin map → ONLINE Drivers + related Pickup context; OFFLINE not on Online Drivers map
 After accept → Start Navigation → Google Maps; no in-app turn-by-turn / routing engine
-Map / Distance assistive only → Phase 1 dispatch / accept / Order State unchanged
+Map / Distance assistive for UI → Phase 1 Accept / Order State unchanged; Wave Dispatch may use Haversine for notify batching only
 No road distance / ETA / Google Routes-based distance in Phase 2
 No Pickup latitude/longitude database columns for P2-02
 ```

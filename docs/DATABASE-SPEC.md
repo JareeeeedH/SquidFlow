@@ -234,6 +234,8 @@ FAILED
 
 Web Push 的 title / body 不存入 Notification。
 
+Wave Dispatch 以既有 `notifications` 列作為「此 Order 已通知過該 Driver」的紀錄（任一 `PENDING` / `SENT` / `FAILED` 皆算已通知）。**不**新增 wave／dispatch 專用表或欄位。
+
 ---
 
 ## 7. PushSubscription

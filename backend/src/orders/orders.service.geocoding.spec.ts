@@ -8,8 +8,8 @@ import {
 } from '@prisma/client';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { DistanceService } from '../distance/distance.service';
+import { WaveDispatchService } from '../dispatch/wave-dispatch.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from './orders.service';
 
@@ -36,8 +36,8 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
     $transaction: jest.fn(),
     $executeRawUnsafe: jest.fn(),
   };
-  const notificationsService = {
-    deliverPendingForOrder: jest.fn(),
+  const waveDispatchService = {
+    startAfterPublish: jest.fn().mockResolvedValue(undefined),
   };
   const geocodingService = {
     scheduleGeocode: jest.fn(),
@@ -69,7 +69,7 @@ describe('OrdersService geocoding hooks (P2-02)', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: prisma },
-        { provide: NotificationsService, useValue: notificationsService },
+        { provide: WaveDispatchService, useValue: waveDispatchService },
         { provide: GeocodingService, useValue: geocodingService },
         { provide: DistanceService, useValue: distanceService },
       ],

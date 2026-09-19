@@ -445,6 +445,13 @@ POST /api/v1/orders/:id/publish
 }
 ```
 
+Publish 成功將 Order 設為 `OPEN` 後，由 Backend 啟動 **Wave Dispatch**（見 `MVP-SPEC` / `SYSTEM-ARCHITECTURE-SPEC`）：
+
+- 不另開 Dispatch API；Frontend 不控制波次
+- Response 不包含波次或通知清單
+- 第一波於 Publish 流程內啟動；後續波次由 Backend 以 process 內排程執行
+- Notification／Push 失敗不回滾 Publish，不改變 Order Status
+
 ---
 
 ## Cancel Order

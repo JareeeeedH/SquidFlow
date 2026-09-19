@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import {
   DispatchMode,
   DriverOnlineStatus,
-  NotificationStatus,
   OrderEventType,
   OrderStatus,
   Prisma,
@@ -12,8 +11,8 @@ import {
 import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { DistanceService } from '../distance/distance.service';
+import { WaveDispatchService } from '../dispatch/wave-dispatch.service';
 import { GeocodingService } from '../geocoding/geocoding.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ORDER_NO_LOCK_NAMESPACE,
@@ -56,7 +55,7 @@ const assignedDriverInclude = {
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationsService: NotificationsService,
+    private readonly waveDispatchService: WaveDispatchService,
     private readonly geocodingService: GeocodingService,
     private readonly distanceService: DistanceService,
   ) {}
@@ -548,33 +547,6 @@ export class OrdersService {
         },
       });
 
-      const recipients = await tx.driver.findMany({
-        where: {
-          onlineStatus: DriverOnlineStatus.ONLINE,
-          user: {
-            role: UserRole.DRIVER,
-            status: UserStatus.ACTIVE,
-            pushSubscription: {
-              isNot: null,
-            },
-          },
-        },
-        select: {
-          userId: true,
-        },
-      });
-
-      if (recipients.length > 0) {
-        await tx.notification.createMany({
-          data: recipients.map((driver) => ({
-            userId: driver.userId,
-            orderId: id,
-            status: NotificationStatus.PENDING,
-            sentAt: null,
-          })),
-        });
-      }
-
       const order = await tx.order.findUniqueOrThrow({
         where: { id },
         select: {
@@ -589,7 +561,7 @@ export class OrdersService {
       };
     });
 
-    await this.notificationsService.deliverPendingForOrder(result.id);
+    await this.waveDispatchService.startAfterPublish(result.id);
     return result;
   }
 

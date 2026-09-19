@@ -10,11 +10,16 @@ Phase 2 — Driver Location & Trip Information（P2-01～P2-04 已實作）
 Phase 3 — Advanced Dispatch & Communication
 ```
 
-> 產品功能（P1 + P2）已收斂；Production deployment（Docker／HTTPS／反向代理）仍見 Production Readiness Audit，不屬本文件「功能完成」範圍。
+> 產品功能（P1 + P2 + Wave Dispatch）已收斂；Production deployment（Docker／HTTPS／反向代理）仍見 Production Readiness Audit，不屬本文件「功能完成」範圍。
 
 ### Phase 1
 
 核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線 / 離線、Web Push、Admin / Driver UI。詳見下方已完成 TASK。
+
+### Wave Dispatch（分批距離派單）
+
+- 已實作：Publish 後 Backend Wave Dispatch；候選 = ACTIVE + ONLINE + 無 busy Order + 有效 GPS + PushSubscription + 尚未通知；Haversine 近→遠、同距隨機；每波 ≦5、間隔 10s；Accept／Cancel／非 OPEN／無候選則停止；沿用 Accept atomic claim；無 Redis／Queue／WebSocket／SSE／Routes
+- Spec 已同步：`MVP-SPEC`、`API-SPEC`、`DATABASE-SPEC`、`SYSTEM-ARCHITECTURE-SPEC`、`SECURITY-SPEC`、`PHASE-2-SPEC`
 
 ### Phase 2（P2-01／P2-02／P2-03／P2-04 已實作）
 
@@ -739,3 +744,19 @@ Phase 3 — Advanced Dispatch & Communication
 - 保留 lifecycle OrderEvent 寫入與 Web Push subscription API
 - 未改 Order State、Accept concurrency、Auth、Push 發送、GPS／Geocoding／Distance／Map
 
+
+---
+
+## TASK �X Wave Dispatch�]����Z������^
+
+**Status:** completed
+
+### �w����
+
+- `WaveDispatchService`�GPublish ����i�q���F�C�i ��5�B���j 10s�FHaversine ������B�P�Z�H��
+- �Կ�GACTIVE + ONLINE + �L ACCEPTED/IN_PROGRESS + GPS + PushSubscription + �|���q���� Order
+- Accept / Cancel / �D OPEN / �L�Կ�h����F�u�� Accept atomic claim
+- �L�s DB ���F�H�J�� Notification �@���w�q������
+- ���ޤJ Redis / Queue / WebSocket / SSE / Routes / ETA
+- Unit + e2e�]wave-dispatch / publish / notifications / dispatch-flow�^
+- Spec �P�B�GMVP / API / DB / Architecture / Security / Phase-2 / Development Status
