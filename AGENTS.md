@@ -41,6 +41,8 @@ Review
 docs/
 ├── MVP-SPEC.md
 ├── PHASE-2-SPEC.md
+├── PHASE-3-SPEC.md
+├── PHASE-4-SPEC.md
 ├── TECHNOLOGY-SPEC.md
 ├── DATABASE-SPEC.md
 ├── API-SPEC.md

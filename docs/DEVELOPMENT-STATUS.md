@@ -7,14 +7,15 @@
 ```text
 Phase 1 — 核心派車 MVP（產品功能已實作）
 Phase 2 — Driver Location & Trip Information（P2-01～P2-04 已實作）
-Phase 3 — Advanced Dispatch & Communication
+Phase 3 — Trip Mileage & Fare Calculation（Spec 已定義；實作未開始）
+Phase 4 — Advanced Dispatch & Communication（僅規劃；見 PHASE-4-SPEC.md）
 ```
 
-> 產品功能（P1 + P2 + Wave Dispatch）已收斂；Production deployment（Docker／HTTPS／反向代理）仍見 Production Readiness Audit，不屬本文件「功能完成」範圍。
+> 產品功能（P1 + P2 + Wave Dispatch）已收斂；Phase 3 里程／車資見 `PHASE-3-SPEC.md`；Phase 4 見 `PHASE-4-SPEC.md`。Production deployment（Docker／HTTPS／反向代理）仍見 Production Readiness Audit，不屬本文件「功能完成」範圍。
 
 ### Phase 1
 
-核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線 / 離線、Web Push、Admin / Driver UI。詳見下方已完成 TASK。
+核心派車 MVP：登入、訂單生命週期、搶單、Driver 上線／離線、Web Push、Admin／Driver UI。詳見下方已完成 TASK。
 
 ### Wave Dispatch（分批距離派單）
 
@@ -25,38 +26,49 @@ Phase 3 — Advanced Dispatch & Communication
 
 產品範圍以 `PHASE-2-SPEC.md` 為準。包含：
 
-- Driver Location（P2-01：已實作 — GPS、立即首次定位、每 30 秒更新、Backend 只存最新位置；Online / Offline 控制更新；失敗不改 Online 狀態）
+- Driver Location（P2-01：已實作 — GPS、立即首次定位、每 30 秒更新、Backend 只存最新位置；Online／Offline 控制更新；失敗不改 Online 狀態）
 - Pickup Geocoding（P2-02：已實作 — Google Geocoding API；建單不阻塞；非同步 geocode；**不**存 Pickup lat/lng 到 DB；同 Order 結果供 Distance／Map；改地址重 geocode）
 - Straight-line Distance（P2-03：已實作 — `DistanceService` + `distance_meters`；無道路距離／ETA）
 - Map & Google Maps Navigation handoff（P2-04：已實作 — Google Maps JavaScript API；Driver／Admin Map；ephemeral Pickup 座標；導航 handoff；Maps／導航失敗不影響核心流程）
 
-不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA；不引入 Redis／Queue／Worker／WebSocket 做 geocoding／distance／map。
+不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA；不引入 Redis／Queue／Worker／WebSocket 做 geocoding／distance／map。任務期間里程計費屬 Phase 3。
 
-### Phase 3（後續規劃，僅簡述）
+### Phase 3 — Trip Mileage & Fare Calculation（Spec 已定義；尚未實作）
 
-- Advanced Dispatch：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤
+產品範圍以 `PHASE-3-SPEC.md` 為準。
+
+- `IN_PROGRESS` GPS 10 秒 + Haversine 累加 `trip_distance_meters`
+- Complete 鎖定里程並依費率寫入最終 `price`
+- 沿用 `PATCH /api/v1/driver/location`；不保存 GPS History
+- Backend 為里程／車資唯一權威
+
+### Phase 4 — Advanced Dispatch & Communication（僅規劃）
+
+產品範圍以 `PHASE-4-SPEC.md` 為準（僅簡述）：
+
+- Advanced Dispatch：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤
 - Communication：第三方通訊整合（不指定服務或技術方案）
 
 ---
 
-## TASK-001 — Project Bootstrap
+## TASK-001 â Project Bootstrap
 
 **Status:** completed
 
-### 已完成的基礎環境
+### å·²å®æçåºç¤ç°å¢
 
-- Frontend：Vue 3 + Vite + TypeScript + Vue Router + Pinia
-- Backend：NestJS + TypeScript Modular Monolith 骨架
-- Prisma：已設定，尚未建立業務資料表
-- PostgreSQL：Docker Compose（`postgres:16`）
-- Health check：`GET /api/v1/health`
-- Root scripts：`dev:frontend`、`dev:backend`、`db:up`、`db:down`、`build`、`lint`、`test`
+- Frontendï¼Vue 3 + Vite + TypeScript + Vue Router + Pinia
+- Backendï¼NestJS + TypeScript Modular Monolith éª¨æ¶
+- Prismaï¼å·²è¨­å®ï¼å°æªå»ºç«æ¥­åè³æè¡¨
+- PostgreSQLï¼Docker Composeï¼`postgres:16`ï¼
+- Health checkï¼`GET /api/v1/health`
+- Root scriptsï¼`dev:frontend`ã`dev:backend`ã`db:up`ã`db:down`ã`build`ã`lint`ã`test`
 
-### 啟動方式
+### ååæ¹å¼
 
 ```text
-1. 複製 backend/.env.example 為 backend/.env（預設 PORT=3001，對齊 Vite proxy）
-2. 複製 frontend/.env.example 為 frontend/.env，並填入與 Backend 相同的 VAPID public key
+1. è¤è£½ backend/.env.example çº backend/.envï¼é è¨­ PORT=3001ï¼å°é½ Vite proxyï¼
+2. è¤è£½ frontend/.env.example çº frontend/.envï¼ä¸¦å¡«å¥è Backend ç¸åç VAPID public key
 3. npm run db:up
 4. cd backend && npm install && npm run prisma:generate
 5. cd frontend && npm install
@@ -64,699 +76,724 @@ Phase 3 — Advanced Dispatch & Communication
 7. npm run dev:frontend
 ```
 
-本機預設：Docker PostgreSQL 對應 `localhost:5433`；Backend `PORT=3001`（與 Vite `/api` proxy 一致）。若 host `3001` 被占用，同時改 `backend/.env` 的 `PORT` 與 `frontend/vite.config.ts` proxy target。
+æ¬æ©é è¨­ï¼Docker PostgreSQL å°æ `localhost:5433`ï¼Backend `PORT=3001`ï¼è Vite `/api` proxy ä¸è´ï¼ãè¥ host `3001` è¢«å ç¨ï¼åææ¹ `backend/.env` ç `PORT` è `frontend/vite.config.ts` proxy targetã
 
 ---
 
-## TASK-002 — Database Schema / Prisma
+## TASK-002 â Database Schema / Prisma
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Prisma schema 依 DATABASE-SPEC 建立 7 張表：`users`、`drivers`、`orders`、`order_events`、`notifications`、`push_subscriptions`、`sessions`
-- 第一個 migration：`20260914202731_init`
-- Partial unique index：
+- Prisma schema ä¾ DATABASE-SPEC å»ºç« 7 å¼µè¡¨ï¼`users`ã`drivers`ã`orders`ã`order_events`ã`notifications`ã`push_subscriptions`ã`sessions`
+- ç¬¬ä¸å migrationï¼`20260914202731_init`
+- Partial unique indexï¼
   - `idx_one_active_order_per_driver`
   - `idx_one_active_session_per_user`
-- 尚未實作 Auth / Order / Driver API
+- å°æªå¯¦ä½ Auth / Order / Driver API
 
 ---
 
-## TASK-003 — Authentication / Session
+## TASK-003 â Authentication / Session
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/logout`
-- Session + HttpOnly Cookie（`squidflow_session`）
-- PostgreSQL Session、Single Active Session transaction
+- Session + HttpOnly Cookieï¼`squidflow_session`ï¼
+- PostgreSQL SessionãSingle Active Session transaction
 - bcrypt password hashing
-- AuthGuard / RolesGuard 基礎
-- 未實作 Frontend Login UI、Driver / Order / Notification API
+- AuthGuard / RolesGuard åºç¤
+- æªå¯¦ä½ Frontend Login UIãDriver / Order / Notification API
 
 ---
 
-## TASK-004 — Admin Driver Management
+## TASK-004 â Admin Driver Management
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `GET /api/v1/drivers`
 - `POST /api/v1/drivers`
 - `GET /api/v1/drivers/:id`
 - `PUT /api/v1/drivers/:id`
 - `PATCH /api/v1/drivers/:id/status`
-- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
-- 建立 Driver 時同一 transaction 寫入 User + Driver
-- User.role = DRIVER、User.status = ACTIVE、Driver.online_status = OFFLINE 由 Backend 決定
-- password 使用既有 PasswordService / bcrypt；PUT 未提供則不改密碼
-- username / license_plate unique 轉為統一 API error
-- 未實作 Driver Management UI、Order API、Driver online/offline、Web Push
+- Admin-onlyï¼AuthGuard + RolesGuardï¼`User.role = ADMIN`ï¼
+- å»ºç« Driver æåä¸ transaction å¯«å¥ User + Driver
+- User.role = DRIVERãUser.status = ACTIVEãDriver.online_status = OFFLINE ç± Backend æ±ºå®
+- password ä½¿ç¨æ¢æ PasswordService / bcryptï¼PUT æªæä¾åä¸æ¹å¯ç¢¼
+- username / license_plate unique è½çºçµ±ä¸ API error
+- æªå¯¦ä½ Driver Management UIãOrder APIãDriver online/offlineãWeb Push
 
 ---
 
-## TASK-005 — Driver Online / Offline
+## TASK-005 â Driver Online / Offline
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `PATCH /api/v1/driver/status`
-- Driver-only：AuthGuard + RolesGuard（`User.role = DRIVER`）
-- 以 current user 對應的 Driver 更新 `online_status`，不接受 client 指定 `driver_id` / `user_id`
-- 只接受 `ONLINE` / `OFFLINE`；`ACTIVE` / `SUSPENDED` 為 VALIDATION_ERROR
-- `SUSPENDED` Driver 不可切換 Online Status，回傳 `ACCOUNT_SUSPENDED`，不改 `online_status`
-- 不修改 Order、不發送 Notification
-- 未實作 Accept Order、搶單、Web Push、Frontend Online/Offline UI
+- Driver-onlyï¼AuthGuard + RolesGuardï¼`User.role = DRIVER`ï¼
+- ä»¥ current user å°æç Driver æ´æ° `online_status`ï¼ä¸æ¥å client æå® `driver_id` / `user_id`
+- åªæ¥å `ONLINE` / `OFFLINE`ï¼`ACTIVE` / `SUSPENDED` çº VALIDATION_ERROR
+- `SUSPENDED` Driver ä¸å¯åæ Online Statusï¼åå³ `ACCOUNT_SUSPENDED`ï¼ä¸æ¹ `online_status`
+- ä¸ä¿®æ¹ Orderãä¸ç¼é Notification
+- æªå¯¦ä½ Accept Orderãæ¶å®ãWeb PushãFrontend Online/Offline UI
 
 ---
 
-## TASK-006 — Admin Order CRUD / DRAFT
+## TASK-006 â Admin Order CRUD / DRAFT
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `GET /api/v1/orders`
 - `POST /api/v1/orders`
 - `GET /api/v1/orders/:id`
 - `PUT /api/v1/orders/:id`
 - `DELETE /api/v1/orders/:id`
-- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
-- 建立時固定 `status=DRAFT`、`dispatch_mode=OPEN`、`driver_id=null`、`created_by=current admin`
-- `order_no`：`ORD-YYYYMMDD-NNN`（Asia/Taipei 日期），transaction + PostgreSQL advisory lock
-- Create 與 `ORDER_CREATED` 同一 transaction
-- PUT / DELETE 僅允許 DRAFT；非 DRAFT 回 `INVALID_ORDER_STATUS`
-- DRAFT hard delete：先刪 OrderEvent / Notification，再刪 Order（不改 Schema CASCADE）
-- `GET /orders` query：`status`、`date`（Taipei `created_at` 日曆日）、`search`（`order_no` / `customer_name`）
-- 未實作 Publish、Cancel、搶單、Notification、Frontend Order UI
+- Admin-onlyï¼AuthGuard + RolesGuardï¼`User.role = ADMIN`ï¼
+- å»ºç«æåºå® `status=DRAFT`ã`dispatch_mode=OPEN`ã`driver_id=null`ã`created_by=current admin`
+- `order_no`ï¼`ORD-YYYYMMDD-NNN`ï¼Asia/Taipei æ¥æï¼ï¼transaction + PostgreSQL advisory lock
+- Create è `ORDER_CREATED` åä¸ transaction
+- PUT / DELETE ååè¨± DRAFTï¼é DRAFT å `INVALID_ORDER_STATUS`
+- DRAFT hard deleteï¼ååª OrderEvent / Notificationï¼ååª Orderï¼ä¸æ¹ Schema CASCADEï¼
+- `GET /orders` queryï¼`status`ã`date`ï¼Taipei `created_at` æ¥ææ¥ï¼ã`search`ï¼`order_no` / `customer_name`ï¼
+- æªå¯¦ä½ PublishãCancelãæ¶å®ãNotificationãFrontend Order UI
 
 ---
 
-## TASK-007 — Order Publish / DRAFT → OPEN
+## TASK-007 â Order Publish / DRAFT â OPEN
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `POST /api/v1/orders/:id/publish`
-- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
-- Atomic `UPDATE ... WHERE id AND status = DRAFT` → `OPEN`
-- 同一 transaction：Order OPEN + `ORDER_PUBLISHED` + `Notification(PENDING)`
-- 通知對象：`User.role=DRIVER` 且 `User.status=ACTIVE` 且 `Driver.online_status=ONLINE`，且沒有 `ACCEPTED` / `IN_PROGRESS` Order
-- 無符合資格 Driver 時仍 Publish 成功，Notification = 0
-- 非 DRAFT / 重複 Publish → `INVALID_ORDER_STATUS`
-- 未實作 Web Push、Accept / 搶單、Cancel、Frontend
+- Admin-onlyï¼AuthGuard + RolesGuardï¼`User.role = ADMIN`ï¼
+- Atomic `UPDATE ... WHERE id AND status = DRAFT` â `OPEN`
+- åä¸ transactionï¼Order OPEN + `ORDER_PUBLISHED` + `Notification(PENDING)`
+- éç¥å°è±¡ï¼`User.role=DRIVER` ä¸ `User.status=ACTIVE` ä¸ `Driver.online_status=ONLINE`ï¼ä¸æ²æ `ACCEPTED` / `IN_PROGRESS` Order
+- ç¡ç¬¦åè³æ ¼ Driver æä» Publish æåï¼Notification = 0
+- é DRAFT / éè¤ Publish â `INVALID_ORDER_STATUS`
+- æªå¯¦ä½ Web PushãAccept / æ¶å®ãCancelãFrontend
 
 ---
 
-## TASK-008 — Driver Open Orders / Order Detail
+## TASK-008 â Driver Open Orders / Order Detail
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `GET /api/v1/driver/orders/open`
 - `GET /api/v1/driver/orders/:id`
-- Driver-only：AuthGuard + RolesGuard（`User.role = DRIVER`）
-- Driver context 由 current user → `drivers.user_id` 取得，不接受 client `driver_id` / `user_id`
-- Open Orders 僅在可接單時回傳 `status=OPEN`：ACTIVE + ONLINE + 無 ACCEPTED / IN_PROGRESS；否則空陣列
-- Order Detail：OPEN 或 `order.driver_id = current driver`（含 ACCEPTED / IN_PROGRESS / COMPLETED / CANCELLED）
-- 其他 Driver 已接單與不存在訂單一律 `404 NOT_FOUND`
-- GET 唯讀：不改 Order / Driver，不新增 OrderEvent
-- 未實作 Accept / 搶單、Start / Complete、`GET /driver/orders`、Web Push、Frontend
+- Driver-onlyï¼AuthGuard + RolesGuardï¼`User.role = DRIVER`ï¼
+- Driver context ç± current user â `drivers.user_id` åå¾ï¼ä¸æ¥å client `driver_id` / `user_id`
+- Open Orders åå¨å¯æ¥å®æåå³ `status=OPEN`ï¼ACTIVE + ONLINE + ç¡ ACCEPTED / IN_PROGRESSï¼å¦åç©ºé£å
+- Order Detailï¼OPEN æ `order.driver_id = current driver`ï¼å« ACCEPTED / IN_PROGRESS / COMPLETED / CANCELLEDï¼
+- å¶ä» Driver å·²æ¥å®èä¸å­å¨è¨å®ä¸å¾ `404 NOT_FOUND`
+- GET å¯è®ï¼ä¸æ¹ Order / Driverï¼ä¸æ°å¢ OrderEvent
+- æªå¯¦ä½ Accept / æ¶å®ãStart / Completeã`GET /driver/orders`ãWeb PushãFrontend
 
 ---
 
-## Frontend Phase A-1 — Foundation & Authentication
+## Frontend Phase A-1 â Foundation & Authentication
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - Naive UI + Lucide
 - CSS Variables + Scoped CSS
-- Vite proxy：`/api` → `http://localhost:3001`
-- 共用 API Client（`credentials: include`）
-- Pinia Auth Store、`GET /auth/me` 初始化
-- Router guard：`/login` 與受保護 `/`
+- Vite proxyï¼`/api` â `http://localhost:3001`
+- å±ç¨ API Clientï¼`credentials: include`ï¼
+- Pinia Auth Storeã`GET /auth/me` åå§å
+- Router guardï¼`/login` èåä¿è­· `/`
 - Login / Logout
-- 最小 Authenticated Layout
-- 未實作 Orders / Drivers / Accept / Cancel / Web Push
+- æå° Authenticated Layout
+- æªå¯¦ä½ Orders / Drivers / Accept / Cancel / Web Push
 
 ---
 
-## Frontend Phase A-2 — Admin Orders List
+## Frontend Phase A-2 â Admin Orders List
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Admin 導覽：訂單 → `/orders`
-- `GET /api/v1/orders`：`search` / `status` / `date`
-- Orders table、Loading / Empty / Error / 403
-- Status visual、Taipei 時間、NT$ 價格
-- 查看 → `/orders/:id` navigation placeholder（未實作 Detail UI）
-- 未實作 Create / Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
+- Admin å°è¦½ï¼è¨å® â `/orders`
+- `GET /api/v1/orders`ï¼`search` / `status` / `date`
+- Orders tableãLoading / Empty / Error / 403
+- Status visualãTaipei æéãNT$ å¹æ ¼
+- æ¥ç â `/orders/:id` navigation placeholderï¼æªå¯¦ä½ Detail UIï¼
+- æªå¯¦ä½ Create / Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
 
 ---
 
-## Frontend Phase A-3 — Order Detail + Create Draft
+## Frontend Phase A-3 â Order Detail + Create Draft
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- `GET /api/v1/orders/:id` Order Detail（唯讀）
-- `POST /api/v1/orders` 建立 Draft
-- `/orders/new` → 成功後進入 `/orders/:id`
-- 未實作 Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
+- `GET /api/v1/orders/:id` Order Detailï¼å¯è®ï¼
+- `POST /api/v1/orders` å»ºç« Draft
+- `/orders/new` â æåå¾é²å¥ `/orders/:id`
+- æªå¯¦ä½ Edit / Delete / Publish / Cancel / Drivers / Accept / Web Push
 
 ---
 
-## Frontend Phase A-4 — Edit / Delete / Publish Draft
+## Frontend Phase A-4 â Edit / Delete / Publish Draft
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- DRAFT：`PUT /orders/:id` 編輯
-- DRAFT：`DELETE /orders/:id` 刪除（確認後回 `/orders`）
-- DRAFT：`POST /orders/:id/publish` 發布（確認後重新載入 Detail）
-- 非 DRAFT 不提供以上操作
-- 未實作 Cancel / Accept / Drivers / Web Push
+- DRAFTï¼`PUT /orders/:id` ç·¨è¼¯
+- DRAFTï¼`DELETE /orders/:id` åªé¤ï¼ç¢ºèªå¾å `/orders`ï¼
+- DRAFTï¼`POST /orders/:id/publish` ç¼å¸ï¼ç¢ºèªå¾éæ°è¼å¥ Detailï¼
+- é DRAFT ä¸æä¾ä»¥ä¸æä½
+- æªå¯¦ä½ Cancel / Accept / Drivers / Web Push
 
 ---
 
-## Frontend Phase A-5 — Admin Driver Management
+## Frontend Phase A-5 â Admin Driver Management
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Admin 導覽：司機 → `/drivers`
-- `GET /api/v1/drivers` 司機列表
-- `GET /api/v1/drivers/:id` 司機詳情
-- `POST /api/v1/drivers` 新增司機
-- `PUT /api/v1/drivers/:id` 編輯（空白密碼不送出）
-- `PATCH /api/v1/drivers/:id/status` 啟用 / 停用
-- 帳號狀態 `ACTIVE` / `SUSPENDED` 與上線狀態 `ONLINE` / `OFFLINE` 分開顯示
-- 未實作 Delete Driver、Force Logout、Driver UI、Accept、Web Push
+- Admin å°è¦½ï¼å¸æ© â `/drivers`
+- `GET /api/v1/drivers` å¸æ©åè¡¨
+- `GET /api/v1/drivers/:id` å¸æ©è©³æ
+- `POST /api/v1/drivers` æ°å¢å¸æ©
+- `PUT /api/v1/drivers/:id` ç·¨è¼¯ï¼ç©ºç½å¯ç¢¼ä¸éåºï¼
+- `PATCH /api/v1/drivers/:id/status` åç¨ / åç¨
+- å¸³èçæ `ACTIVE` / `SUSPENDED` èä¸ç·çæ `ONLINE` / `OFFLINE` åéé¡¯ç¤º
+- æªå¯¦ä½ Delete DriverãForce LogoutãDriver UIãAcceptãWeb Push
 
 ---
 
-## Frontend Phase A-6 — Driver UI
+## Frontend Phase A-6 â Driver UI
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Driver 登入後進入 `/driver`
-- Admin / Driver 路由依 role 隔離
-- `PATCH /api/v1/driver/status` 上線 / 下線
-- `GET /api/v1/driver/orders/open` 可搶訂單
-- `GET /api/v1/driver/orders/:id` 司機訂單詳情
-- Mobile-first Card / 大觸控區
-- 未實作 My Orders、Start / Complete / Cancel、Web Push
+- Driver ç»å¥å¾é²å¥ `/driver`
+- Admin / Driver è·¯ç±ä¾ role éé¢
+- `PATCH /api/v1/driver/status` ä¸ç· / ä¸ç·
+- `GET /api/v1/driver/orders/open` å¯æ¶è¨å®
+- `GET /api/v1/driver/orders/:id` å¸æ©è¨å®è©³æ
+- Mobile-first Card / å¤§è§¸æ§å
+- æªå¯¦ä½ My OrdersãStart / Complete / CancelãWeb Push
 
 ---
 
-## TASK-009 — Driver Accept Order
+## TASK-009 â Driver Accept Order
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `POST /api/v1/driver/orders/:id/accept`
-- Atomic claim：`UPDATE ... WHERE id = :id AND status = 'OPEN'`
-- 成功：`OPEN → ACCEPTED`、寫入 `driver_id` / `accepted_at`、建立 `ORDER_ACCEPTED`
-- 失敗：`ORDER_ALREADY_ACCEPTED` / `DRIVER_OFFLINE` / `DRIVER_HAS_ACTIVE_ORDER` / `INVALID_ORDER_STATUS` / `NOT_FOUND`
-- 同一 Driver 未完成訂單由 Business Rule + `idx_one_active_order_per_driver` 雙重保護
-- Driver UI「我要接單」以 Backend 回傳為準
-- 未實作 Start / Complete / Cancel、My Orders、Web Push
+- Atomic claimï¼`UPDATE ... WHERE id = :id AND status = 'OPEN'`
+- æåï¼`OPEN â ACCEPTED`ãå¯«å¥ `driver_id` / `accepted_at`ãå»ºç« `ORDER_ACCEPTED`
+- å¤±æï¼`ORDER_ALREADY_ACCEPTED` / `DRIVER_OFFLINE` / `DRIVER_HAS_ACTIVE_ORDER` / `INVALID_ORDER_STATUS` / `NOT_FOUND`
+- åä¸ Driver æªå®æè¨å®ç± Business Rule + `idx_one_active_order_per_driver` ééä¿è­·
+- Driver UIãæè¦æ¥å®ãä»¥ Backend åå³çºæº
+- æªå¯¦ä½ Start / Complete / CancelãMy OrdersãWeb Push
 
 ---
 
-## TASK-010 — Driver My Orders / Start / Complete
+## TASK-010 â Driver My Orders / Start / Complete
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- `GET /api/v1/driver/orders`：僅回傳目前 Driver 自己的訂單，支援 `status` filter，不回傳 DRAFT
-- `POST /api/v1/driver/orders/:id/start`：僅自己的 `ACCEPTED` → `IN_PROGRESS`，寫入 `started_at` 與 `ORDER_STARTED`
-- `POST /api/v1/driver/orders/:id/complete`：僅自己的 `IN_PROGRESS` → `COMPLETED`，寫入 `completed_at` 與 `ORDER_COMPLETED`
-- 狀態、timestamp、event 同一 transaction；atomic `UPDATE ... WHERE`
-- 非法 / 重複 transition → `INVALID_ORDER_STATUS`；其他 Driver → `404`；Admin → `403`
-- 不接受 client `driver_id` / `user_id` / timestamp
-- ONLINE / OFFLINE 不影響已接訂單的 Start / Complete
-- SUSPENDED：沿用 leftover session `ACCOUNT_SUSPENDED`、正式停權撤 session `401`
-- 未實作 Cancel、My Orders Frontend、Web Push
+- `GET /api/v1/driver/orders`ï¼ååå³ç®å Driver èªå·±çè¨å®ï¼æ¯æ´ `status` filterï¼ä¸åå³ DRAFT
+- `POST /api/v1/driver/orders/:id/start`ï¼åèªå·±ç `ACCEPTED` â `IN_PROGRESS`ï¼å¯«å¥ `started_at` è `ORDER_STARTED`
+- `POST /api/v1/driver/orders/:id/complete`ï¼åèªå·±ç `IN_PROGRESS` â `COMPLETED`ï¼å¯«å¥ `completed_at` è `ORDER_COMPLETED`
+- çæãtimestampãevent åä¸ transactionï¼atomic `UPDATE ... WHERE`
+- éæ³ / éè¤ transition â `INVALID_ORDER_STATUS`ï¼å¶ä» Driver â `404`ï¼Admin â `403`
+- ä¸æ¥å client `driver_id` / `user_id` / timestamp
+- ONLINE / OFFLINE ä¸å½±é¿å·²æ¥è¨å®ç Start / Complete
+- SUSPENDEDï¼æ²¿ç¨ leftover session `ACCOUNT_SUSPENDED`ãæ­£å¼åæ¬æ¤ session `401`
+- æªå¯¦ä½ CancelãMy Orders FrontendãWeb Push
 
 ---
 
-## TASK-011 — Admin Cancel Order
+## TASK-011 â Admin Cancel Order
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
 - `POST /api/v1/orders/:id/cancel`
-- Admin-only：AuthGuard + RolesGuard（`User.role = ADMIN`）
-- Atomic `UPDATE ... WHERE id AND status IN ('OPEN', 'ACCEPTED')` → `CANCELLED` + `cancelled_at`
-- 同一 transaction 寫入 `ORDER_CANCELLED`
-- `ACCEPTED` 取消保留 `driver_id` / `accepted_at`；該 Driver 可再接其他 OPEN 訂單
-- 非法 / 重複 cancel → `INVALID_ORDER_STATUS`；不存在 → `NOT_FOUND`；Driver → `403`
-- 不接受 client `driver_id` / `cancelled_at` / 狀態欄位
-- 不發送 Web Push / Notification
-- 未實作 Cancel Frontend、Web Push
+- Admin-onlyï¼AuthGuard + RolesGuardï¼`User.role = ADMIN`ï¼
+- Atomic `UPDATE ... WHERE id AND status IN ('OPEN', 'ACCEPTED')` â `CANCELLED` + `cancelled_at`
+- åä¸ transaction å¯«å¥ `ORDER_CANCELLED`
+- `ACCEPTED` åæ¶ä¿ç `driver_id` / `accepted_at`ï¼è©² Driver å¯åæ¥å¶ä» OPEN è¨å®
+- éæ³ / éè¤ cancel â `INVALID_ORDER_STATUS`ï¼ä¸å­å¨ â `NOT_FOUND`ï¼Driver â `403`
+- ä¸æ¥å client `driver_id` / `cancelled_at` / çææ¬ä½
+- ä¸ç¼é Web Push / Notification
+- æªå¯¦ä½ Cancel FrontendãWeb Push
 
 ---
 
-## TASK-012 — Web Push
+## TASK-012 â Web Push
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- `POST /api/v1/notifications/subscription`、`DELETE /api/v1/notifications/subscription`
-- Driver-only；未登入 `401`、Admin `403`、SUSPENDED leftover session `ACCOUNT_SUSPENDED`
-- 同一 User 只保留一筆 PushSubscription；新 subscription 取代舊的（含相同 endpoint）
-- Logout / unsubscribe 移除目前 subscription
-- Publish 同一 transaction：Order `OPEN` + `ORDER_PUBLISHED` + `Notification(PENDING)`
-- 通知資格：`DRIVER + ACTIVE + ONLINE + 有效 PushSubscription`；持有 `ACCEPTED` / `IN_PROGRESS` 仍可收到通知
-- Accept 資格維持既有規則，不因通知放寬而改變
-- Transaction commit 後發送 Web Push；`PENDING → SENT / FAILED`
-- 實際發送時 Order 必須仍為 `OPEN`；已不是 `OPEN` 的 PENDING 不發送
-- Invalid subscription（404 / 410）：移除 subscription，Notification → `FAILED`
-- Push failure 不影響 Publish / Order state；不做 retry / queue
-- Web Push title / body 不存入 Notification；VAPID 由 env 提供
-- 未實作 Frontend integration、deployment
+- `POST /api/v1/notifications/subscription`ã`DELETE /api/v1/notifications/subscription`
+- Driver-onlyï¼æªç»å¥ `401`ãAdmin `403`ãSUSPENDED leftover session `ACCOUNT_SUSPENDED`
+- åä¸ User åªä¿çä¸ç­ PushSubscriptionï¼æ° subscription åä»£èçï¼å«ç¸å endpointï¼
+- Logout / unsubscribe ç§»é¤ç®å subscription
+- Publish åä¸ transactionï¼Order `OPEN` + `ORDER_PUBLISHED` + `Notification(PENDING)`
+- éç¥è³æ ¼ï¼`DRIVER + ACTIVE + ONLINE + ææ PushSubscription`ï¼ææ `ACCEPTED` / `IN_PROGRESS` ä»å¯æ¶å°éç¥
+- Accept è³æ ¼ç¶­ææ¢æè¦åï¼ä¸å éç¥æ¾å¯¬èæ¹è®
+- Transaction commit å¾ç¼é Web Pushï¼`PENDING â SENT / FAILED`
+- å¯¦éç¼éæ Order å¿é ä»çº `OPEN`ï¼å·²ä¸æ¯ `OPEN` ç PENDING ä¸ç¼é
+- Invalid subscriptionï¼404 / 410ï¼ï¼ç§»é¤ subscriptionï¼Notification â `FAILED`
+- Push failure ä¸å½±é¿ Publish / Order stateï¼ä¸å retry / queue
+- Web Push title / body ä¸å­å¥ Notificationï¼VAPID ç± env æä¾
+- æªå¯¦ä½ Frontend integrationãdeployment
 
 ---
 
-## TASK-013 — Frontend Web Push Integration
+## TASK-013 â Frontend Web Push Integration
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Driver Home「開啟通知 / 關閉通知」；Permission 被拒絕只顯示「通知未開啟」
-- 請求 Notification Permission、註冊 Service Worker、建立 PushSubscription
+- Driver Homeãéåéç¥ / éééç¥ãï¼Permission è¢«æçµåªé¡¯ç¤ºãéç¥æªéåã
+- è«æ± Notification Permissionãè¨»å Service Workerãå»ºç« PushSubscription
 - `POST / DELETE /api/v1/notifications/subscription`
-- 登入後依瀏覽器 Permission + 既有 subscription 恢復通知狀態（並重新 POST 給 Backend）
-- Logout 先移除目前 browser / Backend subscription
-- 收到 Push 顯示通知；點擊進入 `/driver/orders/:id`
-- Permission 失敗不影響登入、Online/Offline、接單
-- VAPID public key 使用 `VITE_VAPID_PUBLIC_KEY`（與 Backend 同一組 public key）
-- 未實作 deployment
+- ç»å¥å¾ä¾çè¦½å¨ Permission + æ¢æ subscription æ¢å¾©éç¥çæï¼ä¸¦éæ° POST çµ¦ Backendï¼
+- Logout åç§»é¤ç®å browser / Backend subscription
+- æ¶å° Push é¡¯ç¤ºéç¥ï¼é»æé²å¥ `/driver/orders/:id`
+- Permission å¤±æä¸å½±é¿ç»å¥ãOnline/Offlineãæ¥å®
+- VAPID public key ä½¿ç¨ `VITE_VAPID_PUBLIC_KEY`ï¼è Backend åä¸çµ public keyï¼
+- æªå¯¦ä½ deployment
 
 ---
 
-## TASK-014 — Real Push & End-to-End Flow Verification
+## TASK-014 â Real Push & End-to-End Flow Verification
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- 驗證 Publish → OPEN → Accept → Start → Complete → COMPLETED（`backend/test/dispatch-flow.e2e-spec.ts` + 本機瀏覽器 / API）
-- 驗證 Offline / Busy / SUSPENDED / 同時搶單 / Admin Cancel（既有 e2e + dispatch-flow；本機另驗證 Offline Accept 與 Admin Cancel）
-- 驗證 Push failure 不影響 Publish / Order
-- 瀏覽器：Notification Permission = granted、Service Worker `/sw.js` 已註冊、`showNotification` 可顯示、click message 可導向 `/driver/orders/:id`、Driver UI「我要接單」成功
-- Cursor 內建 Chromium 的 `PushManager.subscribe` 回 `AbortError: Registration failed - push service not available`，因此無法在此環境完成真實 Web Push 網路投遞 / FCM subscription
-- 未實作 Driver Start / Complete UI、Admin Cancel UI、deployment（Start / Complete 以 Driver API 驗證）
+- é©è­ Publish â OPEN â Accept â Start â Complete â COMPLETEDï¼`backend/test/dispatch-flow.e2e-spec.ts` + æ¬æ©çè¦½å¨ / APIï¼
+- é©è­ Offline / Busy / SUSPENDED / åææ¶å® / Admin Cancelï¼æ¢æ e2e + dispatch-flowï¼æ¬æ©å¦é©è­ Offline Accept è Admin Cancelï¼
+- é©è­ Push failure ä¸å½±é¿ Publish / Order
+- çè¦½å¨ï¼Notification Permission = grantedãService Worker `/sw.js` å·²è¨»åã`showNotification` å¯é¡¯ç¤ºãclick message å¯å°å `/driver/orders/:id`ãDriver UIãæè¦æ¥å®ãæå
+- Cursor å§å»º Chromium ç `PushManager.subscribe` å `AbortError: Registration failed - push service not available`ï¼å æ­¤ç¡æ³å¨æ­¤ç°å¢å®æçå¯¦ Web Push ç¶²è·¯æé / FCM subscription
+- æªå¯¦ä½ Driver Start / Complete UIãAdmin Cancel UIãdeploymentï¼Start / Complete ä»¥ Driver API é©è­ï¼
 
 ---
 
-## TASK-015 — Driver My Orders + Start/Complete + Admin Cancel UI
+## TASK-015 â Driver My Orders + Start/Complete + Admin Cancel UI
 
 **Status:** completed
 
-### 已完成
+### å·²å®æ
 
-- Driver「我的訂單」：目前訂單（`ACCEPTED` / `IN_PROGRESS`）與歷史訂單（`COMPLETED` / `CANCELLED`）
-- `GET /api/v1/driver/orders`；`ACCEPTED` →「開始行程」；`IN_PROGRESS` →「完成訂單」
-- `POST /api/v1/driver/orders/:id/start`、`POST /api/v1/driver/orders/:id/complete`
-- Admin Order Detail：`OPEN` / `ACCEPTED` →「取消訂單」；`IN_PROGRESS` / `COMPLETED` / `CANCELLED` 唯讀
+- Driverãæçè¨å®ãï¼ç®åè¨å®ï¼`ACCEPTED` / `IN_PROGRESS`ï¼èæ­·å²è¨å®ï¼`COMPLETED` / `CANCELLED`ï¼
+- `GET /api/v1/driver/orders`ï¼`ACCEPTED` âãéå§è¡ç¨ãï¼`IN_PROGRESS` âãå®æè¨å®ã
+- `POST /api/v1/driver/orders/:id/start`ã`POST /api/v1/driver/orders/:id/complete`
+- Admin Order Detailï¼`OPEN` / `ACCEPTED` âãåæ¶è¨å®ãï¼`IN_PROGRESS` / `COMPLETED` / `CANCELLED` å¯è®
 - `POST /api/v1/orders/:id/cancel`
-- 未實作 Dashboard、Security Hardening、deployment
+- æªå¯¦ä½ DashboardãSecurity Hardeningãdeployment
 
 ---
 
-## TASK-016 — Production Security Hardening + Final QA
+## TASK-016 â Production Security Hardening + Final QA
 
 **Status:** completed
+
+### å·²å®æ
+
+- Login brute-forceï¼åä¸ IP + username é£çºå¤±æå¾éå®ï¼æåç»å¥æ¸é¤è¨æ¸ï¼éå®æéä¸é²è¡å¯ç¢¼é©è­
+- Rate limitingï¼in-memoryï¼é Redisï¼ï¼LoginãAcceptãPublishãCancelï¼production é è¨­è¼å´ãdev/test è¼é¬ï¼å¯ç¨ env è¦å¯«
+- Security headersï¼CSPãX-Content-Type-OptionsãReferrer-PolicyãX-Frame-Optionsï¼HSTS å production
+- Production CORSï¼`FRONTEND_ORIGIN` allowlist + credentialsï¼production æªè¨­å®åçè¦½å¨ Origin æçµ
+- Production Cookie ç¶­æ HttpOnly / Secure / SameSite=Laxï¼`TRUST_PROXY` ä¾åä»£å¾åå¾çå¯¦ client IP
+- æç¢º JSON body ä¸é 100kb
+- æªä¿®æ¹ Order business rulesãDatabase SchemaãAPI contract
+- æªå¯¦ä½ Dashboardãdeployment
+
+---
+
+## TASK-015B â Admin Order Detail Driver è³è¨
+
+**Status:** completed
+
+### å·²å®æ
+
+- `GET /api/v1/orders/:id`ï¼å« PUT æååå³ï¼å¢å  `driver`
+- æªææ´¾ï¼`driver: null`
+- å·²ææ´¾ï¼`username`ã`vehicle_type`ã`license_plate`ã`vehicle_brand`ã`vehicle_model`ã`vehicle_color`
+- Admin Order Detail é¡¯ç¤ºæ¥å®å¸æ©èè»è¼è³è¨ï¼Frontend ä¸å¦æ Driver API
+- å·²åæ­¥ `API-SPEC`ï¼æªæ¹ Schema
+- Dashboard / Dispatch Console æ«ç·©ç¨ç« TASKï¼æªç¸®æ¸ UI-UX-SPEC
+
+---
+
+## TASK-016A â Admin Dashboard / Dispatch Console
+
+**Status:** completed
+
+### å·²å®æ
+
+- `GET /api/v1/admin/dashboard`ï¼Admin-only
+- `summary`ï¼Backend èåå­ç¨® Order Status æ¸é
+- `board_orders`ï¼`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`ï¼ä¾ `created_at` éåº
+- æªææ´¾ `driver: null`ï¼å·²ææ´¾ `driver: { username }`ï¼ä¸å¦æ Driver API
+- ä¸ä½¿ç¨ `active_orders`
+- Admin ç»å¥å¾é²å¥ Dashboardï¼Status Summary é»æ â `/orders?status=<status>`
+- Dispatch Board åæ¬å¡çï¼é»æé²å¥ Order Detail
+- å®æ´è¨å®åè¡¨ä»å¨ `/orders`ï¼å«æ¢ææå°ï¼ç¯©é¸
+- å·²åæ­¥ `API-SPEC`ï¼æªæ¹ Schemaãæªå WebSocket / SSE / ææçæ¿
+- æªå¯¦ä½ deployment
+
+---
+
+## TASK-016B â Sync Dashboard UI-UX Spec
+
+**Status:** completed
+
+### å·²å®æ
+
+- `UI-UX-SPEC`ï¼Dashboard = Status Summary + Dispatch Board
+- Status Summary é¡¯ç¤ºå­ç¨® statusï¼ä¸é¡¯ç¤ºãå¨é¨ãï¼é»æ â `/orders?status=<status>`
+- Dispatch Board åæ¬ï¼`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`ï¼å¡çé²å¥ Order Detail
+- å®æ´è¨å®æå° / ç¯©é¸ / ç®¡çç¶­æå¨ `/orders`
+- Dashboard ä¸å«å®æ´ Order Listãæå° / æ¥æç¯©é¸ãBI / å ±è¡¨ãRealtime
+- æªæ¹ Backend / Frontend / Schema / API contract
+
+---
+
+## TASK-016C â Admin Dashboard UI Polish
+
+**Status:** completed
+
+### å·²å®æ
+
+- Status Summaryï¼æ¸å­å±¤ç´ãOrderStatusTagãå¯é»æ hover / focusãOPEN / ACCEPTED / IN_PROGRESS è¼é«è¾¨è­åº¦
+- Dispatch Boardï¼æ¬ä½ headerãå¡çè³è¨åå±¤ãå¸æ© / æªææ´¾ãcompact empty state
+- Desktop / Laptop / Tablet æ¬ä½ååèª¿æ´
+- æªæ¹ API / Schema / business rules / routing
+
+---
+
+## TASK â Driver Management UI Polish
+
+**Status:** completed
+
+### å·²å®æ
+
+- å¸æ©ç®¡çé æ¨é¡ãèªªæèãæ°å¢å¸æ©ãPrimary CTA
+- åè¡¨æ¬ä½å±¤ç´ï¼å¸³èãä¸ç·çæãè»çãè»è¼ãå¸³èçæåªå
+- Online Status è Account Status ç¶­æåéé¡¯ç¤º
+- æä½æ¬åºå®å³å´ï¼ãæ¥çãé²å¥æ¢æå¸æ©è©³æ
+- æªæ¹ API / Schema / business rules / filter / search
+
+---
+
+## TASK â Driver UI/UX Polish
+
+**Status:** completed
+
+### å·²å®æ
+
+- Driver Homeï¼ä¸ç·çæä½çºä¸»è¦çæåï¼éç¥èå¸³èçæéçºæ¬¡è¦å±¤ç´ï¼ãå¯æ¶è¨å®ãçº Primary CTA
+- Open Ordersï¼å¡çæ¹çºè¡ç¨ / å®è / å¹æ ¼ / CTA æè®å±¤ç´
+- Order Detailï¼è¡ç¨èæéåªåï¼ä¾æ¢æçæé¡¯ç¤ºãæè¦æ¥å®ããéå§è¡ç¨ããå®æè¨å®ã
+- My Ordersï¼ç®åè¨å®èæ­·å²è¨å®è¦è¦ºåå±¤ï¼æ­·å²ä¿æå¯è®
+- Loading / success / error çææ´æ¸æ¥ï¼ç¶­ææ¢æ double-submit guard
+- æªæ¹ API / Schema / business rules / Notification Center / Dashboard / Realtime
+
+---
+
+## TASK â Remove Driver Vehicle Type / Year
+
+**Status:** completed
+
+### å·²å®æ
+
+- `drivers.vehicle_type`ã`drivers.vehicle_year` æ¹çº nullableï¼æ¢æè³æä¿ç
+- Create / Update Driver API ä¸åè¦æ±æåå³éå©æ¬ï¼æ° Driver å¯«å¥ `NULL`
+- Driver List / Detail / Create / Edit UI ç§»é¤è»åèå¹´ä»½
+- Order API `AssignedDriver` ç§»é¤ `vehicle_type`ï¼`vehicle_year` æ¬ä¾å°±ä¸å¨ nested driverï¼
+- `orders.vehicle_type` å¾çºå·² DROPï¼è¦ Simplify Order Creation Fields
+- å·²åæ­¥ MVP / DATABASE / API / UI-UX Spec
+
+---
+
+## TASK â Simplify Order Creation Fields
+
+**Status:** completed
+
+### å·²å®æ
+
+- DROP `orders.scheduled_at`ã`orders.vehicle_type`ï¼ä¸ä¿ç nullable
+- `customer_name` / `destination` / `price` / `note` æ¹çº optionalï¼DB è API ä½¿ç¨ `NULL`ï¼UI é¡¯ç¤º `â`
+- Create / Update åªè¦æ± `pickup_location`ï¼ä¸æ¥åå·²åªæ¬ä½
+- Dashboard / Driver Open / Driver My Orders / Admin Orders çä¾ `created_at` DESC
+- `GET /orders?date=` æ¹çº Taipei æ¥ææ¥ç¯©é¸ `created_at`
+- Push åªé¡¯ç¤ºè¡ç¨èæå¡«çå¹æ ¼ï¼ç¡ destination åªé¡¯ç¤º pickup
+- `drivers.vehicle_type` ç¶­æåæ¬¡ nullable æ±ºç­ï¼æªåä¿®æ¹
+- å·²åæ­¥ MVP / DATABASE / API / UI-UX Spec
+
+---
+
+## TASK â Polish Admin Create Order UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- å»ºç«æ´¾è»å®é æ¹çºç½®ä¸­ãæå¤§å¯¬åº¦ 800pxï¼Header è Form Card åå¯¬
+- è¡¨å®åæãè¡ç¨è³è¨ããè²»ç¨èåè¨»ãï¼ä¸è»å°é»ç¶­æå¿å¡«å¼·èª¿
+- ãå²å­èç¨¿ãç¶­æå³ä¸ Primary CTA
+- æªæ¹æ¬ä½ãAPIãSchemaãvalidationãrouting æ business rules
+
+---
+
+## TASK â Polish Admin Create Driver UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- æ°å¢å¸æ©é æ¹çºç½®ä¸­ãæå¤§å¯¬åº¦ 800pxï¼Header è Form Card åå¯¬
+- è¡¨å®åæãå¸³èè³è¨ããè»è¼è³è¨ãï¼å¿å¡«æ¬ä½é¡¯ç¤º `*`
+- ãå»ºç«å¸æ©ãç¶­æ Primary CTAï¼ãåæ¶ãç¶­æ Secondary
+- æªæ¹æ¬ä½ãAPIãSchemaãvalidationãrouting æ business rules
+
+---
+
+## TASK â Compact Admin Dashboard Order Cards
+
+**Status:** completed
+
+### å·²å®æ
+
+- Dispatch Board å¡çæ¹çºä¸è¡ï¼å®è+å®¢æ¶+å¹æ ¼ãè¡ç¨ãæé+å¸æ©
+- ç¡ `customer_name` ä¸çç©ºç½ï¼`price` / `destination` é¡¯ç¤º `â`ï¼æªææ´¾é¡¯ç¤ºæªææ´¾
+- éä½ card padding èåç´éè·ï¼ä¿ç status è²æ¢è click / hover
+- æªæ¹ API / Schema / business rules
+
+---
+
+## TASK â Polish Admin Order Detail UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- Admin è¨å®è©³ææ¹çºç½®ä¸­ 7:3 éæ¬ï¼å·¦å´è¨å®è³è¨ + æ¥å®å¸æ©ï¼å³å´çæ / æä½ / æé
+- è¡ç¨æ¹çº `ä¸è»å°é» â ç®çå°`ï¼æé«è¡ç¨èå¹æ ¼å±¤ç´
+- æªææ´¾é¡¯ç¤ºå°ç¡ï¼å·²ææ´¾åªé¡¯ç¤ºå¯é»æ usernameï¼é²å¥æ¢æ Driver Detail
+- ä¸é¡¯ç¤ºè»ç / è»è¼ / è»è²ï¼æªæ°å¢ APIãSchema æ business action
+
+---
+
+## TASK â Polish Admin Driver Detail UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- å¸æ©è©³ææ¹çºç½®ä¸­ç´ 960pxã7:3 éæ¬ï¼å·¦å´å¸³è / è»è¼ï¼å³å´çæ / æä½
+- æé«å¸³èèè»çå±¤ç´ï¼ä¸ç·æç¤ºéçºæ¬¡è¦æå­ï¼ä¸æä¾ Admin æ§å¶ Online / Offline
+- æªæ¹ API / Schema / business rules
+
+---
+
+## TASK â Polish Driver Home Mobile UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- Driver Home æ¹çº compact Online / Notification switch bar
+- ç§»é¤ Home ä¸èå°è¦½éè¤çå¯æ¶è¨å® / æçè¨å®å¥å£
+- æªæ¹ APIãPush rulesãå°è¦½ IA æ business rules
+
+---
+
+## TASK â Update Phase 2 / Phase 3 Specification
+
+**Status:** completed
+
+### å·²å®æ
+
+- çµ±ä¸ Phase 1 / 2 / 3 éçæ¼ MVP / Architecture / API / Database / UI-UX / DEVELOPMENT-STATUS
+- Phase 2 éå® Location / Distance / Mapï¼ç¬¬ä¸æ¹éè¨èé²éæ´¾è»ç§»è³ Phase 3
+- æªæ¹ Backend / Frontend / Schema / Migration / API å¯¦ä½
+
+---
+
+## TASK â P2-01 Driver GPS Location Technical Spec Sync
+
+**Status:** completed
+
+### å·²å®æ
+
+- ä»¥ `PHASE-2-SPEC.md` çºç¢åæºæï¼åæ­¥ P2-01 è³ DATABASE / API / Architecture / Security
+- Driver ææ°ä½ç½®æ¬ä½ãDriver location ä¸å ±ï¼è®å APIãAdmin ONLINE locations APIãGPS lifecycle èææ¬è¦åå·²å¯«å¥ Spec
+- ç§»é¤ï¼æ´æ­£è finalized Phase 2 è¡çªçéè·¯è·é¢ï¼ETA æè¿°ï¼ç¸éæä»¶ï¼
+- æªæ¹ Backend / Frontend / Schema / Migration / API å¯¦ä½
+
+---
+
+## TASK â P2-02 Pickup Geocoding Technical Spec Sync
+
+**Status:** completed
+
+### å·²å®æ
+
+- Provider å®çº Google Geocoding APIï¼å»ºå®ï¼æ¹å°åå¾éåæ­¥ geocodeï¼å¤±æä¸å½±é¿ Order
+- **ä¸**æ°å¢ Pickup lat/lng DB æ¬ä½ï¼å Order çµæä¾ Distanceï¼Mapï¼é¿å per-Driver éè¤ Google å¼å«
+- åæ­¥ PHASE-2 / API / DATABASE / Architecture / Security / UI-UX / MVP / DEVELOPMENT-STATUS
+- ç§»é¤ååãæ°¸ä¹å¯«å¥ Order DBãä¹ BLOCKINGï¼æ®é¤ï¼P2-04 å°å SDK é ç¬¦å Google Â§6.2
+- æªæ¹ Backend / Frontend / Schema / Migration / API å¯¦ä½
+
+---
+
+## TASK â P2-03 Straight-line Distance Technical Spec Sync
+
+**Status:** completed
+
+### å·²å®æ
+
+- ä»¥ `PHASE-2-SPEC.md` çºç¢åæºæï¼åæ­¥ P2-03 è³ APIï¼DATABASEï¼Architectureï¼Securityï¼UI-UXï¼MVPï¼DEVELOPMENT-STATUS
+- å®ç¾© `DistanceService`ãéé `GeocodingService.getPickupCoordinates` åå¾ transient Pickup åº§æ¨ãcanonical `distance_meters`
+- Driverï¼Admin visibilityãç¼ºåº§æ¨è¡çºãå®ä½éæª»èç²¾åº¦ï¼æ´æ¸å¬å°ºï¼1 ä½å°æ¸å¬éï¼å·²å¯«å¥ Spec
+- **ä¸**æ°å¢ Distanceï¼Pickup lat/lng DB æ¬ä½ï¼**ä¸**å¼å¥ Redisï¼Queueï¼Workerï¼Routesï¼ETA
+- æªæ¹ Backendï¼Frontendï¼Schemaï¼Migrationï¼API å¯¦ä½
+
+---
+
+## TASK â P2-04 Map & Navigation Technical + UI/UX Spec Sync
+
+**Status:** completed
+
+### å·²å®æ
+
+- Map SDK å®çº Google Maps JavaScript APIï¼å°èªçº Google Maps handoff
+- åæ­¥ PHASE-2ï¼APIï¼DATABASEï¼Architectureï¼Securityï¼Technologyï¼UI-UXï¼MVPï¼DEVELOPMENT-STATUS
+- å®ç¾© ephemeral `pickup_latitude`ï¼`pickup_longitude`ï¼Order Detailï¼ï¼æ²¿ç¨ P2-01ï¼P2-03ï¼ä¸æ¹ P2-03 distances array shape
+- éæ¸ Geocoding server key vs Maps browser keyï¼Mapï¼å°èªå¤±æä¸å½±é¿æ ¸å¿æ´¾è»
+- æªæ¹ Backendï¼Frontendï¼Schemaï¼Migrationï¼API å¯¦ä½
+
+---
+
+## TASK â P2-04 Map & Google Maps Navigation Implementation
+
+**Status:** completed
+
+### å·²å®æ
+
+- Backend Order Detailï¼Adminï¼Driverï¼éå  ephemeral `pickup_latitude`ï¼`pickup_longitude`ï¼runtime geocodeï¼é DBï¼
+- Frontendï¼`OrderMap`ãMaps JS loaderã`VITE_GOOGLE_MAPS_API_KEY`ãè·é¢æ ¼å¼ãGoogle Maps å°èª handoff
+- Driver Order Detailï¼Mapï¼èªå·±ä½ç½® + Pickupï¼+ ç´ç·è·é¢ + ACCEPTED å¾ãéå§å°èªã
+- Admin Order Detailï¼Mapï¼ONLINE Drivers + Pickupï¼+ æ²¿ç¨ `online-driver-distances`
+- Mapï¼å°èªï¼ç¼º keyï¼ç¼ºåº§æ¨å¤±æéé¢ï¼ä¸å½±é¿ Acceptï¼Onlineï¼Offlineï¼æ ¸å¿ Order
+- æªæ°å¢ Pickup lat/lng DB æ¬ä½ãWebSocketï¼Redisï¼Queueï¼Routingï¼ETAï¼æªæ¹ P2-03 distances array shape
+
+---
+
+## TASK â Premium Polish Driver Mobile UI
+
+**Status:** completed
+
+### å·²å®æ
+
+- Driver Layout / Home / Open Orders / My Orders / Order Detail è¦è¦º polishï¼deep navy accentãcompact cardsï¼
+- Open Orders ç´ 3 è¡ compact cardï¼My Orders æ­·å²ç¡æä½ CTA
+- Home ç¶­æä¸éè¤å¯æ¶è¨å®å¥å£ï¼ä¸é¡¯ç¤º list å±¤ `customer_name`
+- æªæ¹ API / Backend / Schema / business rules / IA
+
+---
+
+## TASK â Driver Home Final UI Cleanup + Status Hydration
+
+**Status:** completed
+
+### å·²å®æ
+
+- æ°å¢ `GET /api/v1/driver/status`ï¼Homeï¼Layout hydrate online status
+- Header ç§»é¤ãæ´¾è»ãèé æ¬ Online æå­ï¼å¸³èçæåè¡é¡¯ç¤º
+- æªæ¹ SchemaãPATCH contractãOrderï¼Push rules
+
+---
+
+---
+
+## TASK â Remove unused Notification list / OrderEvent read & unused event types
+
+**Status:** completed
+
+### å·²å®æ
+
+- èª Specï¼Prisma enum ç§»é¤ ORDER_VIEWEDãORDER_ACCEPT_FAILED
+- ç§»é¤æªå¯¦ä½å¥ç´ï¼GET /notificationsãGET /orders/:id/events
+- ä¿ç lifecycle OrderEvent å¯«å¥è Web Push subscription API
+- æªæ¹ Order StateãAccept concurrencyãAuthãPush ç¼éãGPSï¼Geocodingï¼Distanceï¼Map
+
+
+---
+
+## TASK ¡X Wave Dispatch¡]¤À§å¶ZÂ÷¬£³æ¡^
+
+**Status:** completed
+
+### ¤w§¹¦¨
+
+- `WaveDispatchService`¡GPublish «á¤Àªi³qª¾¡F¨Cªi ¡Ø5¡B¶¡¹j 10s¡FHaversine ªñ¡÷»·¡B¦P¶ZÀH¾÷
+- ­Ô¿ï¡GACTIVE + ONLINE + µL ACCEPTED/IN_PROGRESS + GPS + PushSubscription + ©|¥¼³qª¾¦¹ Order
+- Accept / Cancel / «D OPEN / µL­Ô¿ï«h°±¤î¡Fªu¥Î Accept atomic claim
+- µL·s DB Äæ¦ì¡F¥H¬J¦³ Notification §@¬°¤w³qª¾¬ö¿ý
+- ¤£¤Þ¤J Redis / Queue / WebSocket / SSE / Routes / ETA
+- Unit + e2e¡]wave-dispatch / publish / notifications / dispatch-flow¡^
+- Spec ¦P¨B¡GMVP / API / DB / Architecture / Security / Phase-2 / Development Status
+
+---
+
+## TASK — Phase 3 Trip Mileage & Fare Specification
+
+**Status:** completed（Spec only；實作未開始）
 
 ### 已完成
 
-- Login brute-force：同一 IP + username 連續失敗後鎖定；成功登入清除計數；鎖定期間不進行密碼驗證
-- Rate limiting（in-memory，非 Redis）：Login、Accept、Publish、Cancel；production 預設較嚴、dev/test 較鬆，可用 env 覆寫
-- Security headers：CSP、X-Content-Type-Options、Referrer-Policy、X-Frame-Options；HSTS 僅 production
-- Production CORS：`FRONTEND_ORIGIN` allowlist + credentials；production 未設定則瀏覽器 Origin 拒絕
-- Production Cookie 維持 HttpOnly / Secure / SameSite=Lax；`TRUST_PROXY` 供反代後取得真實 client IP
-- 明確 JSON body 上限 100kb
-- 未修改 Order business rules、Database Schema、API contract
-- 未實作 Dashboard、deployment
+- 新增 `PHASE-3-SPEC.md`：任務期間實際里程＋固定費率車資
+- Phase 3 = Trip Mileage & Fare；原 Advanced Dispatch／Communication 改列 **Phase 4**（`PHASE-4-SPEC.md`）
+- 同步路線圖：`MVP-SPEC`、`PHASE-2-SPEC`、`DATABASE-SPEC`、`API-SPEC`、`SYSTEM-ARCHITECTURE-SPEC`、`UI-UX-SPEC`、`DEVELOPMENT-STATUS`、`AGENTS.md`
+- 未改 Backend／Frontend／Prisma migration／執行期行為
 
 ---
 
-## TASK-015B — Admin Order Detail Driver 資訊
+## TASK — Promote Pending to Phase 4 Specification
 
-**Status:** completed
+**Status:** completed（Spec only）
 
 ### 已完成
 
-- `GET /api/v1/orders/:id`（含 PUT 成功回傳）增加 `driver`
-- 未指派：`driver: null`
-- 已指派：`username`、`vehicle_type`、`license_plate`、`vehicle_brand`、`vehicle_model`、`vehicle_color`
-- Admin Order Detail 顯示接單司機與車輛資訊；Frontend 不另打 Driver API
-- 已同步 `API-SPEC`；未改 Schema
-- Dashboard / Dispatch Console 暫緩獨立 TASK，未縮減 UI-UX-SPEC
-
----
-
-## TASK-016A — Admin Dashboard / Dispatch Console
-
-**Status:** completed
-
-### 已完成
-
-- `GET /api/v1/admin/dashboard`：Admin-only
-- `summary`：Backend 聚合六種 Order Status 數量
-- `board_orders`：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`，依 `created_at` 降序
-- 未指派 `driver: null`；已指派 `driver: { username }`，不另打 Driver API
-- 不使用 `active_orders`
-- Admin 登入後進入 Dashboard；Status Summary 點擊 → `/orders?status=<status>`
-- Dispatch Board 四欄卡片；點擊進入 Order Detail
-- 完整訂單列表仍在 `/orders`，含既有搜尋／篩選
-- 已同步 `API-SPEC`；未改 Schema、未做 WebSocket / SSE / 拖拉看板
-- 未實作 deployment
-
----
-
-## TASK-016B — Sync Dashboard UI-UX Spec
-
-**Status:** completed
-
-### 已完成
-
-- `UI-UX-SPEC`：Dashboard = Status Summary + Dispatch Board
-- Status Summary 顯示六種 status，不顯示「全部」；點擊 → `/orders?status=<status>`
-- Dispatch Board 四欄：`DRAFT` / `OPEN` / `ACCEPTED` / `IN_PROGRESS`；卡片進入 Order Detail
-- 完整訂單搜尋 / 篩選 / 管理維持在 `/orders`
-- Dashboard 不含完整 Order List、搜尋 / 日期篩選、BI / 報表、Realtime
-- 未改 Backend / Frontend / Schema / API contract
-
----
-
-## TASK-016C — Admin Dashboard UI Polish
-
-**Status:** completed
-
-### 已完成
-
-- Status Summary：數字層級、OrderStatusTag、可點擊 hover / focus、OPEN / ACCEPTED / IN_PROGRESS 較高辨識度
-- Dispatch Board：欄位 header、卡片資訊分層、司機 / 未指派、compact empty state
-- Desktop / Laptop / Tablet 欄位切分調整
-- 未改 API / Schema / business rules / routing
-
----
-
-## TASK — Driver Management UI Polish
-
-**Status:** completed
-
-### 已完成
-
-- 司機管理頁標題、說明與「新增司機」Primary CTA
-- 列表欄位層級：帳號、上線狀態、車牌、車輛、帳號狀態優先
-- Online Status 與 Account Status 維持分開顯示
-- 操作欄固定右側，「查看」進入既有司機詳情
-- 未改 API / Schema / business rules / filter / search
-
----
-
-## TASK — Driver UI/UX Polish
-
-**Status:** completed
-
-### 已完成
-
-- Driver Home：上線狀態作為主要狀態區，通知與帳號狀態降為次要層級，「可搶訂單」為 Primary CTA
-- Open Orders：卡片改為行程 / 單號 / 價格 / CTA 掃讀層級
-- Order Detail：行程與時間優先，依既有狀態顯示「我要接單」「開始行程」「完成訂單」
-- My Orders：目前訂單與歷史訂單視覺分層，歷史保持唯讀
-- Loading / success / error 狀態更清楚，維持既有 double-submit guard
-- 未改 API / Schema / business rules / Notification Center / Dashboard / Realtime
-
----
-
-## TASK — Remove Driver Vehicle Type / Year
-
-**Status:** completed
-
-### 已完成
-
-- `drivers.vehicle_type`、`drivers.vehicle_year` 改為 nullable，既有資料保留
-- Create / Update Driver API 不再要求或回傳這兩欄；新 Driver 寫入 `NULL`
-- Driver List / Detail / Create / Edit UI 移除車型與年份
-- Order API `AssignedDriver` 移除 `vehicle_type`（`vehicle_year` 本來就不在 nested driver）
-- `orders.vehicle_type` 後續已 DROP，見 Simplify Order Creation Fields
-- 已同步 MVP / DATABASE / API / UI-UX Spec
-
----
-
-## TASK — Simplify Order Creation Fields
-
-**Status:** completed
-
-### 已完成
-
-- DROP `orders.scheduled_at`、`orders.vehicle_type`；不保留 nullable
-- `customer_name` / `destination` / `price` / `note` 改為 optional，DB 與 API 使用 `NULL`，UI 顯示 `—`
-- Create / Update 只要求 `pickup_location`；不接受已刪欄位
-- Dashboard / Driver Open / Driver My Orders / Admin Orders 皆依 `created_at` DESC
-- `GET /orders?date=` 改為 Taipei 日曆日篩選 `created_at`
-- Push 只顯示行程與有填的價格；無 destination 只顯示 pickup
-- `drivers.vehicle_type` 維持前次 nullable 決策，未再修改
-- 已同步 MVP / DATABASE / API / UI-UX Spec
-
----
-
-## TASK — Polish Admin Create Order UI
-
-**Status:** completed
-
-### 已完成
-
-- 建立派車單頁改為置中、最大寬度 800px；Header 與 Form Card 同寬
-- 表單分成「行程資訊」「費用與備註」，上車地點維持必填強調
-- 「儲存草稿」維持右下 Primary CTA
-- 未改欄位、API、Schema、validation、routing 或 business rules
-
----
-
-## TASK — Polish Admin Create Driver UI
-
-**Status:** completed
-
-### 已完成
-
-- 新增司機頁改為置中、最大寬度 800px；Header 與 Form Card 同寬
-- 表單分成「帳號資訊」「車輛資訊」，必填欄位顯示 `*`
-- 「建立司機」維持 Primary CTA，「取消」維持 Secondary
-- 未改欄位、API、Schema、validation、routing 或 business rules
-
----
-
-## TASK — Compact Admin Dashboard Order Cards
-
-**Status:** completed
-
-### 已完成
-
-- Dispatch Board 卡片改為三行：單號+客戶+價格、行程、時間+司機
-- 無 `customer_name` 不留空白；`price` / `destination` 顯示 `—`；未指派顯示未指派
-- 降低 card padding 與垂直間距，保留 status 色條與 click / hover
-- 未改 API / Schema / business rules
-
----
-
-## TASK — Polish Admin Order Detail UI
-
-**Status:** completed
-
-### 已完成
-
-- Admin 訂單詳情改為置中 7:3 雙欄；左側訂單資訊 + 接單司機，右側狀態 / 操作 / 時間
-- 行程改為 `上車地點 → 目的地`，提高行程與價格層級
-- 未指派顯示尚無；已指派只顯示可點擊 username，進入既有 Driver Detail
-- 不顯示車牌 / 車輛 / 車色；未新增 API、Schema 或 business action
-
----
-
-## TASK — Polish Admin Driver Detail UI
-
-**Status:** completed
-
-### 已完成
-
-- 司機詳情改為置中約 960px、7:3 雙欄；左側帳號 / 車輛，右側狀態 / 操作
-- 提高帳號與車牌層級；上線提示降為次要文字，不提供 Admin 控制 Online / Offline
-- 未改 API / Schema / business rules
-
----
-
-## TASK — Polish Driver Home Mobile UI
-
-**Status:** completed
-
-### 已完成
-
-- Driver Home 改為 compact Online / Notification switch bar
-- 移除 Home 上與導覽重複的可搶訂單 / 我的訂單入口
-- 未改 API、Push rules、導覽 IA 或 business rules
-
----
-
-## TASK — Update Phase 2 / Phase 3 Specification
-
-**Status:** completed
-
-### 已完成
-
-- 統一 Phase 1 / 2 / 3 邊界於 MVP / Architecture / API / Database / UI-UX / DEVELOPMENT-STATUS
-- Phase 2 限定 Location / Distance / Map；第三方通訊與進階派車移至 Phase 3
-- 未改 Backend / Frontend / Schema / Migration / API 實作
-
----
-
-## TASK — P2-01 Driver GPS Location Technical Spec Sync
-
-**Status:** completed
-
-### 已完成
-
-- 以 `PHASE-2-SPEC.md` 為產品準據，同步 P2-01 至 DATABASE / API / Architecture / Security
-- Driver 最新位置欄位、Driver location 上報／讀取 API、Admin ONLINE locations API、GPS lifecycle 與授權規則已寫入 Spec
-- 移除／更正與 finalized Phase 2 衝突的道路距離／ETA 描述（相關文件）
-- 未改 Backend / Frontend / Schema / Migration / API 實作
-
----
-
-## TASK — P2-02 Pickup Geocoding Technical Spec Sync
-
-**Status:** completed
-
-### 已完成
-
-- Provider 定為 Google Geocoding API；建單／改地址後非同步 geocode；失敗不影響 Order
-- **不**新增 Pickup lat/lng DB 欄位；同 Order 結果供 Distance／Map；避免 per-Driver 重複 Google 呼叫
-- 同步 PHASE-2 / API / DATABASE / Architecture / Security / UI-UX / MVP / DEVELOPMENT-STATUS
-- 移除先前「永久寫入 Order DB」之 BLOCKING；殘餘：P2-04 地圖 SDK 須符合 Google §6.2
-- 未改 Backend / Frontend / Schema / Migration / API 實作
-
----
-
-## TASK — P2-03 Straight-line Distance Technical Spec Sync
-
-**Status:** completed
-
-### 已完成
-
-- 以 `PHASE-2-SPEC.md` 為產品準據，同步 P2-03 至 API／DATABASE／Architecture／Security／UI-UX／MVP／DEVELOPMENT-STATUS
-- 定義 `DistanceService`、透過 `GeocodingService.getPickupCoordinates` 取得 transient Pickup 座標、canonical `distance_meters`
-- Driver／Admin visibility、缺座標行為、單位門檻與精度（整數公尺／1 位小數公里）已寫入 Spec
-- **不**新增 Distance／Pickup lat/lng DB 欄位；**不**引入 Redis／Queue／Worker／Routes／ETA
-- 未改 Backend／Frontend／Schema／Migration／API 實作
-
----
-
-## TASK — P2-04 Map & Navigation Technical + UI/UX Spec Sync
-
-**Status:** completed
-
-### 已完成
-
-- Map SDK 定為 Google Maps JavaScript API；導航為 Google Maps handoff
-- 同步 PHASE-2／API／DATABASE／Architecture／Security／Technology／UI-UX／MVP／DEVELOPMENT-STATUS
-- 定義 ephemeral `pickup_latitude`／`pickup_longitude`（Order Detail）；沿用 P2-01／P2-03；不改 P2-03 distances array shape
-- 釐清 Geocoding server key vs Maps browser key；Map／導航失敗不影響核心派車
-- 未改 Backend／Frontend／Schema／Migration／API 實作
-
----
-
-## TASK — P2-04 Map & Google Maps Navigation Implementation
-
-**Status:** completed
-
-### 已完成
-
-- Backend Order Detail（Admin／Driver）附加 ephemeral `pickup_latitude`／`pickup_longitude`（runtime geocode；非 DB）
-- Frontend：`OrderMap`、Maps JS loader、`VITE_GOOGLE_MAPS_API_KEY`、距離格式、Google Maps 導航 handoff
-- Driver Order Detail：Map（自己位置 + Pickup）+ 直線距離 + ACCEPTED 後「開始導航」
-- Admin Order Detail：Map（ONLINE Drivers + Pickup）+ 沿用 `online-driver-distances`
-- Map／導航／缺 key／缺座標失敗隔離；不影響 Accept／Online／Offline／核心 Order
-- 未新增 Pickup lat/lng DB 欄位、WebSocket／Redis／Queue／Routing／ETA；未改 P2-03 distances array shape
-
----
-
-## TASK — Premium Polish Driver Mobile UI
-
-**Status:** completed
-
-### 已完成
-
-- Driver Layout / Home / Open Orders / My Orders / Order Detail 視覺 polish（deep navy accent、compact cards）
-- Open Orders 約 3 行 compact card；My Orders 歷史無操作 CTA
-- Home 維持不重複可搶訂單入口；不顯示 list 層 `customer_name`
-- 未改 API / Backend / Schema / business rules / IA
-
----
-
-## TASK — Driver Home Final UI Cleanup + Status Hydration
-
-**Status:** completed
-
-### 已完成
-
-- 新增 `GET /api/v1/driver/status`；Home／Layout hydrate online status
-- Header 移除「派車」與頂欄 Online 文字；帳號狀態同行顯示
-- 未改 Schema、PATCH contract、Order／Push rules
-
----
-
----
-
-## TASK — Remove unused Notification list / OrderEvent read & unused event types
-
-**Status:** completed
-
-### 已完成
-
-- 自 Spec／Prisma enum 移除 ORDER_VIEWED、ORDER_ACCEPT_FAILED
-- 移除未實作契約：GET /notifications、GET /orders/:id/events
-- 保留 lifecycle OrderEvent 寫入與 Web Push subscription API
-- 未改 Order State、Accept concurrency、Auth、Push 發送、GPS／Geocoding／Distance／Map
-
-
----
-
-## TASK �X Wave Dispatch�]����Z������^
-
-**Status:** completed
-
-### �w����
-
-- `WaveDispatchService`�GPublish ����i�q���F�C�i ��5�B���j 10s�FHaversine ������B�P�Z�H��
-- �Կ�GACTIVE + ONLINE + �L ACCEPTED/IN_PROGRESS + GPS + PushSubscription + �|���q���� Order
-- Accept / Cancel / �D OPEN / �L�Կ�h����F�u�� Accept atomic claim
-- �L�s DB ���F�H�J�� Notification �@���w�q������
-- ���ޤJ Redis / Queue / WebSocket / SSE / Routes / ETA
-- Unit + e2e�]wave-dispatch / publish / notifications / dispatch-flow�^
-- Spec �P�B�GMVP / API / DB / Architecture / Security / Phase-2 / Development Status
+- 新增 `PHASE-4-SPEC.md`：Advanced Dispatch & Communication（僅規劃簡述）
+- 各 Spec 路線圖 Pending → Phase 4；`AGENTS.md` 列入 Source of Truth
+- 未改執行期行為

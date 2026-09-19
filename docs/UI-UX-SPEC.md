@@ -937,10 +937,20 @@ Driver
 ```text
 Phase 1 — 核心派車 MVP UI Scope（上表；已實作）
 Phase 2 — Driver Location & Trip Information（地圖 / 直線距離相關 UI；已對齊）
-Phase 3 — Advanced Dispatch & Communication（進階派車與通訊相關 UI）
+Phase 3 — Trip Mileage & Fare Calculation（里程／車資 UI；見 PHASE-3-SPEC.md）
+Phase 4 — Advanced Dispatch & Communication（見 PHASE-4-SPEC.md）
 ```
 
-產品範圍以 `PHASE-2-SPEC.md` 為準。Phase 3 UI 細節於進入該階段時再定義。目前不設計 Phase 3 通訊介面。Phase 2 UI **不**呈現道路距離或 ETA。維持既有 Modern SaaS + Dispatch Console 視覺／操作方向（見 §1）；不另開一套地圖產品視覺語言。
+產品範圍 Phase 2 以 `PHASE-2-SPEC.md` 為準；Phase 3 以 `PHASE-3-SPEC.md` 為準；Phase 4 以 `PHASE-4-SPEC.md` 為準。
+
+**Phase 3 UI（產品規則已定義）：**
+
+- `IN_PROGRESS`：顯示已行駛里程（例如「已行駛 3.8 km」）；資料來自 Backend `trip_distance_meters`
+- `COMPLETED`：顯示行駛里程與車資（例如「行駛里程 8.4 km」「車資 NT$275」）；`price` 為 Complete 後系統計算結果
+- **不**顯示 GPS 軌跡與計算細節
+- Frontend **不**自行計算車資／最終里程；Driver 於 `IN_PROGRESS` 以 10 秒間隔上報 location，完成後回到 30 秒
+
+Phase 4（進階派車／通訊）UI 細節於進入該階段時再定義。Phase 2 UI **不**呈現道路距離或 ETA。維持既有 Modern SaaS + Dispatch Console 視覺／操作方向（見 §1）；不另開一套地圖產品視覺語言。
 
 P2-02：不提供手動觸發 Geocoding 的 UI；Geocoding 為建單／修改 `pickup_location` 後的系統非同步行為。UI **不**假設 Order DB 內有 Pickup lat/lng 欄位；距離／地圖所需座標由 Backend 在執行期提供（見 `PHASE-2-SPEC.md` P2-02）。In-app Map SDK：**Google Maps JavaScript API**（P2-04）。
 

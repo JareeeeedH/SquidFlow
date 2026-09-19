@@ -44,7 +44,8 @@ Known sync status:
 ```text
 Phase 1 — Core Dispatch MVP (implemented)
 Phase 2 — Driver Location & Trip Information (this document)
-Phase 3 — Advanced Dispatch & Communication (out of scope here)
+Phase 3 — Trip Mileage & Fare Calculation (see PHASE-3-SPEC.md; out of scope here)
+Phase 4 — Advanced Dispatch & Communication (see PHASE-4-SPEC.md; out of scope here)
 ```
 
 Phase 2 focuses on:
@@ -249,7 +250,7 @@ Phase 2 does **not** include:
 - Built-in routing engine
 - Road routing or traffic navigation inside SquidFlow
 
-Phase 3 capabilities (advanced dispatch, third-party communication, and related topics) remain high-level Phase 3 planning only and are not expanded in this document.
+Advanced Dispatch / third-party communication are **Phase 4** (see `PHASE-4-SPEC.md`) and are not expanded in this document. Trip mileage & fare are Phase 3 (`PHASE-3-SPEC.md`).
 
 ---
 

@@ -217,14 +217,14 @@ PRIORITY
 AUTO
 ```
 
-未來可支援（屬 Phase 3 Advanced Dispatch，詳細需求待定）：
+未來可支援（屬 **Phase 4** — Advanced Dispatch，詳細需求待定；見 `PHASE-4-SPEC.md`）：
 
 - 開放搶單
 - 指定司機
 - 指定司機優先，逾時後開放搶單
 - 自動派單
 
-Phase 2 不擴充 `dispatch_mode`，不實作指定司機或自動派單。
+Phase 2／Phase 3 不擴充 `dispatch_mode`，不實作指定司機或自動派單。
 
 ---
 
@@ -708,7 +708,8 @@ COMPLETED
 ```text
 Phase 1 — 核心派車 MVP
 Phase 2 — Driver Location & Trip Information
-Phase 3 — Advanced Dispatch & Communication
+Phase 3 — Trip Mileage & Fare Calculation
+Phase 4 — Advanced Dispatch & Communication
 ```
 
 ## 18.1 Phase 1 — 核心派車 MVP（已包含）
@@ -782,10 +783,24 @@ Phase 2 包含：
 - 先聚焦「司機在哪裡」與「到上車點的直線距離」
 - 不建立複雜 Dispatch Engine
 - 不做自動派車／AI Dispatch／通訊整合
+- 不做任務期間里程累計與費率車資（屬 Phase 3）
 
-## 18.3 Phase 3 — Advanced Dispatch & Communication
+## 18.3 Phase 3 — Trip Mileage & Fare Calculation
 
-Phase 3 為後續開發規劃，目前只做簡述，不定義詳細需求。
+產品範圍以 `PHASE-3-SPEC.md` 為準。
+
+Phase 3 包含：
+
+- `IN_PROGRESS` 期間以 GPS（10 秒）Haversine 累加實際里程
+- 完成任務時鎖定 `trip_distance_meters`，依固定費率寫入最終 `price`
+- 沿用 `PATCH /api/v1/driver/location`；不保存 GPS History
+- Backend 為里程與車資唯一權威
+
+Phase 3 **不**改變 Accept／搶單條件；**不**以 P2-03 直線距離計費。
+
+## 18.4 Phase 4 — Advanced Dispatch & Communication
+
+產品範圍以 `PHASE-4-SPEC.md` 為準。目前只做簡述，不定義詳細需求。
 
 ### Advanced Dispatch
 

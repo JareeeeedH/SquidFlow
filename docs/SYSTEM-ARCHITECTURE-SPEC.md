@@ -1434,7 +1434,9 @@ Reliable
 Redis
 Realtime Connection
 Message Queue
-Advanced Dispatch（Phase 3）
+Advanced Dispatch（Phase 4）
+Communication（Phase 4）
+Trip Mileage & Fare（Phase 3）
 Microservices
 ```
 
@@ -1447,10 +1449,11 @@ Microservices
 ```text
 Phase 1 — 核心派車 MVP（目前）
 Phase 2 — Driver Location & Trip Information
-Phase 3 — Advanced Dispatch & Communication
+Phase 3 — Trip Mileage & Fare Calculation
+Phase 4 — Advanced Dispatch & Communication
 ```
 
-產品範圍以 `PHASE-2-SPEC.md` 為準。
+產品範圍 Phase 2 以 `PHASE-2-SPEC.md` 為準；Phase 3 以 `PHASE-3-SPEC.md` 為準；Phase 4 以 `PHASE-4-SPEC.md` 為準。
 
 **Phase 2 / P2-01（已對齊）：**
 
@@ -1534,9 +1537,17 @@ Frontend（Vue）
 - Geocoding server key 僅 Backend；Maps JS 使用分開的 Frontend-restricted key
 - Map／導航失敗不得影響 Order／Accept／Online／Offline
 
-Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn。
+Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn、任務里程計費（屬 Phase 3）。
 
-**Phase 3** 為後續規劃（僅簡述）：
+**Phase 3 — Trip Mileage & Fare**（產品規則見 `PHASE-3-SPEC.md`）：
+
+- 沿用 `PATCH /api/v1/driver/location`；`IN_PROGRESS` 期間 10 秒上報、Haversine 累加 `trip_distance_meters`
+- Complete 時鎖定里程並依費率寫入 `price`；Backend 為唯一權威
+- **不**保存 GPS History／Track；僅保留上一計費點 + 累計里程（完成後清除上一點）
+- **不**改變 Accept／搶單；**不**以 P2-03 直線距離計費
+- GPS 失敗不改 Order State、不補算缺失路段
+
+**Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：
 
 - Advanced Dispatch：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤
 - Communication：第三方通訊整合（不指定服務或技術方案）

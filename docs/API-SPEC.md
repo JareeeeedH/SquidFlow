@@ -352,6 +352,7 @@ GET /api/v1/orders/:id
     "pickup_location": "左營高鐵站",
     "destination": "高雄小港機場",
     "price": 1200,
+    "trip_distance_meters": null,
     "note": "2件行李",
     "status": "ACCEPTED",
     "dispatch_mode": "OPEN",
@@ -379,6 +380,8 @@ GET /api/v1/orders/:id
 未指派司機時 `driver` 為 `null`。`driver` 只包含上述欄位，不含 `id`、`vehicle_type`、`vehicle_year`、`online_status`、帳號 `status`。選填欄位未填時為 `null`。不含 `scheduled_at`、訂單 `vehicle_type`。
 
 `pickup_latitude`／`pickup_longitude`（P2-04）：ephemeral runtime Pickup 座標（見 §5D）；**不是** DB 欄位。缺 geocode 結果時為 `null`。
+
+`trip_distance_meters`（Phase 3）：任務里程；未開始累計或未實作前可為 `null`。`COMPLETED` 後為鎖定最終值。Complete 後 `price` 為費率計算結果（見 `PHASE-3-SPEC.md`）。
 
 ---
 
@@ -735,12 +738,16 @@ POST /api/v1/driver/orders/:id/complete
   "data": {
     "id": "uuid",
     "status": "COMPLETED",
-    "completed_at": "2026-09-15T08:20:00Z"
+    "completed_at": "2026-09-15T08:20:00Z",
+    "trip_distance_meters": 8400,
+    "price": 275
   }
 }
 ```
 
 僅允許目前接單 Driver 執行。
+
+**Phase 3（見 `PHASE-3-SPEC.md`）：** Complete 成功時 Backend 鎖定 `trip_distance_meters`、依費率寫入最終 `price`，並結束該訂單里程追蹤。Frontend 不得自行計算或覆寫這兩欄。Response 應回傳鎖定後的 `trip_distance_meters` 與 `price`。
 
 ---
 
@@ -1240,10 +1247,11 @@ INVALID_ORDER_STATUS
 ```text
 Phase 1 — 核心派車 MVP 端點
 Phase 2 — Driver Location & Trip Information
-Phase 3 — Advanced Dispatch & Communication
+Phase 3 — Trip Mileage & Fare Calculation
+Phase 4 — Advanced Dispatch & Communication
 ```
 
-產品範圍以 `PHASE-2-SPEC.md` 為準。
+產品範圍 Phase 2 以 `PHASE-2-SPEC.md` 為準；Phase 3 以 `PHASE-3-SPEC.md` 為準；Phase 4 以 `PHASE-4-SPEC.md` 為準。
 
 **Phase 2 / P2-01（已定義）：**
 
@@ -1283,4 +1291,13 @@ Phase 3 — Advanced Dispatch & Communication
 - Map／導航失敗不影響 Order／Accept／Online／Offline
 - Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
-**Phase 3** 僅為後續規劃：自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊整合。目前不定義 API。
+**Phase 3 — Trip Mileage & Fare（產品規則見 `PHASE-3-SPEC.md`）：**
+
+- **不**新增專用 GPS API；沿用 `PATCH /api/v1/driver/location`
+- Driver 於本訂單 `IN_PROGRESS` 時 Frontend 以 **10** 秒間隔上報；其餘 `ONLINE` 維持 **30** 秒
+- Backend 僅在該訂單 `IN_PROGRESS` 時將有效 GPS 納入 Haversine 里程累加；第一個有效點只當起點
+- 必須保證 concurrency：不重複累加、舊點不覆蓋較新 tracking state、Complete 後不得再累積
+- `POST /api/v1/driver/orders/:id/complete`：鎖定 `trip_distance_meters`、依費率寫入 `price`；Order／Driver 讀取 API 回傳這兩欄
+- **不**新增 GPS history／track endpoint；**不**以 P2-03 `distance_meters` 計費
+
+**Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤、第三方通訊整合 — 目前不定義 API。

@@ -120,6 +120,7 @@ Order
 ├─ pickup_location
 ├─ destination
 ├─ price
+├─ trip_distance_meters
 ├─ note
 ├─ status
 ├─ dispatch_mode
@@ -141,6 +142,7 @@ Order
 | `pickup_location` | TEXT | ✅ |
 | `destination` | TEXT | ❌ |
 | `price` | DECIMAL(10,2) | ❌ |
+| `trip_distance_meters` | INTEGER | ❌ |
 | `note` | TEXT | ❌ |
 | `status` | ENUM | ✅ |
 | `dispatch_mode` | ENUM | ✅ |
@@ -152,6 +154,8 @@ Order
 | `cancelled_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
+
+> **Phase 3：** `trip_distance_meters` 於 `IN_PROGRESS` 由 Backend 累加，`COMPLETED` 時鎖定。`price` 於 Complete 時依費率覆寫為最終車資（見 `PHASE-3-SPEC.md`）。不新增 `calculated_fare`／`final_price`。Tracking 所需「上一計費 GPS 點」為 Backend 內部狀態（可落在 Order 暫存欄位或等效儲存，完成後清除上一點）；**不**建 GPS history／track 表。
 
 ```text
 status:
@@ -550,10 +554,11 @@ updated_at
 ```text
 Phase 1 — 核心派車 MVP Schema
 Phase 2 — Driver Location & Trip Information
-Phase 3 — Advanced Dispatch & Communication
+Phase 3 — Trip Mileage & Fare Calculation
+Phase 4 — Advanced Dispatch & Communication
 ```
 
-產品範圍以 `PHASE-2-SPEC.md` 為準。
+產品範圍 Phase 2 以 `PHASE-2-SPEC.md` 為準；Phase 3 以 `PHASE-3-SPEC.md` 為準；Phase 4 以 `PHASE-4-SPEC.md` 為準。
 
 **Phase 2 / P2-01（已定義）：**
 
@@ -581,4 +586,11 @@ Phase 3 — Advanced Dispatch & Communication
 - Map 使用的 Pickup 座標僅為 Backend runtime（P2-02）；**不**為此做 Migration
 - Phase 2 **不**儲存道路距離或 ETA
 
-**Phase 3** 僅為後續規劃（自動派車、AI Dispatch、Priority / 自動重派、進階車隊追蹤、第三方通訊）。目前不定義資料模型。
+**Phase 3 — Trip Mileage & Fare（已定義產品規則，見 `PHASE-3-SPEC.md`）：**
+
+- Order 新增 `trip_distance_meters`（INTEGER，可 NULL；完成後鎖定最終值）
+- Complete 時以費率覆寫 `price`；不新增第二套價格欄位
+- **不**新增 GPS history／points／track 表
+- 上一計費 GPS 點為 Backend tracking state（可持久化於 Order 暫存欄位，完成後清除）
+
+**Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤、第三方通訊 — 目前不定義資料模型。
