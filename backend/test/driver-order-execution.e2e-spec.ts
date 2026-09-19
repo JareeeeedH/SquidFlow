@@ -490,6 +490,9 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     });
     expect(events).toHaveLength(1);
     expect(events[0].actorUserId).toBe(users.starter.id);
+    expect(stored?.tripDistanceMeters).toBe(0);
+    expect(stored?.tripLastLatitude).toBeNull();
+    expect(stored?.tripLastLongitude).toBeNull();
 
     const again = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.startAccepted}/start`)
@@ -519,20 +522,33 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       .expect(200);
     expect(
       asBody<
-        ApiSuccessBody<{ id: string; status: string; completed_at: string }>
-      >(completed).data.status,
-    ).toBe('COMPLETED');
-    expect(
-      asBody<
-        ApiSuccessBody<{ id: string; status: string; completed_at: string }>
-      >(completed).data.id,
-    ).toBe(orders.offlineAccepted);
+        ApiSuccessBody<{
+          id: string;
+          status: string;
+          completed_at: string;
+          trip_distance_meters: number;
+          price: number;
+        }>
+      >(completed).data,
+    ).toEqual({
+      id: orders.offlineAccepted,
+      status: 'COMPLETED',
+      completed_at:
+        asBody<ApiSuccessBody<{ completed_at: string }>>(completed).data
+          .completed_at,
+      trip_distance_meters: 0,
+      price: 100,
+    });
 
     const stored = await prisma.order.findUnique({
       where: { id: orders.offlineAccepted },
     });
     expect(stored?.status).toBe('COMPLETED');
     expect(stored?.completedAt).not.toBeNull();
+    expect(stored?.tripDistanceMeters).toBe(0);
+    expect(stored?.price?.toNumber()).toBe(100);
+    expect(stored?.tripLastLatitude).toBeNull();
+    expect(stored?.tripLastLongitude).toBeNull();
     expect(
       await prisma.orderEvent.count({
         where: {
@@ -553,14 +569,21 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       .expect(200);
     const after = Date.now();
 
-    const body =
-      asBody<
-        ApiSuccessBody<{ id: string; status: string; completed_at: string }>
-      >(response);
+    const body = asBody<
+      ApiSuccessBody<{
+        id: string;
+        status: string;
+        completed_at: string;
+        trip_distance_meters: number;
+        price: number;
+      }>
+    >(response);
     expect(body.data).toEqual({
       id: orders.completeProgress,
       status: 'COMPLETED',
       completed_at: body.data.completed_at,
+      trip_distance_meters: 0,
+      price: 100,
     });
     const completedAt = new Date(body.data.completed_at).getTime();
     expect(completedAt).toBeGreaterThanOrEqual(before - 1000);
@@ -572,6 +595,10 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     });
     expect(stored?.status).toBe('COMPLETED');
     expect(stored?.completedAt?.toISOString()).toBe(body.data.completed_at);
+    expect(stored?.tripDistanceMeters).toBe(0);
+    expect(stored?.price?.toNumber()).toBe(100);
+    expect(stored?.tripLastLatitude).toBeNull();
+    expect(stored?.tripLastLongitude).toBeNull();
     expect(
       await prisma.orderEvent.count({
         where: {
@@ -742,6 +769,9 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     });
     expect(stored?.status).toBe('IN_PROGRESS');
     expect(stored?.startedAt).not.toBeNull();
+    expect(stored?.tripDistanceMeters).toBe(0);
+    expect(stored?.tripLastLatitude).toBeNull();
+    expect(stored?.tripLastLongitude).toBeNull();
     expect(
       await prisma.orderEvent.count({
         where: {

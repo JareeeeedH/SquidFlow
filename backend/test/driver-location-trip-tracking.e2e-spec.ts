@@ -389,7 +389,10 @@ describe('Driver Location Trip Tracking P3-4 (e2e)', () => {
     });
     expect(order.tripDistanceMeters).toBe(1200);
     expect(order.tripLastLatitude?.toNumber()).toBeCloseTo(pointA.latitude, 6);
-    expect(order.tripLastLongitude?.toNumber()).toBeCloseTo(pointA.longitude, 6);
+    expect(order.tripLastLongitude?.toNumber()).toBeCloseTo(
+      pointA.longitude,
+      6,
+    );
   });
 
   it('serializes concurrent location updates so segments are not lost', async () => {

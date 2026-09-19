@@ -12,6 +12,7 @@ import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { DistanceService } from '../distance/distance.service';
 import { WaveDispatchService } from '../dispatch/wave-dispatch.service';
+import { calculateTripFare } from '../fare/trip-fare';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -436,6 +437,9 @@ export class OrdersService {
         data: {
           status: OrderStatus.IN_PROGRESS,
           startedAt,
+          tripDistanceMeters: 0,
+          tripLastLatitude: null,
+          tripLastLongitude: null,
         },
       });
 
@@ -475,7 +479,33 @@ export class OrdersService {
 
     return this.prisma.$transaction(async (tx) => {
       const driver = await this.findDriverInTxOrThrow(tx, user.id);
+
+      const lockedOrders = await tx.$queryRaw<
+        Array<{
+          id: string;
+          driver_id: string | null;
+          status: OrderStatus;
+          trip_distance_meters: number | null;
+        }>
+      >`
+        SELECT id, driver_id, status, trip_distance_meters
+        FROM orders
+        WHERE id = ${id}::uuid
+        FOR UPDATE
+      `;
+
+      const locked = lockedOrders[0];
+      if (!locked || locked.driver_id !== driver.id) {
+        throw AppErrors.notFound('找不到訂單');
+      }
+      if (locked.status !== OrderStatus.IN_PROGRESS) {
+        throw AppErrors.invalidOrderStatus();
+      }
+
+      const finalDistanceMeters = locked.trip_distance_meters ?? 0;
+      const fare = calculateTripFare(finalDistanceMeters);
       const completedAt = new Date();
+
       const updated = await tx.order.updateMany({
         where: {
           id,
@@ -485,11 +515,15 @@ export class OrdersService {
         data: {
           status: OrderStatus.COMPLETED,
           completedAt,
+          price: new Prisma.Decimal(fare),
+          tripDistanceMeters: finalDistanceMeters,
+          tripLastLatitude: null,
+          tripLastLongitude: null,
         },
       });
 
       if (updated.count !== 1) {
-        await this.throwOwnOrderTransitionError(tx, id, driver.id);
+        throw AppErrors.invalidOrderStatus();
       }
 
       await tx.orderEvent.create({
@@ -500,21 +534,12 @@ export class OrdersService {
         },
       });
 
-      const order = await tx.order.findUniqueOrThrow({
-        where: { id },
-        select: {
-          id: true,
-          status: true,
-          completedAt: true,
-        },
-      });
-
       return {
-        id: order.id,
-        status: order.status,
-        completed_at: order.completedAt
-          ? order.completedAt.toISOString()
-          : completedAt.toISOString(),
+        id: locked.id,
+        status: OrderStatus.COMPLETED,
+        completed_at: completedAt.toISOString(),
+        trip_distance_meters: finalDistanceMeters,
+        price: fare,
       };
     });
   }

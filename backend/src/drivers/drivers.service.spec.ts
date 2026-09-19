@@ -195,32 +195,31 @@ describe('DriversService', () => {
       longitude: 120.305,
     });
 
-    expect(prisma.order.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 'order-1',
-        status: 'IN_PROGRESS',
-      },
-      data: expect.objectContaining({
-        tripDistanceMeters: expect.any(Number),
-        tripLastLatitude: expect.any(Prisma.Decimal),
-        tripLastLongitude: expect.any(Prisma.Decimal),
-      }),
+    expect(prisma.order.updateMany).toHaveBeenCalledTimes(1);
+    const updateManyCalls = prisma.order.updateMany.mock
+      .calls as unknown as Array<
+      [
+        {
+          where: { id: string; status: string };
+          data: {
+            tripDistanceMeters: number;
+            tripLastLatitude: Prisma.Decimal;
+            tripLastLongitude: Prisma.Decimal;
+          };
+        },
+      ]
+    >;
+    const updateManyArg = updateManyCalls[0][0];
+    expect(updateManyArg.where).toEqual({
+      id: 'order-1',
+      status: 'IN_PROGRESS',
     });
-    const updateManyCall = prisma.order.updateMany.mock.calls[0] as unknown as [
-      {
-        data: {
-          tripDistanceMeters: number;
-          tripLastLatitude: Prisma.Decimal;
-          tripLastLongitude: Prisma.Decimal;
-        };
-      },
-    ];
-    expect(updateManyCall[0].data.tripDistanceMeters).toBeGreaterThan(0);
-    expect(updateManyCall[0].data.tripLastLatitude.toNumber()).toBeCloseTo(
+    expect(updateManyArg.data.tripDistanceMeters).toBeGreaterThan(0);
+    expect(updateManyArg.data.tripLastLatitude.toNumber()).toBeCloseTo(
       22.63,
       6,
     );
-    expect(updateManyCall[0].data.tripLastLongitude.toNumber()).toBeCloseTo(
+    expect(updateManyArg.data.tripLastLongitude.toNumber()).toBeCloseTo(
       120.305,
       6,
     );
@@ -248,17 +247,27 @@ describe('DriversService', () => {
       longitude: 120.3014,
     });
 
-    expect(prisma.order.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 'order-1',
-        status: 'IN_PROGRESS',
-      },
-      data: {
-        tripDistanceMeters: 0,
-        tripLastLatitude: expect.any(Prisma.Decimal),
-        tripLastLongitude: expect.any(Prisma.Decimal),
-      },
+    const firstGpsCalls = prisma.order.updateMany.mock
+      .calls as unknown as Array<
+      [
+        {
+          where: { id: string; status: string };
+          data: {
+            tripDistanceMeters: number;
+            tripLastLatitude: Prisma.Decimal;
+            tripLastLongitude: Prisma.Decimal;
+          };
+        },
+      ]
+    >;
+    const firstGpsArg = firstGpsCalls[0][0];
+    expect(firstGpsArg.where).toEqual({
+      id: 'order-1',
+      status: 'IN_PROGRESS',
     });
+    expect(firstGpsArg.data.tripDistanceMeters).toBe(0);
+    expect(firstGpsArg.data.tripLastLatitude).toBeInstanceOf(Prisma.Decimal);
+    expect(firstGpsArg.data.tripLastLongitude).toBeInstanceOf(Prisma.Decimal);
   });
 
   it('returns null location when the driver has never reported GPS', async () => {
