@@ -17,7 +17,11 @@ describe('DriversService', () => {
     user: {
       update: jest.fn(),
     },
+    order: {
+      updateMany: jest.fn(),
+    },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   };
   const sessionService = {
     revokeActiveSessions: jest.fn(),
@@ -28,12 +32,15 @@ describe('DriversService', () => {
     prisma.driver.findMany.mockReset();
     prisma.driver.update.mockReset();
     prisma.user.update.mockReset();
+    prisma.order.updateMany.mockReset();
     prisma.$transaction.mockReset();
+    prisma.$queryRaw.mockReset();
     sessionService.revokeActiveSessions.mockReset();
     prisma.$transaction.mockImplementation(
       async (callback: (tx: typeof prisma) => Promise<unknown>) =>
         callback(prisma),
     );
+    prisma.$queryRaw.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -139,11 +146,14 @@ describe('DriversService', () => {
       location_updated_at: updatedAt.toISOString(),
     });
 
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(prisma.driver.findUnique).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
       select: { id: true },
     });
     expect(prisma.driver.update).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.order.updateMany).not.toHaveBeenCalled();
     const updateCall = prisma.driver.update.mock.calls[0] as unknown as [
       {
         where: { id: string };
@@ -160,6 +170,95 @@ describe('DriversService', () => {
     expect(updateCall[0].data.longitude).toBeInstanceOf(Prisma.Decimal);
     expect(updateCall[0].data.locationUpdatedAt).toBeInstanceOf(Date);
     expect(updateCall[0].data.onlineStatus).toBeUndefined();
+  });
+
+  it('accumulates trip mileage for an IN_PROGRESS order inside the location transaction', async () => {
+    const updatedAt = new Date('2026-09-16T00:30:00.000Z');
+    prisma.driver.findUnique.mockResolvedValue({ id: 'driver-1' });
+    prisma.driver.update.mockResolvedValue({
+      latitude: new Prisma.Decimal('22.63'),
+      longitude: new Prisma.Decimal('120.305'),
+      locationUpdatedAt: updatedAt,
+    });
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        id: 'order-1',
+        trip_distance_meters: 0,
+        trip_last_latitude: new Prisma.Decimal('22.6273'),
+        trip_last_longitude: new Prisma.Decimal('120.3014'),
+      },
+    ]);
+    prisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.updateOwnLocation(activeDriverUser(), {
+      latitude: 22.63,
+      longitude: 120.305,
+    });
+
+    expect(prisma.order.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'order-1',
+        status: 'IN_PROGRESS',
+      },
+      data: expect.objectContaining({
+        tripDistanceMeters: expect.any(Number),
+        tripLastLatitude: expect.any(Prisma.Decimal),
+        tripLastLongitude: expect.any(Prisma.Decimal),
+      }),
+    });
+    const updateManyCall = prisma.order.updateMany.mock.calls[0] as unknown as [
+      {
+        data: {
+          tripDistanceMeters: number;
+          tripLastLatitude: Prisma.Decimal;
+          tripLastLongitude: Prisma.Decimal;
+        };
+      },
+    ];
+    expect(updateManyCall[0].data.tripDistanceMeters).toBeGreaterThan(0);
+    expect(updateManyCall[0].data.tripLastLatitude.toNumber()).toBeCloseTo(
+      22.63,
+      6,
+    );
+    expect(updateManyCall[0].data.tripLastLongitude.toNumber()).toBeCloseTo(
+      120.305,
+      6,
+    );
+  });
+
+  it('sets first GPS as last point with zero distance for IN_PROGRESS order', async () => {
+    prisma.driver.findUnique.mockResolvedValue({ id: 'driver-1' });
+    prisma.driver.update.mockResolvedValue({
+      latitude: new Prisma.Decimal('22.6273'),
+      longitude: new Prisma.Decimal('120.3014'),
+      locationUpdatedAt: new Date(),
+    });
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        id: 'order-1',
+        trip_distance_meters: null,
+        trip_last_latitude: null,
+        trip_last_longitude: null,
+      },
+    ]);
+    prisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.updateOwnLocation(activeDriverUser(), {
+      latitude: 22.6273,
+      longitude: 120.3014,
+    });
+
+    expect(prisma.order.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'order-1',
+        status: 'IN_PROGRESS',
+      },
+      data: {
+        tripDistanceMeters: 0,
+        tripLastLatitude: expect.any(Prisma.Decimal),
+        tripLastLongitude: expect.any(Prisma.Decimal),
+      },
+    });
   });
 
   it('returns null location when the driver has never reported GPS', async () => {
@@ -219,6 +318,7 @@ describe('DriversService', () => {
         { latitude: 1, longitude: 2 },
       ),
     ).rejects.toMatchObject({ errorCode: 'ACCOUNT_SUSPENDED' });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.driver.update).not.toHaveBeenCalled();
   });
 });

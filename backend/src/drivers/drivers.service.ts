@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   DriverOnlineStatus,
+  OrderStatus,
   Prisma,
   UserRole,
   UserStatus,
@@ -9,6 +10,7 @@ import { AppErrors } from '../common/errors/app.error';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { PasswordService } from '../auth/password.service';
 import { SessionService } from '../auth/session.service';
+import { recordTripLocation } from '../fare/trip-tracking';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   toDriverLocationResponse,
@@ -26,6 +28,28 @@ const driverUserSelect = {
   username: true,
   status: true,
 } as const;
+
+type LockedInProgressTripOrder = {
+  id: string;
+  trip_distance_meters: number | null;
+  trip_last_latitude: Prisma.Decimal | string | number | null;
+  trip_last_longitude: Prisma.Decimal | string | number | null;
+};
+
+function toNullableNumber(
+  value: Prisma.Decimal | string | number | null | undefined,
+): number | null {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return Number(value);
+  }
+  return value.toNumber();
+}
 
 @Injectable()
 export class DriversService {
@@ -225,31 +249,75 @@ export class DriversService {
       throw AppErrors.accountSuspended();
     }
 
-    const driver = await this.prisma.driver.findUnique({
-      where: { userId: user.id },
-      select: {
-        id: true,
-      },
-    });
-    if (!driver) {
-      throw AppErrors.notFound('找不到司機');
-    }
+    return this.prisma.$transaction(async (tx) => {
+      const driver = await tx.driver.findUnique({
+        where: { userId: user.id },
+        select: {
+          id: true,
+        },
+      });
+      if (!driver) {
+        throw AppErrors.notFound('找不到司機');
+      }
 
-    const updated = await this.prisma.driver.update({
-      where: { id: driver.id },
-      data: {
-        latitude: new Prisma.Decimal(input.latitude),
-        longitude: new Prisma.Decimal(input.longitude),
-        locationUpdatedAt: new Date(),
-      },
-      select: {
-        latitude: true,
-        longitude: true,
-        locationUpdatedAt: true,
-      },
-    });
+      const updated = await tx.driver.update({
+        where: { id: driver.id },
+        data: {
+          latitude: new Prisma.Decimal(input.latitude),
+          longitude: new Prisma.Decimal(input.longitude),
+          locationUpdatedAt: new Date(),
+        },
+        select: {
+          latitude: true,
+          longitude: true,
+          locationUpdatedAt: true,
+        },
+      });
 
-    return toDriverLocationResponse(updated);
+      const lockedOrders = await tx.$queryRaw<LockedInProgressTripOrder[]>`
+        SELECT id, trip_distance_meters, trip_last_latitude, trip_last_longitude
+        FROM orders
+        WHERE driver_id = ${driver.id}::uuid
+          AND status = 'IN_PROGRESS'::"OrderStatus"
+        FOR UPDATE
+      `;
+
+      const order = lockedOrders[0];
+      if (order) {
+        const next = recordTripLocation(
+          {
+            distanceMeters: order.trip_distance_meters ?? 0,
+            lastLatitude: toNullableNumber(order.trip_last_latitude),
+            lastLongitude: toNullableNumber(order.trip_last_longitude),
+          },
+          {
+            latitude: input.latitude,
+            longitude: input.longitude,
+          },
+        );
+
+        // Order.trip_distance_meters is INTEGER; round only at persistence boundary.
+        await tx.order.updateMany({
+          where: {
+            id: order.id,
+            status: OrderStatus.IN_PROGRESS,
+          },
+          data: {
+            tripDistanceMeters: Math.round(next.distanceMeters),
+            tripLastLatitude:
+              next.lastLatitude == null
+                ? null
+                : new Prisma.Decimal(next.lastLatitude),
+            tripLastLongitude:
+              next.lastLongitude == null
+                ? null
+                : new Prisma.Decimal(next.lastLongitude),
+          },
+        });
+      }
+
+      return toDriverLocationResponse(updated);
+    });
   }
 
   async listOnlineLocations() {
