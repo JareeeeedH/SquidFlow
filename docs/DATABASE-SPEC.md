@@ -121,6 +121,8 @@ Order
 ├─ destination
 ├─ price
 ├─ trip_distance_meters
+├─ trip_last_latitude
+├─ trip_last_longitude
 ├─ note
 ├─ status
 ├─ dispatch_mode
@@ -143,6 +145,8 @@ Order
 | `destination` | TEXT | ❌ |
 | `price` | DECIMAL(10,2) | ❌ |
 | `trip_distance_meters` | INTEGER | ❌ |
+| `trip_last_latitude` | DECIMAL(10,7) | ❌ |
+| `trip_last_longitude` | DECIMAL(10,7) | ❌ |
 | `note` | TEXT | ❌ |
 | `status` | ENUM | ✅ |
 | `dispatch_mode` | ENUM | ✅ |
@@ -155,7 +159,7 @@ Order
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 
-> **Phase 3：** `trip_distance_meters` 於 `IN_PROGRESS` 由 Backend 累加，`COMPLETED` 時鎖定。`price` 於 Complete 時依費率覆寫為最終車資（見 `PHASE-3-SPEC.md`）。不新增 `calculated_fare`／`final_price`。Tracking 所需「上一計費 GPS 點」為 Backend 內部狀態（可落在 Order 暫存欄位或等效儲存，完成後清除上一點）；**不**建 GPS history／track 表。
+> **Phase 3：** `trip_distance_meters` 於 `IN_PROGRESS` 由 Backend 累加，`COMPLETED` 時鎖定。`price` 於 Complete 時依費率覆寫為最終車資（見 `PHASE-3-SPEC.md`）。不新增 `calculated_fare`／`final_price`。`trip_last_latitude`／`trip_last_longitude` 為 Backend 內部上一計費 GPS 點（完成後清除）；**不**對外 API 暴露為產品欄位；**不**建 GPS history／track 表。
 
 ```text
 status:
@@ -589,8 +593,9 @@ Phase 4 — Advanced Dispatch & Communication
 **Phase 3 — Trip Mileage & Fare（已定義產品規則，見 `PHASE-3-SPEC.md`）：**
 
 - Order 新增 `trip_distance_meters`（INTEGER，可 NULL；完成後鎖定最終值）
+- Order 新增 `trip_last_latitude`／`trip_last_longitude`（DECIMAL(10,7)，可 NULL；Backend 內部上一計費點，完成後清除）
 - Complete 時以費率覆寫 `price`；不新增第二套價格欄位
 - **不**新增 GPS history／points／track 表
-- 上一計費 GPS 點為 Backend tracking state（可持久化於 Order 暫存欄位，完成後清除）
+- 上一計費 GPS 點持久化於上述 Order 暫存欄位（非 history）
 
 **Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤、第三方通訊 — 目前不定義資料模型。

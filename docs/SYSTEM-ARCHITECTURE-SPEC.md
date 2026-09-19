@@ -1543,7 +1543,7 @@ Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合
 
 - 沿用 `PATCH /api/v1/driver/location`；`IN_PROGRESS` 期間 10 秒上報、Haversine 累加 `trip_distance_meters`
 - Complete 時鎖定里程並依費率寫入 `price`；Backend 為唯一權威
-- **不**保存 GPS History／Track；僅保留上一計費點 + 累計里程（完成後清除上一點）
+- **不**保存 GPS History／Track；僅保留上一計費點 + 累計里程（Order：`trip_last_latitude`／`trip_last_longitude` + `trip_distance_meters`；完成後清除上一點）
 - **不**改變 Accept／搶單；**不**以 P2-03 直線距離計費
 - GPS 失敗不改 Order State、不補算缺失路段
 

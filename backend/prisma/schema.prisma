@@ -97,27 +97,30 @@ model Driver {
 }
 
 model Order {
-  id             String         @id @default(uuid()) @db.Uuid
-  orderNo        String         @unique @map("order_no") @db.VarChar
-  customerName   String?        @map("customer_name") @db.VarChar
-  pickupLocation String         @map("pickup_location") @db.Text
-  destination    String?        @db.Text
-  price          Decimal?       @db.Decimal(10, 2)
-  note           String?        @db.Text
-  status         OrderStatus
-  dispatchMode   DispatchMode   @map("dispatch_mode")
-  driverId       String?        @map("driver_id") @db.Uuid
-  createdBy      String         @map("created_by") @db.Uuid
-  acceptedAt     DateTime?      @map("accepted_at") @db.Timestamptz(6)
-  startedAt      DateTime?      @map("started_at") @db.Timestamptz(6)
-  completedAt    DateTime?      @map("completed_at") @db.Timestamptz(6)
-  cancelledAt    DateTime?      @map("cancelled_at") @db.Timestamptz(6)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  driver         Driver?        @relation(fields: [driverId], references: [id])
-  creator        User           @relation("OrderCreatedBy", fields: [createdBy], references: [id])
-  events         OrderEvent[]
-  notifications  Notification[]
+  id                 String         @id @default(uuid()) @db.Uuid
+  orderNo            String         @unique @map("order_no") @db.VarChar
+  customerName       String?        @map("customer_name") @db.VarChar
+  pickupLocation     String         @map("pickup_location") @db.Text
+  destination        String?        @db.Text
+  price              Decimal?       @db.Decimal(10, 2)
+  tripDistanceMeters Int?           @map("trip_distance_meters")
+  tripLastLatitude   Decimal?       @map("trip_last_latitude") @db.Decimal(10, 7)
+  tripLastLongitude  Decimal?       @map("trip_last_longitude") @db.Decimal(10, 7)
+  note               String?        @db.Text
+  status             OrderStatus
+  dispatchMode       DispatchMode   @map("dispatch_mode")
+  driverId           String?        @map("driver_id") @db.Uuid
+  createdBy          String         @map("created_by") @db.Uuid
+  acceptedAt         DateTime?      @map("accepted_at") @db.Timestamptz(6)
+  startedAt          DateTime?      @map("started_at") @db.Timestamptz(6)
+  completedAt        DateTime?      @map("completed_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  driver             Driver?        @relation(fields: [driverId], references: [id])
+  creator            User           @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  events             OrderEvent[]
+  notifications      Notification[]
 
   @@map("orders")
 }
