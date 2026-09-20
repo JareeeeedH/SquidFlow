@@ -15,7 +15,7 @@ import type { DriverOrderDetail } from '../api/types'
 import OrderMap from '../components/OrderMap.vue'
 import OrderStatusTag from '../components/OrderStatusTag.vue'
 import SlideToConfirm from '../components/SlideToConfirm.vue'
-import { formatStraightLineDistance } from '../lib/format-distance'
+import { formatStraightLineDistance, formatTripDistanceKm } from '../lib/format-distance'
 import { formatOptionalText, formatPrice, formatScheduledAt } from '../lib/format'
 import { openGoogleMapsNavigation } from '../lib/google-maps-nav'
 import { useDriverStatusStore } from '../stores/driver-status'
@@ -115,6 +115,28 @@ const hasPrimaryAction = computed(
 
 const distanceLabel = computed(() =>
   formatStraightLineDistance(order.value?.distance_meters),
+)
+
+const tripDistanceKm = computed(() =>
+  formatTripDistanceKm(order.value?.trip_distance_meters),
+)
+
+const inProgressMileage = computed(() => {
+  if (order.value?.status !== 'IN_PROGRESS' || !tripDistanceKm.value) {
+    return null
+  }
+  return `已行駛 ${tripDistanceKm.value}`
+})
+
+const completedMileage = computed(() => {
+  if (order.value?.status !== 'COMPLETED' || !tripDistanceKm.value) {
+    return null
+  }
+  return tripDistanceKm.value
+})
+
+const priceLabel = computed(() =>
+  order.value?.status === 'COMPLETED' ? '車資' : '價格',
 )
 
 const pickupPoint = computed(() => {
@@ -356,8 +378,16 @@ watch(
             <dt>直線距離</dt>
             <dd>{{ distanceLabel }}</dd>
           </div>
+          <div v-if="inProgressMileage" class="summary-row">
+            <dt>已行駛</dt>
+            <dd>{{ tripDistanceKm }}</dd>
+          </div>
+          <div v-if="completedMileage" class="summary-row">
+            <dt>行駛里程</dt>
+            <dd>{{ completedMileage }}</dd>
+          </div>
           <div class="summary-row">
-            <dt>價格</dt>
+            <dt>{{ priceLabel }}</dt>
             <dd class="price">{{ formatPrice(order.price) }}</dd>
           </div>
         </dl>

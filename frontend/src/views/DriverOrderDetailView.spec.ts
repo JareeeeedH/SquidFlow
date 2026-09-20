@@ -42,6 +42,7 @@ const openOrder: DriverOrderDetail = {
   note: '2件行李',
   status: 'OPEN',
   distance_meters: null,
+  trip_distance_meters: null,
   pickup_latitude: null,
   pickup_longitude: null,
 }
@@ -183,11 +184,22 @@ describe('DriverOrderDetailView', () => {
       id: 'order-1',
       status: 'COMPLETED',
       completed_at: '2026-09-15T08:20:00.000Z',
+      trip_distance_meters: 8400,
+      price: 275,
     })
     vi.mocked(getDriverOrder)
       .mockResolvedValueOnce(ownAccepted)
-      .mockResolvedValueOnce({ ...ownAccepted, status: 'IN_PROGRESS' })
-      .mockResolvedValueOnce({ ...ownAccepted, status: 'COMPLETED' })
+      .mockResolvedValueOnce({
+        ...ownAccepted,
+        status: 'IN_PROGRESS',
+        trip_distance_meters: 3800,
+      })
+      .mockResolvedValueOnce({
+        ...ownAccepted,
+        status: 'COMPLETED',
+        trip_distance_meters: 8400,
+        price: 275,
+      })
 
     const { wrapper } = await mountDetail()
     await confirmSlide(wrapper)
@@ -195,14 +207,45 @@ describe('DriverOrderDetailView', () => {
     expect(startDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('行程已開始')
     expect(wrapper.text()).toContain('滑動完成訂單')
+    expect(wrapper.text()).toContain('已行駛')
+    expect(wrapper.text()).toContain('3.8 km')
 
     await confirmSlide(wrapper)
 
     expect(completeDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('訂單已完成')
     expect(wrapper.text()).toContain('已完成')
+    expect(wrapper.text()).toContain('行駛里程')
+    expect(wrapper.text()).toContain('8.4 km')
+    expect(wrapper.text()).toContain('車資')
+    expect(wrapper.text()).toContain('NT$ 275')
     expect(wrapper.text()).not.toContain('滑動開始行程')
     expect(wrapper.text()).not.toContain('滑動完成訂單')
+  })
+
+  it('shows in-progress and completed trip fields from backend only', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue({
+      ...ownAccepted,
+      status: 'IN_PROGRESS',
+      trip_distance_meters: 3800,
+    })
+    const inProgress = await mountDetail()
+    expect(inProgress.wrapper.text()).toContain('已行駛')
+    expect(inProgress.wrapper.text()).toContain('3.8 km')
+    expect(inProgress.wrapper.text()).not.toContain('行駛里程')
+
+    vi.mocked(getDriverOrder).mockResolvedValue({
+      ...ownAccepted,
+      status: 'COMPLETED',
+      trip_distance_meters: 8400,
+      price: 275,
+    })
+    const completed = await mountDetail()
+    expect(completed.wrapper.text()).toContain('行駛里程')
+    expect(completed.wrapper.text()).toContain('8.4 km')
+    expect(completed.wrapper.text()).toContain('車資')
+    expect(completed.wrapper.text()).toContain('NT$ 275')
+    expect(completed.wrapper.text()).not.toContain('已行駛')
   })
 
   it('shows 404 when the order is missing or belongs to another driver', async () => {

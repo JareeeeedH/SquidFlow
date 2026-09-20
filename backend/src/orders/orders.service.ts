@@ -210,6 +210,7 @@ export class OrdersService {
         destination: true,
         price: true,
         status: true,
+        tripDistanceMeters: true,
       },
     });
 
@@ -286,6 +287,7 @@ export class OrdersService {
         note: true,
         status: true,
         driverId: true,
+        tripDistanceMeters: true,
       },
     });
 

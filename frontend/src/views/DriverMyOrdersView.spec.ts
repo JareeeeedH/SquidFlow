@@ -33,6 +33,7 @@ const accepted: DriverMyOrder = {
   price: 1200,
   status: 'ACCEPTED',
   distance_meters: null,
+  trip_distance_meters: null,
 }
 
 const completed: DriverMyOrder = {
@@ -40,6 +41,8 @@ const completed: DriverMyOrder = {
   id: 'order-2',
   order_no: 'ORD-20260915-009',
   status: 'COMPLETED',
+  price: 275,
+  trip_distance_meters: 8400,
 }
 
 async function mountMine() {
@@ -130,10 +133,25 @@ describe('DriverMyOrdersView', () => {
       id: 'order-1',
       status: 'COMPLETED',
       completed_at: '2026-09-15T08:20:00.000Z',
+      trip_distance_meters: 8400,
+      price: 275,
     })
     vi.mocked(listDriverOrders)
-      .mockResolvedValueOnce([{ ...accepted, status: 'IN_PROGRESS' }])
-      .mockResolvedValueOnce([{ ...accepted, status: 'COMPLETED' }])
+      .mockResolvedValueOnce([
+        {
+          ...accepted,
+          status: 'IN_PROGRESS',
+          trip_distance_meters: 3800,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          ...accepted,
+          status: 'COMPLETED',
+          trip_distance_meters: 8400,
+          price: 275,
+        },
+      ])
 
     const { wrapper } = await mountMine()
     await confirmSlide(wrapper)
@@ -142,7 +160,57 @@ describe('DriverMyOrdersView', () => {
     expect(wrapper.text()).toContain('訂單已完成')
     expect(wrapper.text()).toContain('目前沒有進行中的訂單')
     expect(wrapper.text()).toContain('已完成')
+    expect(wrapper.text()).toContain('行駛里程 8.4 km')
+    expect(wrapper.text()).toContain('車資 NT$ 275')
     expect(wrapper.text()).not.toContain('滑動完成訂單')
+  })
+
+  it('shows in-progress trip mileage from backend trip_distance_meters', async () => {
+    vi.mocked(listDriverOrders).mockResolvedValue([
+      {
+        ...accepted,
+        status: 'IN_PROGRESS',
+        trip_distance_meters: 3800,
+      },
+    ])
+    const { wrapper } = await mountMine()
+
+    expect(wrapper.text()).toContain('已行駛 3.8 km')
+    expect(wrapper.text()).not.toContain('行駛里程')
+  })
+
+  it('hides mileage when trip_distance_meters is null', async () => {
+    vi.mocked(listDriverOrders).mockResolvedValue([
+      {
+        ...accepted,
+        status: 'IN_PROGRESS',
+        trip_distance_meters: null,
+      },
+      {
+        ...completed,
+        trip_distance_meters: null,
+      },
+    ])
+    const { wrapper } = await mountMine()
+
+    expect(wrapper.text()).not.toContain('已行駛')
+    expect(wrapper.text()).not.toContain('行駛里程')
+    expect(wrapper.text()).not.toContain('0.0 km')
+  })
+
+  it('shows completed mileage and fare from backend values without recalculating', async () => {
+    vi.mocked(listDriverOrders).mockResolvedValue([
+      {
+        ...completed,
+        trip_distance_meters: 8400,
+        price: 275,
+      },
+    ])
+    const { wrapper } = await mountMine()
+
+    expect(wrapper.text()).toContain('行駛里程 8.4 km')
+    expect(wrapper.text()).toContain('車資 NT$ 275')
+    expect(wrapper.text()).not.toContain('已行駛')
   })
 
   it('shows backend errors without inventing a local status', async () => {

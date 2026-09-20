@@ -4,6 +4,8 @@ import {
   toDashboardBoardOrder,
   toDashboardSummary,
   toDetail,
+  toDriverMyOrder,
+  toDriverOrderDetail,
   type OrderWithAssignedDriver,
 } from './orders.mapper';
 
@@ -28,6 +30,9 @@ function orderRow(
     cancelledAt: null,
     createdAt: new Date('2026-09-15T07:00:00.000Z'),
     updatedAt: new Date('2026-09-15T07:00:00.000Z'),
+    tripDistanceMeters: null,
+    tripLastLatitude: null,
+    tripLastLongitude: null,
     driver: null,
     ...overrides,
   };
@@ -152,5 +157,88 @@ describe('toDashboardBoardOrder', () => {
       driver: { username: 'driver01' },
     });
     expect(Object.keys(item.driver ?? {})).toEqual(['username']);
+  });
+});
+
+describe('toDriverMyOrder', () => {
+  it('exposes trip_distance_meters for IN_PROGRESS without replacing distance_meters', () => {
+    const mapped = toDriverMyOrder(
+      {
+        id: 'order-1',
+        orderNo: 'ORD-20260915-001',
+        createdAt: new Date('2026-09-15T07:00:00.000Z'),
+        pickupLocation: '左營高鐵站',
+        destination: '高雄小港機場',
+        price: new Prisma.Decimal('100.00'),
+        status: OrderStatus.IN_PROGRESS,
+        tripDistanceMeters: 3800,
+      },
+      1200,
+    );
+
+    expect(mapped.trip_distance_meters).toBe(3800);
+    expect(mapped.distance_meters).toBe(1200);
+    expect(mapped.status).toBe(OrderStatus.IN_PROGRESS);
+  });
+
+  it('exposes trip_distance_meters for COMPLETED and keeps null when unset', () => {
+    const withTrip = toDriverMyOrder({
+      id: 'order-2',
+      orderNo: 'ORD-20260915-002',
+      createdAt: new Date('2026-09-15T07:00:00.000Z'),
+      pickupLocation: '左營高鐵站',
+      destination: null,
+      price: new Prisma.Decimal('275.00'),
+      status: OrderStatus.COMPLETED,
+      tripDistanceMeters: 8400,
+    });
+    expect(withTrip.trip_distance_meters).toBe(8400);
+    expect(withTrip.distance_meters).toBeNull();
+    expect(withTrip.price).toBe(275);
+
+    const withoutTrip = toDriverMyOrder({
+      id: 'order-3',
+      orderNo: 'ORD-20260915-003',
+      createdAt: new Date('2026-09-15T07:00:00.000Z'),
+      pickupLocation: '左營高鐵站',
+      destination: null,
+      price: null,
+      status: OrderStatus.ACCEPTED,
+      tripDistanceMeters: null,
+    });
+    expect(withoutTrip.trip_distance_meters).toBeNull();
+  });
+});
+
+describe('toDriverOrderDetail', () => {
+  it('exposes trip_distance_meters for IN_PROGRESS and COMPLETED', () => {
+    const inProgress = toDriverOrderDetail({
+      id: 'order-1',
+      orderNo: 'ORD-20260915-001',
+      customerName: '王先生',
+      pickupLocation: '左營高鐵站',
+      destination: '高雄小港機場',
+      createdAt: new Date('2026-09-15T07:00:00.000Z'),
+      price: new Prisma.Decimal('100.00'),
+      note: null,
+      status: OrderStatus.IN_PROGRESS,
+      tripDistanceMeters: 3800,
+    });
+    expect(inProgress.trip_distance_meters).toBe(3800);
+
+    const completed = toDriverOrderDetail({
+      id: 'order-2',
+      orderNo: 'ORD-20260915-002',
+      customerName: null,
+      pickupLocation: '左營高鐵站',
+      destination: null,
+      createdAt: new Date('2026-09-15T07:00:00.000Z'),
+      price: new Prisma.Decimal('275.00'),
+      note: null,
+      status: OrderStatus.COMPLETED,
+      tripDistanceMeters: 8400,
+    });
+    expect(completed.trip_distance_meters).toBe(8400);
+    expect(completed.price).toBe(275);
   });
 });

@@ -14,6 +14,7 @@ import OrderStatusTag from '../components/OrderStatusTag.vue'
 import SlideToConfirm from '../components/SlideToConfirm.vue'
 import { splitDriverMyOrders } from '../lib/driver-my-orders'
 import { formatOptionalText, formatPrice, formatScheduledAt, formatTaipeiYmd } from '../lib/format'
+import { formatTripDistanceKm } from '../lib/format-distance'
 import { useDriverStatusStore } from '../stores/driver-status'
 
 const router = useRouter()
@@ -30,6 +31,20 @@ const grouped = computed(() => splitDriverMyOrders(orders.value))
 const acting = computed(() => actingId.value !== null)
 
 let requestSeq = 0
+
+function tripMileageLabel(order: DriverMyOrder) {
+  const km = formatTripDistanceKm(order.trip_distance_meters)
+  if (!km) {
+    return null
+  }
+  if (order.status === 'IN_PROGRESS') {
+    return `已行駛 ${km}`
+  }
+  if (order.status === 'COMPLETED') {
+    return `行駛里程 ${km}`
+  }
+  return null
+}
 
 function captureError(caught: unknown) {
   if (caught instanceof ApiClientError) {
@@ -201,6 +216,12 @@ void loadOrders()
                     <span class="arrow" aria-hidden="true">→</span>
                     <span class="place">{{ formatOptionalText(order.destination) }}</span>
                   </p>
+                  <p
+                    v-if="order.status === 'IN_PROGRESS' && tripMileageLabel(order)"
+                    class="trip-meta"
+                  >
+                    {{ tripMileageLabel(order) }}
+                  </p>
                   <p class="order-no">{{ order.order_no }}</p>
                 </button>
                 <SlideToConfirm
@@ -247,6 +268,18 @@ void loadOrders()
                   <span class="place">{{ order.pickup_location }}</span>
                   <span class="arrow" aria-hidden="true">→</span>
                   <span class="place">{{ formatOptionalText(order.destination) }}</span>
+                </p>
+                <p
+                  v-if="order.status === 'COMPLETED' && tripMileageLabel(order)"
+                  class="trip-meta"
+                >
+                  {{ tripMileageLabel(order) }}
+                </p>
+                <p
+                  v-if="order.status === 'COMPLETED' && order.price != null"
+                  class="trip-fare"
+                >
+                  車資 {{ formatPrice(order.price) }}
                 </p>
                 <p class="order-no">{{ order.order_no }}</p>
               </button>
@@ -487,6 +520,21 @@ h2 {
   line-height: 1.3;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+}
+
+.trip-meta,
+.trip-fare {
+  margin: 0;
+  min-width: 0;
+  font: var(--font-caption);
+  font-weight: 600;
+  color: var(--color-primary, #0b1f3a);
+  line-height: 1.3;
+}
+
+.trip-fare {
+  font: var(--font-label);
+  font-weight: 700;
 }
 
 .card :deep(.n-button) {

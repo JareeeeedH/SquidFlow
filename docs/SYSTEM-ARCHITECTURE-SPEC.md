@@ -796,7 +796,8 @@ Driver → ONLINE
         ↓
 立即請求第一次 Geolocation
         ↓
-之後每 30 秒更新一次
+ONLINE + IN_PROGRESS → 每 10 秒更新一次
+otherwise ONLINE     → 每 30 秒更新一次
         ↓
 Driver → OFFLINE
         ↓
@@ -808,7 +809,7 @@ Driver → OFFLINE
 失敗規則：
 
 - GPS 權限拒絕、定位失敗，或 location API 失敗：**不得**改變 `ONLINE` / `OFFLINE`
-- 失敗時保留最後一次有效位置；於下一個 30 秒週期再重試
+- 失敗時保留最後一次有效位置；於下一個 GPS 週期再重試
 
 範圍限制：
 

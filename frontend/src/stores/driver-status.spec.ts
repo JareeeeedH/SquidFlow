@@ -49,6 +49,7 @@ describe('driver status store', () => {
         price: null,
         status: 'ACCEPTED',
         distance_meters: null,
+        trip_distance_meters: null,
       },
     ])
     const store = useDriverStatusStore()
@@ -75,6 +76,7 @@ describe('driver status store', () => {
         price: null,
         status: 'IN_PROGRESS',
         distance_meters: null,
+        trip_distance_meters: null,
       },
     ])
     const store = useDriverStatusStore()

@@ -109,6 +109,7 @@ export type DriverMyOrder = {
   price: number | null;
   status: OrderStatus;
   distance_meters: number | null;
+  trip_distance_meters: number | null;
 };
 
 export type DriverOpenOrder = {
@@ -133,6 +134,7 @@ export type DriverOrderDetail = {
   note: string | null;
   status: OrderStatus;
   distance_meters: number | null;
+  trip_distance_meters: number | null;
   pickup_latitude: number | null;
   pickup_longitude: number | null;
 };
@@ -146,6 +148,7 @@ type DriverMyOrderRow = Pick<
   | 'destination'
   | 'price'
   | 'status'
+  | 'tripDistanceMeters'
 >;
 
 type DriverOpenOrderRow = Pick<
@@ -170,6 +173,7 @@ type DriverOrderDetailRow = Pick<
   | 'price'
   | 'note'
   | 'status'
+  | 'tripDistanceMeters'
 >;
 
 function iso(value: Date | null): string | null {
@@ -300,6 +304,7 @@ export function toDriverMyOrder(
     price: priceNumber(order.price),
     status: order.status,
     distance_meters: distanceMeters,
+    trip_distance_meters: order.tripDistanceMeters,
   };
 }
 
@@ -338,6 +343,7 @@ export function toDriverOrderDetail(
     note: order.note,
     status: order.status,
     distance_meters: distanceMeters,
+    trip_distance_meters: order.tripDistanceMeters,
     pickup_latitude: pickup.pickup_latitude,
     pickup_longitude: pickup.pickup_longitude,
   };

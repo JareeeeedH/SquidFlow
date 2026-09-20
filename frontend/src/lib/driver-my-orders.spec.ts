@@ -11,6 +11,7 @@ const accepted: DriverMyOrder = {
   price: 1200,
   status: 'ACCEPTED',
   distance_meters: null,
+  trip_distance_meters: null,
 }
 
 const inProgress: DriverMyOrder = { ...accepted, id: 'b', status: 'IN_PROGRESS' }
