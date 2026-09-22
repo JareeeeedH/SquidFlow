@@ -183,14 +183,15 @@ defineExpose({
   min-height: 56px;
   padding: 4px;
   border-radius: 999px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-primary, #0b1f3a) 10%, #ffffff),
-      color-mix(in srgb, var(--color-primary, #0b1f3a) 16%, #eef2f7)
-    );
-  border: 1px solid color-mix(in srgb, var(--color-primary, #0b1f3a) 18%, var(--color-border, #e2e8f0));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary, #3b82f6) 16%, rgba(28, 38, 62, 0.95)),
+    color-mix(in srgb, var(--color-primary, #3b82f6) 10%, rgba(22, 32, 54, 0.98))
+  );
+  border: 1px solid color-mix(in srgb, var(--color-primary, #3b82f6) 32%, var(--color-border, rgba(186, 203, 225, 0.26)));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 20px rgba(8, 12, 24, 0.25);
   user-select: none;
   touch-action: none;
   overflow: hidden;
@@ -202,7 +203,8 @@ defineExpose({
   top: 4px;
   bottom: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary, #0b1f3a) 18%, transparent);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 28%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary, #3b82f6) 22%, transparent);
   pointer-events: none;
   transition: width 0.05s linear;
 }
@@ -216,12 +218,12 @@ defineExpose({
   z-index: 1;
   margin: 0;
   padding: 0 56px;
-  color: var(--color-primary, #0b1f3a);
+  color: #e2e8f0;
   font: var(--font-label);
   font-weight: 700;
   letter-spacing: 0.04em;
   pointer-events: none;
-  opacity: 0.88;
+  opacity: 0.92;
 }
 
 .slide-thumb {
@@ -237,11 +239,10 @@ defineExpose({
   border: 0;
   border-radius: 999px;
   color: #f8fafc;
-  background:
-    linear-gradient(145deg, #16325a 0%, var(--color-primary, #0b1f3a) 55%, #071526 100%);
+  background: linear-gradient(145deg, #60a5fa 0%, var(--color-primary, #3b82f6) 50%, #4f46e5 100%);
   box-shadow:
-    0 6px 14px rgb(11 31 58 / 28%),
-    inset 0 1px 0 rgb(255 255 255 / 22%);
+    0 6px 16px rgba(37, 99, 235, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
   cursor: grab;
   transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }

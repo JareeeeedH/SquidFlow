@@ -37,9 +37,10 @@ withDefaults(
   align-items: center;
   justify-content: center;
   border-radius: inherit;
-  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
-  backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--color-background, #070b18) 55%, transparent);
+  backdrop-filter: blur(3px);
   pointer-events: all;
+  animation: refresh-overlay-fade 180ms ease both;
 }
 
 .refresh-spinner {
@@ -48,6 +49,7 @@ withDefaults(
   border: 2px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
   border-top-color: var(--color-primary);
   border-radius: 50%;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-primary) 28%, transparent);
   animation: refresh-overlay-spin 0.9s linear infinite;
 }
 
@@ -57,9 +59,22 @@ withDefaults(
   }
 }
 
+@keyframes refresh-overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .refresh-spinner {
+  .refresh-spinner,
+  .refresh-overlay {
     animation: none;
+  }
+
+  .refresh-spinner {
     border-top-color: var(--color-primary);
     opacity: 0.85;
   }

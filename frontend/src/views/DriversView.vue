@@ -263,6 +263,11 @@ void loadDrivers()
 h1 {
   margin: 0;
   font: var(--font-page-title);
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 55%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .subtitle {
@@ -286,11 +291,14 @@ h1 {
 
 .panel {
   min-height: 360px;
-  background: var(--color-surface);
+  background: var(--admin-panel, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  border-radius: 14px;
   padding: var(--space-8);
   overflow: hidden;
+  box-shadow: var(--admin-shadow, none);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .state {

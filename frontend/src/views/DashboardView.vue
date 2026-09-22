@@ -200,7 +200,7 @@ useVisiblePolling((reason) => {
     </NResult>
 
     <NSpin v-else :show="loading && !manualUpdating">
-      <section class="summary" aria-label="訂單狀態統計">
+      <section class="summary dashboard-section" aria-label="訂單狀態統計">
         <h2 class="section-title">狀態總覽</h2>
         <div class="summary-grid">
           <button
@@ -220,7 +220,7 @@ useVisiblePolling((reason) => {
         </div>
       </section>
 
-      <section class="board board-desktop" aria-label="派車看板">
+      <section class="board board-desktop dashboard-section" aria-label="派車看板">
         <h2 class="section-title">派車看板</h2>
         <div class="board-grid">
           <div
@@ -276,7 +276,7 @@ useVisiblePolling((reason) => {
         </div>
       </section>
 
-      <section class="board board-mobile" aria-label="執行中訂單">
+      <section class="board board-mobile dashboard-section" aria-label="執行中訂單">
         <div class="mobile-board-actions">
           <AdminRefreshButton
             text
@@ -374,6 +374,7 @@ useVisiblePolling((reason) => {
   flex-direction: column;
   gap: var(--space-24);
   min-width: 0;
+  animation: admin-page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .page-header {
@@ -386,17 +387,34 @@ useVisiblePolling((reason) => {
 h1 {
   margin: 0;
   font: var(--font-page-title);
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 55%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .subtitle {
   margin: var(--space-4) 0 0;
-  color: var(--color-muted-text);
+  color: rgba(203, 213, 225, 0.88);
   font: var(--font-caption);
+}
+
+.dashboard-section {
+  padding: var(--space-16);
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--admin-surface-section);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--admin-shadow, 0 12px 32px rgba(8, 12, 24, 0.28));
 }
 
 .section-title {
   margin: 0 0 var(--space-12);
   font: var(--font-section-title);
+  color: #f8fafc;
+  letter-spacing: -0.01em;
 }
 
 .state {
@@ -428,33 +446,33 @@ h1 {
 .column,
 .focus-group,
 .order-card {
-  --status-color: var(--color-muted-text);
+  --status-color: rgba(148, 163, 184, 0.72);
 }
 
 .summary-card[data-status='OPEN'],
 .column[data-status='OPEN'],
 .focus-group[data-status='OPEN'] {
-  --status-color: var(--color-warning);
+  --status-color: #d97706;
 }
 
 .summary-card[data-status='ACCEPTED'],
 .column[data-status='ACCEPTED'],
 .focus-group[data-status='ACCEPTED'] {
-  --status-color: var(--color-info);
+  --status-color: #38bdf8;
 }
 
 .summary-card[data-status='IN_PROGRESS'],
 .column[data-status='IN_PROGRESS'],
 .focus-group[data-status='IN_PROGRESS'] {
-  --status-color: var(--color-primary);
+  --status-color: #3b82f6;
 }
 
 .summary-card[data-status='COMPLETED'] {
-  --status-color: var(--color-success);
+  --status-color: #34d399;
 }
 
 .summary-card[data-status='CANCELLED'] {
-  --status-color: var(--color-danger);
+  --status-color: #f87171;
 }
 
 .summary-card {
@@ -464,23 +482,51 @@ h1 {
   align-items: flex-start;
   min-height: 96px;
   padding: var(--space-16);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  box-shadow: inset 0 3px 0 var(--status-color);
+  background: var(--admin-surface-status);
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, white 12%);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 3px 0 var(--status-color),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    var(--admin-shadow, 0 12px 32px rgba(8, 12, 24, 0.28));
   cursor: pointer;
   text-align: left;
   color: var(--color-text);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .summary-card.is-operational {
-  background: color-mix(in srgb, var(--status-color) 8%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--status-color) 35%, var(--color-border));
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--status-color) 14%, rgba(48, 62, 94, 0.98)),
+      rgba(40, 52, 82, 0.98)
+    );
+  border-color: color-mix(in srgb, var(--status-color) 38%, var(--color-border));
+  box-shadow:
+    inset 0 3px 0 var(--status-color),
+    0 0 20px color-mix(in srgb, var(--status-color) 16%, transparent),
+    var(--admin-shadow, 0 16px 40px rgba(0, 0, 0, 0.35));
 }
 
 .summary-card:hover,
 .summary-card:focus-visible {
-  border-color: var(--status-color);
+  border-color: color-mix(in srgb, var(--status-color) 55%, var(--color-border));
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 3px 0 var(--status-color),
+    0 0 28px color-mix(in srgb, var(--status-color) 22%, transparent),
+    0 18px 44px rgba(0, 0, 0, 0.4);
+}
+
+.summary-card:active {
+  transform: translateY(0);
 }
 
 .summary-card:focus-visible,
@@ -499,6 +545,7 @@ h1 {
   font: var(--font-price);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: #f1f5f9;
 }
 
 .summary-card.is-operational .summary-count {
@@ -510,10 +557,15 @@ h1 {
   min-height: 320px;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  background: var(--admin-surface-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, white 15%);
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    var(--admin-shadow, 0 12px 32px rgba(8, 12, 24, 0.28));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .column-header {
@@ -522,7 +574,7 @@ h1 {
   justify-content: space-between;
   gap: var(--space-8);
   padding: var(--space-12) var(--space-16);
-  background: color-mix(in srgb, var(--status-color) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--status-color) 12%, rgba(36, 48, 76, 0.98));
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -538,8 +590,9 @@ h1 {
   min-width: 24px;
   padding: 0 var(--space-8);
   border-radius: var(--radius-8);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: rgba(54, 68, 102, 0.55);
+  border: 1px solid var(--color-border);
+  color: #f8fafc;
   font: var(--font-label);
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -551,6 +604,7 @@ h1 {
   gap: var(--space-4);
   padding: var(--space-8);
   flex: 1;
+  background: rgba(30, 40, 64, 0.35);
 }
 
 .column-empty {
@@ -567,19 +621,30 @@ h1 {
   gap: var(--space-4);
   width: 100%;
   padding: var(--space-8);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
+  background: var(--admin-surface-order);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, white 20%);
   border-left: 3px solid var(--status-color);
-  border-radius: var(--radius-8);
+  border-radius: 10px;
   cursor: pointer;
   text-align: left;
   color: var(--color-text);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .order-card:hover,
 .order-card:focus-visible {
-  border-color: var(--status-color);
-  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--status-color) 50%, var(--color-border));
+  background: var(--admin-surface-order-hover);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--status-color) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+.order-card:active {
+  transform: translateY(0);
 }
 
 .card-row {
@@ -602,17 +667,19 @@ h1 {
 
 .identity {
   font: var(--font-label);
+  color: #f1f5f9;
 }
 
 .price {
   flex-shrink: 0;
   font: var(--font-label);
   font-variant-numeric: tabular-nums;
+  color: #93c5fd;
 }
 
 .route,
 .meta {
-  color: var(--color-muted-text);
+  color: rgba(203, 213, 225, 0.82);
   font: var(--font-caption);
 }
 
@@ -670,9 +737,21 @@ h1 {
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  background: var(--admin-surface-panel);
+  border: 1px solid color-mix(in srgb, var(--status-color) 32%, var(--color-border));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    var(--admin-shadow, 0 12px 28px rgba(8, 12, 24, 0.28));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.focus-group.is-expanded {
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--status-color) 14%, transparent),
+    var(--admin-shadow, 0 12px 28px rgba(0, 0, 0, 0.28));
 }
 
 .focus-group-header {
@@ -681,18 +760,20 @@ h1 {
   justify-content: space-between;
   gap: var(--space-8);
   width: 100%;
+  min-height: 44px;
   padding: var(--space-8);
   border: none;
-  border-radius: var(--radius-8);
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
   color: inherit;
   text-align: left;
+  transition: background 160ms ease;
 }
 
 .focus-group-header:hover,
 .focus-group-header:focus-visible {
-  background: color-mix(in srgb, var(--status-color) 8%, transparent);
+  background: color-mix(in srgb, var(--status-color) 10%, transparent);
 }
 
 .focus-group-header:focus-visible {
@@ -749,11 +830,35 @@ h1 {
   padding: var(--space-12) var(--space-8);
 }
 
+@keyframes admin-page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .page,
+  .summary-card,
+  .order-card,
+  .focus-group,
+  .focus-group-header,
   .focus-chevron,
   .focus-accordion,
   .focus-accordion-panel {
-    transition: none;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .summary-card:hover,
+  .summary-card:focus-visible,
+  .order-card:hover,
+  .order-card:focus-visible {
+    transform: none;
   }
 }
 
@@ -776,6 +881,11 @@ h1 {
     display: none;
   }
 
+  .dashboard-section {
+    padding: var(--space-12);
+    border-radius: 14px;
+  }
+
   .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-8);
@@ -785,6 +895,11 @@ h1 {
     min-height: 72px;
     padding: var(--space-12);
     gap: var(--space-8);
+  }
+
+  .summary-card:hover,
+  .summary-card:focus-visible {
+    transform: none;
   }
 
   .summary-count {

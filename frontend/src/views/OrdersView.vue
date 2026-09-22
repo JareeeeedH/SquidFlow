@@ -511,6 +511,11 @@ useVisiblePolling((reason) => {
 h1 {
   margin: 0;
   font: var(--font-page-title);
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 55%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .subtitle {
@@ -561,11 +566,14 @@ h1 {
 
 .panel {
   min-height: 360px;
-  background: var(--color-surface);
+  background: var(--admin-panel, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  border-radius: 14px;
   padding: var(--space-8);
   overflow: hidden;
+  box-shadow: var(--admin-shadow, none);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .state {
@@ -704,12 +712,17 @@ h1 {
   font: var(--font-caption);
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .status-chip.is-active {
-  border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
-  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+  color: #93c5fd;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .chip-count {

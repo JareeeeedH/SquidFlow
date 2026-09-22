@@ -242,10 +242,18 @@ void loadHome()
 
 .identity {
   padding: var(--space-12) var(--space-16);
-  background: var(--color-primary, #0b1f3a);
-  border-radius: var(--radius-12);
+  background: linear-gradient(
+    145deg,
+    rgba(59, 130, 246, 0.32) 0%,
+    rgba(79, 70, 229, 0.28) 55%,
+    rgba(40, 52, 82, 0.95) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: 14px;
   color: #f8fafc;
-  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
 }
 
 .identity-row {
@@ -259,7 +267,11 @@ void loadHome()
   margin: 0;
   font: var(--font-page-title);
   font-size: 24px;
-  color: #f8fafc;
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 60%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -276,7 +288,7 @@ void loadHome()
 
 .identity .row-label {
   margin: 0;
-  color: rgb(248 250 252 / 72%);
+  color: rgba(226, 232, 240, 0.78);
   font: var(--font-caption);
 }
 
@@ -299,10 +311,15 @@ void loadHome()
   flex-direction: column;
   gap: var(--space-8);
   padding: var(--space-12) var(--space-16);
-  background: var(--color-surface);
+  background: var(--driver-surface-card, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .switch-row {
@@ -330,10 +347,12 @@ void loadHome()
   color: var(--color-text);
   font: var(--font-label);
   font-weight: 600;
+  transition: color 180ms ease;
 }
 
 .row-value.is-online {
   color: var(--color-success);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--color-success) 35%, transparent);
 }
 
 .row-value.is-offline {
@@ -342,14 +361,15 @@ void loadHome()
 
 .readiness {
   padding-top: var(--space-4);
-  color: var(--color-text);
+  color: rgba(226, 232, 240, 0.9);
 }
 
 .action-error {
   margin: 0;
   padding: var(--space-12);
-  border-radius: var(--radius-8);
-  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
   color: var(--color-danger);
   font: var(--font-caption);
 }
@@ -370,6 +390,11 @@ void loadHome()
 
 .confirm-actions :deep(.n-button) {
   min-height: 48px;
+  transition: transform 160ms ease, filter 160ms ease !important;
+}
+
+.confirm-actions :deep(.n-button:active:not(:disabled)) {
+  transform: translateY(1px);
 }
 
 .state {
@@ -378,5 +403,13 @@ void loadHome()
 
 :deep(.n-switch.n-switch--active) {
   background: var(--color-success);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-value,
+  .status-panel,
+  .confirm-actions :deep(.n-button) {
+    transition: none !important;
+  }
 }
 </style>

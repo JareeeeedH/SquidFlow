@@ -314,7 +314,8 @@ h2 {
   margin: 0 0 var(--space-8);
   font: var(--font-section-title);
   font-size: 15px;
-  color: var(--color-primary, #0b1f3a);
+  color: #e2e8f0;
+  letter-spacing: -0.01em;
 }
 
 .error-detail,
@@ -329,17 +330,19 @@ h2 {
 .action-error {
   margin: 0;
   padding: var(--space-12);
-  border-radius: var(--radius-8);
+  border-radius: 10px;
   font: var(--font-label);
 }
 
 .success {
-  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-success) 28%, transparent);
   color: var(--color-success);
 }
 
 .action-error {
-  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-danger) 14%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 28%, transparent);
   color: var(--color-danger);
   font: var(--font-caption);
 }
@@ -372,11 +375,17 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  padding: 10px 12px;
-  background: var(--color-surface);
+  padding: 12px 14px;
+  background: var(--driver-surface-card, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .card.current[data-status='ACCEPTED'] {
@@ -384,14 +393,16 @@ h2 {
 }
 
 .card.current[data-status='IN_PROGRESS'] {
-  --status-color: var(--color-primary, #0b1f3a);
+  --status-color: var(--color-primary);
 }
 
 .card.current {
   box-shadow:
     inset 3px 0 0 var(--status-color),
-    var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
-  border-color: color-mix(in srgb, var(--status-color) 28%, var(--color-border));
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 18px color-mix(in srgb, var(--status-color) 16%, transparent),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
+  border-color: color-mix(in srgb, var(--status-color) 36%, var(--color-border));
 }
 
 .card-main {
@@ -421,24 +432,39 @@ h2 {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   text-align: left;
   color: inherit;
   font: inherit;
   cursor: pointer;
-  background: var(--color-surface);
+  background: var(--driver-surface-card, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.history:hover,
+.history:focus-visible,
+.card:hover,
+.card:focus-within {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
 }
 
 .history:active {
-  background: var(--color-primary-soft, #e8eef5);
+  background: var(--driver-surface-elevated, var(--color-primary-soft));
+  transform: translateY(1px);
 }
 
 .history:focus-visible,
 .card-main:focus-visible {
-  outline: 2px solid var(--color-primary, #0b1f3a);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -455,7 +481,7 @@ h2 {
   min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
-  color: var(--color-muted-text);
+  color: rgba(203, 213, 225, 0.85);
   line-height: 1.3;
 }
 
@@ -469,14 +495,14 @@ h2 {
   min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
-  color: var(--color-muted-text);
+  color: rgba(203, 213, 225, 0.85);
 }
 
 .price {
   margin: 0;
   font: var(--font-label);
   font-weight: 700;
-  color: var(--color-primary, #0b1f3a);
+  color: #93c5fd;
   white-space: nowrap;
 }
 
@@ -496,6 +522,7 @@ h2 {
   font: var(--font-body);
   font-weight: 600;
   line-height: 1.3;
+  color: #f1f5f9;
   overflow-wrap: anywhere;
   word-break: break-word;
   display: -webkit-box;
@@ -506,11 +533,12 @@ h2 {
 
 .history .place {
   font-weight: 500;
+  color: rgba(241, 245, 249, 0.92);
 }
 
 .arrow {
   margin-top: 1px;
-  color: var(--color-primary-muted, #1a3358);
+  color: var(--color-primary-muted);
   font-weight: 600;
   line-height: 1.3;
 }
@@ -528,13 +556,14 @@ h2 {
   min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
-  color: var(--color-primary, #0b1f3a);
+  color: #93c5fd;
   line-height: 1.3;
 }
 
 .trip-fare {
   font: var(--font-label);
   font-weight: 700;
+  color: #bfdbfe;
 }
 
 .card :deep(.n-button) {
@@ -556,5 +585,16 @@ h2 {
 
 .state :deep(.n-button) {
   min-height: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .history {
+    transition: none !important;
+  }
+
+  .history:active {
+    transform: none;
+  }
 }
 </style>

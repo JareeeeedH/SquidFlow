@@ -762,6 +762,11 @@ watch(
 h1 {
   margin: var(--space-4) 0 0;
   font: var(--font-page-title);
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 55%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .desktop-layout {
@@ -783,10 +788,13 @@ h1 {
 }
 
 .panel {
-  background: var(--color-surface);
+  background: var(--admin-panel, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  border-radius: 14px;
   padding: var(--space-24);
+  box-shadow: var(--admin-shadow, none);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 h2 {
@@ -1004,7 +1012,9 @@ dd {
   padding: var(--space-12) var(--space-16);
   padding-bottom: max(var(--space-12), env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 94%, #ffffff);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .mobile-action-row {

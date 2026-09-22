@@ -28,9 +28,12 @@ describe('LoginView', () => {
     })
 
     expect(wrapper.text()).toContain('SquidFlow')
+    expect(wrapper.text()).toContain('派車管理系統')
     expect(wrapper.text()).toContain('帳號')
     expect(wrapper.text()).toContain('密碼')
-    expect(wrapper.text()).toContain('登入')
+    expect(wrapper.text()).toContain('登入控制中心')
+    expect(wrapper.text()).not.toContain('FLEET CONTROL SYSTEM')
+    expect(wrapper.text()).not.toContain('INITIALIZE SESSION')
     expect(wrapper.text()).not.toContain('註冊')
     expect(wrapper.text()).not.toContain('忘記密碼')
   })

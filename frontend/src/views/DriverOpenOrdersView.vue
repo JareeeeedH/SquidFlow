@@ -152,6 +152,11 @@ h1 {
   margin: 0;
   font: var(--font-page-title);
   font-size: 24px;
+  letter-spacing: -0.02em;
+  background: linear-gradient(115deg, #ffffff 10%, #93c5fd 55%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .error-detail,
@@ -180,24 +185,41 @@ h1 {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   min-height: 48px;
   text-align: left;
-  background: var(--color-surface);
+  background: var(--driver-surface-card, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
-  box-shadow: var(--shadow-card, 0 1px 2px rgb(11 31 58 / 6%));
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  box-shadow:
+    0 0 18px rgba(59, 130, 246, 0.14),
+    var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
+  transform: translateY(-1px);
 }
 
 .card:active {
-  background: var(--color-primary-soft, #e8eef5);
+  background: var(--driver-surface-elevated, var(--color-primary-soft));
+  transform: translateY(0);
 }
 
 .card:focus-visible {
-  outline: 2px solid var(--color-primary, #0b1f3a);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -214,14 +236,14 @@ h1 {
   min-width: 0;
   font: var(--font-caption);
   font-weight: 600;
-  color: var(--color-muted-text);
+  color: rgba(203, 213, 225, 0.85);
 }
 
 .price {
   margin: 0;
   font: var(--font-label);
   font-weight: 700;
-  color: var(--color-primary, #0b1f3a);
+  color: #93c5fd;
   white-space: nowrap;
 }
 
@@ -241,6 +263,7 @@ h1 {
   font: var(--font-body);
   font-weight: 600;
   line-height: 1.3;
+  color: #f1f5f9;
   overflow-wrap: anywhere;
   word-break: break-word;
   display: -webkit-box;
@@ -252,7 +275,7 @@ h1 {
 .arrow {
   flex: 0 0 auto;
   margin-top: 1px;
-  color: var(--color-primary-muted, #1a3358);
+  color: var(--color-primary-muted);
   font-weight: 600;
   line-height: 1.3;
 }
@@ -275,7 +298,7 @@ h1 {
 
 .view {
   flex: 0 0 auto;
-  color: var(--color-primary, #0b1f3a);
+  color: #93c5fd;
   font: var(--font-caption);
   font-weight: 600;
 }
@@ -286,5 +309,17 @@ h1 {
 
 .state :deep(.n-button) {
   min-height: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none !important;
+  }
+
+  .card:hover,
+  .card:focus-visible,
+  .card:active {
+    transform: none;
+  }
 }
 </style>

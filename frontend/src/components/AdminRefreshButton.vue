@@ -47,6 +47,21 @@ defineEmits<{
 </template>
 
 <style scoped>
+.admin-refresh-btn {
+  transition:
+    transform 160ms ease,
+    filter 160ms ease,
+    box-shadow 160ms ease !important;
+}
+
+.admin-refresh-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.admin-refresh-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .admin-refresh-icon {
   transform-origin: center;
 }
@@ -65,8 +80,16 @@ defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .admin-refresh-btn,
   .admin-refresh-icon.is-spinning {
-    animation: none;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .admin-refresh-btn:hover:not(:disabled),
+  .admin-refresh-btn:active:not(:disabled) {
+    transform: none;
+    filter: none;
   }
 }
 </style>

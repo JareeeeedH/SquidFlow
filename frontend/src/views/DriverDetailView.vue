@@ -490,10 +490,13 @@ h1 {
 }
 
 .panel {
-  background: var(--color-surface);
+  background: var(--admin-panel, var(--color-surface));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-12);
+  border-radius: 14px;
   padding: var(--space-24);
+  box-shadow: var(--admin-shadow, none);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 h2 {
