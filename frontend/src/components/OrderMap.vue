@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { loadGoogleMaps } from '../lib/google-maps-loader'
+import {
+  FIT_BOUNDS_PADDING,
+  MAX_FIT_ZOOM,
+  SINGLE_POINT_ZOOM,
+} from '../lib/order-map-viewport'
 
 export type MapPoint = {
   lat: number
@@ -23,8 +28,12 @@ type MarkerLike = {
   setPosition: (c: { lat: number; lng: number }) => void
 }
 
+type FitBoundsPadding =
+  | number
+  | { top: number; right: number; bottom: number; left: number }
+
 type MapLike = {
-  fitBounds: (bounds: unknown) => void
+  fitBounds: (bounds: unknown, padding?: FitBoundsPadding) => void
   setCenter: (c: { lat: number; lng: number }) => void
   setZoom: (z: number) => void
   getZoom: () => number | undefined
@@ -39,9 +48,6 @@ type MapsApi = {
     isEmpty: () => boolean
   }
 }
-
-/** Soft cap so a single nearby pair does not over-zoom. */
-const MAX_FIT_ZOOM = 15
 
 let map: MapLike | null = null
 let mapsApi: MapsApi | null = null
@@ -91,6 +97,27 @@ function createMarker(point: MapPoint, title: string, kind: MarkerKind): MarkerL
   })
 }
 
+function applyViewport(
+  points: Array<{ lat: number; lng: number }>,
+  bounds: { isEmpty: () => boolean },
+) {
+  if (!map || points.length === 0 || bounds.isEmpty()) {
+    return
+  }
+
+  if (points.length === 1) {
+    map.setCenter(points[0])
+    map.setZoom(SINGLE_POINT_ZOOM)
+    return
+  }
+
+  map.fitBounds(bounds, FIT_BOUNDS_PADDING)
+  const zoom = map.getZoom()
+  if (typeof zoom === 'number' && zoom > MAX_FIT_ZOOM) {
+    map.setZoom(MAX_FIT_ZOOM)
+  }
+}
+
 function syncSelfMarker(point: MapPoint | null, options: { pan: boolean }) {
   if (!map || !mapsApi || !mapReady) {
     return
@@ -135,7 +162,7 @@ async function renderMap(options: { fitBounds: boolean }) {
 
   if (!map) {
     map = new mapsApi.Map(host.value, {
-      zoom: 13,
+      zoom: SINGLE_POINT_ZOOM,
       center: { lat: 23.5, lng: 121 },
       mapTypeControl: false,
       streetViewControl: false,
@@ -145,31 +172,34 @@ async function renderMap(options: { fitBounds: boolean }) {
 
   clearAllMarkers()
   const bounds = new mapsApi.LatLngBounds()
-  let hasPoint = false
+  const points: Array<{ lat: number; lng: number }> = []
 
   if (props.pickup) {
     pickupMarker = createMarker(props.pickup, '上車點', 'pickup')
-    bounds.extend({ lat: props.pickup.lat, lng: props.pickup.lng })
-    hasPoint = true
+    const c = { lat: props.pickup.lat, lng: props.pickup.lng }
+    bounds.extend(c)
+    points.push(c)
   }
 
   if (props.selfLocation) {
     selfMarker = createMarker(props.selfLocation, '我的位置', 'self')
-    bounds.extend({
+    const c = {
       lat: props.selfLocation.lat,
       lng: props.selfLocation.lng,
-    })
-    hasPoint = true
+    }
+    bounds.extend(c)
+    points.push(c)
   }
 
   for (const driver of props.drivers ?? []) {
     const marker = createMarker(driver, driver.label ?? '司機', 'driver')
     driverMarkers.push(marker)
-    bounds.extend({ lat: driver.lat, lng: driver.lng })
-    hasPoint = true
+    const c = { lat: driver.lat, lng: driver.lng }
+    bounds.extend(c)
+    points.push(c)
   }
 
-  if (!hasPoint || bounds.isEmpty()) {
+  if (points.length === 0 || bounds.isEmpty()) {
     status.value = 'unavailable'
     statusMessage.value = '尚無可用座標'
     mapReady = false
@@ -177,11 +207,7 @@ async function renderMap(options: { fitBounds: boolean }) {
   }
 
   if (options.fitBounds) {
-    map.fitBounds(bounds)
-    const zoom = map.getZoom()
-    if (typeof zoom === 'number' && zoom > MAX_FIT_ZOOM) {
-      map.setZoom(MAX_FIT_ZOOM)
-    }
+    applyViewport(points, bounds)
   }
 
   mapReady = true

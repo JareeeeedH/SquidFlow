@@ -353,6 +353,8 @@ GET /api/v1/orders/:id
     "destination": "高雄小港機場",
     "price": 1200,
     "trip_distance_meters": null,
+    "calculated_fare": null,
+    "final_fare": null,
     "note": "2件行李",
     "status": "ACCEPTED",
     "dispatch_mode": "OPEN",
@@ -367,6 +369,7 @@ GET /api/v1/orders/:id
     "created_by": "admin-uuid",
     "accepted_at": "2026-09-15T07:05:00Z",
     "started_at": null,
+    "arrived_at": null,
     "completed_at": null,
     "cancelled_at": null,
     "created_at": "2026-09-15T07:00:00Z",
@@ -381,7 +384,15 @@ GET /api/v1/orders/:id
 
 `pickup_latitude`／`pickup_longitude`（P2-04）：ephemeral runtime Pickup 座標（見 §5D）；**不是** DB 欄位。缺 geocode 結果時為 `null`。
 
-`trip_distance_meters`（Phase 3）：任務里程；未開始累計或未實作前可為 `null`。`COMPLETED` 後為鎖定最終值。Complete 後 `price` 為費率計算結果（見 `PHASE-3-SPEC.md`）。
+**Phase 3 欄位（見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：**
+
+| 欄位 | 說明 |
+|------|------|
+| `price` | 原始派車價格；Complete **不**覆寫 |
+| `trip_distance_meters` | 任務里程；Arrive 時鎖定最終值；未開始可為 `null` |
+| `calculated_fare` | Arrive 後系統依最終里程計算；此前為 `null` |
+| `final_fare` | Complete 後 Driver 確認價格；此前為 `null` |
+| `arrived_at` | 抵達時間；`null` = 尚未抵達（非新 Status） |
 
 ---
 
@@ -556,15 +567,20 @@ GET /api/v1/driver/orders
       "pickup_location": "左營高鐵站",
       "destination": "高雄小港機場",
       "price": 1200,
+      "final_fare": 280,
       "status": "COMPLETED",
-      "distance_meters": null
+      "distance_meters": null,
+      "trip_distance_meters": 8400
     }
   ]
 }
 ```
 
 僅回傳目前登入 Driver 的訂單。依 `created_at` 降序。  
-`distance_meters`：僅在 `ACCEPTED`／`IN_PROGRESS` 且雙方座標可用時為 number；否則 `null`（見 §5C）。
+`distance_meters`：僅在 `ACCEPTED`／`IN_PROGRESS` 且雙方座標可用時為 number；否則 `null`（見 §5C）。  
+`price`：原始派車價格（Admin 建單／編輯；Complete **不**覆寫）。  
+`final_fare`：Complete 後 Driver 確認的最終實際車資；未完成訂單為 `null`。  
+`trip_distance_meters`：任務里程（Arrive 鎖定後為最終值；尚未開始可為 `null`）。
 
 ---
 
@@ -656,6 +672,8 @@ status = OPEN
 
 `pickup_latitude`／`pickup_longitude`：P2-04 Map 用的 **ephemeral** Pickup 座標，來自 Backend runtime `GeocodingService.getPickupCoordinates`（**不是** DB 欄位）。缺可用 geocode 結果時為 `null`；UI 隱藏 Pickup map marker。見 §5D。
 
+Phase 3：Driver Order Detail 另回傳 `trip_distance_meters`、`arrived_at`、`calculated_fare`、`final_fare`（語意同 Admin Get Order；見 `PHASE-3-SPEC.md`）。
+
 ---
 
 ## Accept Order
@@ -720,6 +738,45 @@ POST /api/v1/driver/orders/:id/start
 
 ---
 
+## Arrive Order
+
+```http
+POST /api/v1/driver/orders/:id/arrive
+```
+
+### Request
+
+```json
+{
+  "latitude": 22.5775,
+  "longitude": 120.3500
+}
+```
+
+`latitude`／`longitude` 必填；語意為抵達當下最新 GPS。Backend 以此點計算最後一段里程並鎖定。
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "status": "IN_PROGRESS",
+    "arrived_at": "2026-09-15T08:10:00Z",
+    "trip_distance_meters": 8400,
+    "calculated_fare": 275,
+    "price": 1200
+  }
+}
+```
+
+僅允許目前接單 Driver。前置：`status = IN_PROGRESS` 且 `arrived_at == null`。
+
+**Phase 3（見 `PHASE-3-SPEC.md`）：** Arrive 成功時 Backend 必須：納入最後一段距離、鎖定 `trip_distance_meters`、依費率寫入 `calculated_fare`、寫入 `arrived_at`、清除該訂單上一計費點；**不**改變 `status`；**不**覆寫 `price`。抵達後後續 `PATCH /driver/location` 不再累加該訂單里程。
+
+---
+
 ## Complete Order
 
 ```http
@@ -728,7 +785,13 @@ POST /api/v1/driver/orders/:id/complete
 
 ### Request
 
-無 Request Body。
+```json
+{
+  "final_fare": 280
+}
+```
+
+`final_fare` 必填（NT$ 整數語意；Backend 驗證為有效非負數字）。
 
 ### Response
 
@@ -740,14 +803,16 @@ POST /api/v1/driver/orders/:id/complete
     "status": "COMPLETED",
     "completed_at": "2026-09-15T08:20:00Z",
     "trip_distance_meters": 8400,
-    "price": 275
+    "calculated_fare": 275,
+    "final_fare": 280,
+    "price": 1200
   }
 }
 ```
 
-僅允許目前接單 Driver 執行。
+僅允許目前接單 Driver。前置：`status = IN_PROGRESS` 且 `arrived_at != null`。
 
-**Phase 3（見 `PHASE-3-SPEC.md`）：** Complete 成功時 Backend 鎖定 `trip_distance_meters`、依費率寫入最終 `price`，並結束該訂單里程追蹤。Frontend 不得自行計算或覆寫這兩欄。Response 應回傳鎖定後的 `trip_distance_meters` 與 `price`。
+**Phase 3（見 `PHASE-3-SPEC.md`）：** Complete 成功時 Backend 驗證並儲存 `final_fare`，寫入 `completed_at`，`status` → `COMPLETED`。**不**覆寫 `price`；**不**重算已鎖定的 `trip_distance_meters`／`calculated_fare`。未抵達不可 Complete。
 
 ---
 
@@ -1147,7 +1212,8 @@ DELETE /api/v1/notifications/subscription
 | `POST /orders/:id/publish` | `DRAFT` | `OPEN` |
 | `POST /driver/orders/:id/accept` | `OPEN` | `ACCEPTED` |
 | `POST /driver/orders/:id/start` | `ACCEPTED` | `IN_PROGRESS` |
-| `POST /driver/orders/:id/complete` | `IN_PROGRESS` | `COMPLETED` |
+| `POST /driver/orders/:id/arrive` | `IN_PROGRESS` 且 `arrived_at == null` | 仍為 `IN_PROGRESS`（寫入 `arrived_at`） |
+| `POST /driver/orders/:id/complete` | `IN_PROGRESS` 且 `arrived_at != null` | `COMPLETED` |
 | `POST /orders/:id/cancel` | `OPEN / ACCEPTED` | `CANCELLED` |
 
 ---
@@ -1163,6 +1229,7 @@ Open Orders
 Own Orders
 Accept
 Start
+Arrive
 Complete
 Online / Offline
 Own Location
@@ -1291,13 +1358,16 @@ Phase 4 — Advanced Dispatch & Communication
 - Map／導航失敗不影響 Order／Accept／Online／Offline
 - Phase 2 **不**新增道路距離、ETA，或 Google Routes API 端點
 
-**Phase 3 — Trip Mileage & Fare（產品規則見 `PHASE-3-SPEC.md`）：**
+**Phase 3 — Trip Mileage & Fare（產品規則見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：**
 
 - **不**新增專用 GPS API；沿用 `PATCH /api/v1/driver/location`
 - Driver 於本訂單 `IN_PROGRESS` 時 Frontend 以 **10** 秒間隔上報；其餘 `ONLINE` 維持 **30** 秒
-- Backend 僅在該訂單 `IN_PROGRESS` 時將有效 GPS 納入 Haversine 里程累加；第一個有效點只當起點
-- 必須保證 concurrency：不重複累加、舊點不覆蓋較新 tracking state、Complete 後不得再累積
-- `POST /api/v1/driver/orders/:id/complete`：鎖定 `trip_distance_meters`、依費率寫入 `price`；Order／Driver 讀取 API 回傳這兩欄
-- **不**新增 GPS history／track endpoint；**不**以 P2-03 `distance_meters` 計費
+- Backend 僅在該訂單 `IN_PROGRESS` 且 `arrived_at == null` 時將有效 GPS 納入 Haversine 里程累加；第一個有效點只當起點
+- `POST /api/v1/driver/orders/:id/arrive`：Request 最新 `latitude`／`longitude`；鎖定 `trip_distance_meters`、寫入 `calculated_fare` 與 `arrived_at`；status 不變
+- `POST /api/v1/driver/orders/:id/complete`：Request `final_fare`；必須已抵達；儲存 `final_fare` → `COMPLETED`；**不**覆寫 `price`
+- Order／Driver 讀取 API 回傳：`trip_distance_meters`、`arrived_at`、`calculated_fare`、`final_fare`、`price`（含 `GET /driver/orders` list：`price`＝原始派車價、`final_fare`＝Completed 最終車資／未完成為 `null`）
+- 必須保證 concurrency：不重複累加、舊點不覆蓋較新 tracking state、抵達後／Complete 後不得再累積
+- **不**新增 GPS history／track endpoint；**不**以 P2-03 `distance_meters` 計費；**不**新增 Order Status
+- Local／DEV：真實 browser GPS 自動回傳關閉；DEV GPS Simulator 可用
 
 **Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤、第三方通訊整合 — 目前不定義 API。

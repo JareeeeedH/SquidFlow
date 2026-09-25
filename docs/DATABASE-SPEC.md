@@ -123,6 +123,8 @@ Order
 ├─ trip_distance_meters
 ├─ trip_last_latitude
 ├─ trip_last_longitude
+├─ calculated_fare
+├─ final_fare
 ├─ note
 ├─ status
 ├─ dispatch_mode
@@ -130,6 +132,7 @@ Order
 ├─ created_by
 ├─ accepted_at
 ├─ started_at
+├─ arrived_at
 ├─ completed_at
 ├─ cancelled_at
 ├─ created_at
@@ -147,6 +150,8 @@ Order
 | `trip_distance_meters` | INTEGER | ❌ |
 | `trip_last_latitude` | DECIMAL(10,7) | ❌ |
 | `trip_last_longitude` | DECIMAL(10,7) | ❌ |
+| `calculated_fare` | DECIMAL(10,2) | ❌ |
+| `final_fare` | DECIMAL(10,2) | ❌ |
 | `note` | TEXT | ❌ |
 | `status` | ENUM | ✅ |
 | `dispatch_mode` | ENUM | ✅ |
@@ -154,12 +159,19 @@ Order
 | `created_by` | UUID | ✅ |
 | `accepted_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `started_at` | TIMESTAMP WITH TIME ZONE | ❌ |
+| `arrived_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `completed_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `cancelled_at` | TIMESTAMP WITH TIME ZONE | ❌ |
 | `created_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 | `updated_at` | TIMESTAMP WITH TIME ZONE | ✅ |
 
-> **Phase 3：** `trip_distance_meters` 於 `IN_PROGRESS` 由 Backend 累加，`COMPLETED` 時鎖定。`price` 於 Complete 時依費率覆寫為最終車資（見 `PHASE-3-SPEC.md`）。不新增 `calculated_fare`／`final_price`。`trip_last_latitude`／`trip_last_longitude` 為 Backend 內部上一計費 GPS 點（完成後清除）；**不**對外 API 暴露為產品欄位；**不**建 GPS history／track 表。
+> **Phase 3（見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：**
+> - `trip_distance_meters`：僅在 `IN_PROGRESS` 且 `arrived_at IS NULL` 時累加；**Arrive** 時納入最後一段後鎖定
+> - `arrived_at`：`NULL` = 尚未抵達；非 NULL = 已抵達、等待最終價格確認（**不是**新 Status）
+> - `calculated_fare`：Arrive 時依最終里程寫入；`final_fare`：Complete 時寫入
+> - `price`：**原始派車價格**；Complete **不**覆寫
+> - `trip_last_latitude`／`trip_last_longitude`：Backend 內部上一計費點；**Arrive 後清除**；**不**對外 API 暴露為產品欄位
+> - **不**建 GPS history／track 表；**不**新增 Order Status
 
 ```text
 status:
@@ -206,6 +218,7 @@ ORDER_CREATED
 ORDER_PUBLISHED
 ORDER_ACCEPTED
 ORDER_STARTED
+ORDER_ARRIVED
 ORDER_COMPLETED
 ORDER_CANCELLED
 ```
@@ -590,12 +603,12 @@ Phase 4 — Advanced Dispatch & Communication
 - Map 使用的 Pickup 座標僅為 Backend runtime（P2-02）；**不**為此做 Migration
 - Phase 2 **不**儲存道路距離或 ETA
 
-**Phase 3 — Trip Mileage & Fare（已定義產品規則，見 `PHASE-3-SPEC.md`）：**
+**Phase 3 — Trip Mileage & Fare（已定義產品規則，見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：**
 
-- Order 新增 `trip_distance_meters`（INTEGER，可 NULL；完成後鎖定最終值）
-- Order 新增 `trip_last_latitude`／`trip_last_longitude`（DECIMAL(10,7)，可 NULL；Backend 內部上一計費點，完成後清除）
-- Complete 時以費率覆寫 `price`；不新增第二套價格欄位
-- **不**新增 GPS history／points／track 表
-- 上一計費 GPS 點持久化於上述 Order 暫存欄位（非 history）
+- Order 欄位：`trip_distance_meters`、`trip_last_latitude`／`trip_last_longitude`、`arrived_at`、`calculated_fare`、`final_fare`
+- 里程於 Arrive 鎖定；`price` 保留原始派車價；系統價／最終價分欄
+- OrderEvent 新增 `ORDER_ARRIVED`
+- **不**新增 GPS history／points／track 表；**不**新增 Order Status
+- 上一計費 GPS 點持久化於 Order 暫存欄位（Arrive 後清除）
 
 **Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：自動派車、AI Dispatch、Priority／自動重派、進階車隊追蹤、第三方通訊 — 目前不定義資料模型。

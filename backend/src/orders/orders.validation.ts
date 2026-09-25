@@ -156,3 +156,28 @@ export function parseDriverMyOrdersQuery(query: unknown): DriverMyOrdersQuery {
   }
   return result;
 }
+
+export type CompleteOrderInput = {
+  finalFare: number;
+};
+
+/**
+ * Phase 3 Complete: Driver-confirmed final fare (integer NT$, >= 0).
+ */
+export function parseCompleteBody(body: unknown): CompleteOrderInput {
+  const data = asRecord(body);
+  if (!Object.prototype.hasOwnProperty.call(data, 'final_fare')) {
+    throw AppErrors.validation('final_fare 為必填');
+  }
+  const value = data.final_fare;
+  if (value === null || value === undefined || value === '') {
+    throw AppErrors.validation('final_fare 為必填');
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw AppErrors.validation('final_fare 格式不正確');
+  }
+  if (!Number.isInteger(value) || value < 0) {
+    throw AppErrors.validation('final_fare 格式不正確');
+  }
+  return { finalFare: value };
+}

@@ -35,6 +35,10 @@ export type OrderDetail = {
   pickup_location: string;
   destination: string | null;
   price: number | null;
+  trip_distance_meters: number | null;
+  arrived_at: string | null;
+  calculated_fare: number | null;
+  final_fare: number | null;
   note: string | null;
   status: OrderStatus;
   dispatch_mode: DispatchMode;
@@ -107,6 +111,7 @@ export type DriverMyOrder = {
   pickup_location: string;
   destination: string | null;
   price: number | null;
+  final_fare: number | null;
   status: OrderStatus;
   distance_meters: number | null;
   trip_distance_meters: number | null;
@@ -135,6 +140,9 @@ export type DriverOrderDetail = {
   status: OrderStatus;
   distance_meters: number | null;
   trip_distance_meters: number | null;
+  arrived_at: string | null;
+  calculated_fare: number | null;
+  final_fare: number | null;
   pickup_latitude: number | null;
   pickup_longitude: number | null;
 };
@@ -147,6 +155,7 @@ type DriverMyOrderRow = Pick<
   | 'pickupLocation'
   | 'destination'
   | 'price'
+  | 'finalFare'
   | 'status'
   | 'tripDistanceMeters'
 >;
@@ -174,6 +183,9 @@ type DriverOrderDetailRow = Pick<
   | 'note'
   | 'status'
   | 'tripDistanceMeters'
+  | 'arrivedAt'
+  | 'calculatedFare'
+  | 'finalFare'
 >;
 
 function iso(value: Date | null): string | null {
@@ -282,10 +294,14 @@ export function toDetail(
     created_by: order.createdBy,
     accepted_at: iso(order.acceptedAt),
     started_at: iso(order.startedAt),
+    arrived_at: iso(order.arrivedAt),
     completed_at: iso(order.completedAt),
     cancelled_at: iso(order.cancelledAt),
     created_at: order.createdAt.toISOString(),
     updated_at: order.updatedAt.toISOString(),
+    trip_distance_meters: order.tripDistanceMeters,
+    calculated_fare: priceNumber(order.calculatedFare),
+    final_fare: priceNumber(order.finalFare),
     pickup_latitude: pickup.pickup_latitude,
     pickup_longitude: pickup.pickup_longitude,
   };
@@ -302,6 +318,7 @@ export function toDriverMyOrder(
     pickup_location: order.pickupLocation,
     destination: order.destination,
     price: priceNumber(order.price),
+    final_fare: priceNumber(order.finalFare),
     status: order.status,
     distance_meters: distanceMeters,
     trip_distance_meters: order.tripDistanceMeters,
@@ -344,6 +361,9 @@ export function toDriverOrderDetail(
     status: order.status,
     distance_meters: distanceMeters,
     trip_distance_meters: order.tripDistanceMeters,
+    arrived_at: iso(order.arrivedAt),
+    calculated_fare: priceNumber(order.calculatedFare),
+    final_fare: priceNumber(order.finalFare),
     pickup_latitude: pickup.pickup_latitude,
     pickup_longitude: pickup.pickup_longitude,
   };

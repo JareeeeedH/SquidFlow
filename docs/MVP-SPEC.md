@@ -187,7 +187,7 @@ Order
 | `customer_name` | 客戶姓名，選填 |
 | `pickup_location` | 上車地點，必填 |
 | `destination` | 目的地，選填 |
-| `price` | 派車價格，選填 |
+| `price` | 派車價格，選填（原始派車標價；Phase 3 Complete **不**覆寫） |
 | `note` | 訂單備註，選填 |
 | `driver_id` | 成功接單的司機 |
 | `created_by` | 建立訂單的管理員 |
@@ -615,6 +615,7 @@ GET  /driver/orders/open
 GET  /driver/orders/:id
 POST /driver/orders/:id/accept
 POST /driver/orders/:id/start
+POST /driver/orders/:id/arrive
 POST /driver/orders/:id/complete
 PATCH /driver/status
 ```
@@ -637,7 +638,8 @@ POST /notifications/subscription
 | `POST /orders/:id/publish` | `DRAFT` | `OPEN` |
 | `POST /driver/orders/:id/accept` | `OPEN` | `ACCEPTED` |
 | `POST /driver/orders/:id/start` | `ACCEPTED` | `IN_PROGRESS` |
-| `POST /driver/orders/:id/complete` | `IN_PROGRESS` | `COMPLETED` |
+| `POST /driver/orders/:id/arrive` | `IN_PROGRESS` 且尚未抵達 | 仍為 `IN_PROGRESS`（寫入 `arrived_at`） |
+| `POST /driver/orders/:id/complete` | `IN_PROGRESS` 且已抵達 | `COMPLETED` |
 | `POST /orders/:id/cancel` | `OPEN / ACCEPTED` | `CANCELLED` |
 | `PATCH /driver/status` | — | `ONLINE / OFFLINE` |
 
@@ -787,16 +789,21 @@ Phase 2 包含：
 
 ## 18.3 Phase 3 — Trip Mileage & Fare Calculation
 
-產品範圍以 `PHASE-3-SPEC.md` 為準。
+產品範圍以 `PHASE-3-SPEC.md` 為準（決策見 `docs/adr/0001-arrive-and-final-fare.md`）。
 
 Phase 3 包含：
 
-- `IN_PROGRESS` 期間以 GPS（10 秒）Haversine 累加實際里程
-- 完成任務時鎖定 `trip_distance_meters`，依固定費率寫入最終 `price`
+- `IN_PROGRESS` 且尚未抵達期間，以 GPS（10 秒）Haversine 累加實際里程
+- Driver「抵達」：帶最新 GPS → 最後一段距離 → 鎖定 `trip_distance_meters` → 寫入 `calculated_fare` 與 `arrived_at`；**仍為 `IN_PROGRESS`**
+- Driver「完成」：送出 `final_fare` → Backend 驗證儲存 → `COMPLETED`
+- `price` = 原始派車價格（Complete **不**覆寫）
 - 沿用 `PATCH /api/v1/driver/location`；不保存 GPS History
-- Backend 為里程與車資唯一權威
+- **不**新增 Order Status；「已抵達」以 `arrived_at != null` 表示
+- Backend 為里程與 `calculated_fare`／`final_fare` 儲存的唯一權威
 
 Phase 3 **不**改變 Accept／搶單條件；**不**以 P2-03 直線距離計費。
+
+Local／DEV：真實 browser GPS 自動回傳關閉；DEV GPS Simulator 可用。
 
 ## 18.4 Phase 4 — Advanced Dispatch & Communication
 

@@ -33,14 +33,15 @@ Phase 4 — Advanced Dispatch & Communication（僅規劃；見 PHASE-4-SPEC.md�
 
 不做自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、Google Routes 距離／ETA；不引入 Redis／Queue／Worker／WebSocket 做 geocoding／distance／map。任務期間里程計費屬 Phase 3。
 
-### Phase 3 — Trip Mileage & Fare Calculation（Spec 已定義；尚未實作）
+### Phase 3 — Trip Mileage & Fare Calculation（Spec 已定義；實作需對齊 v1.1 Arrive／final_fare）
 
-產品範圍以 `PHASE-3-SPEC.md` 為準。
+產品範圍以 `PHASE-3-SPEC.md` 為準（決策見 `docs/adr/0001-arrive-and-final-fare.md`）。
 
-- `IN_PROGRESS` GPS 10 秒 + Haversine 累加 `trip_distance_meters`
-- Complete 鎖定里程並依費率寫入最終 `price`
+- `IN_PROGRESS` 且尚未抵達：GPS 10 秒 + Haversine 累加 `trip_distance_meters`
+- Arrive：鎖定里程 + `calculated_fare` + `arrived_at`（仍為 `IN_PROGRESS`）
+- Complete：儲存 `final_fare` → `COMPLETED`；**不**覆寫原始 `price`
 - 沿用 `PATCH /api/v1/driver/location`；不保存 GPS History
-- Backend 為里程／車資唯一權威
+- Backend 為里程／`calculated_fare`／`final_fare` 權威
 
 ### Phase 4 — Advanced Dispatch & Communication（僅規劃）
 

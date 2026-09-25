@@ -1,6 +1,7 @@
 import { api } from './client'
 import type {
   AcceptOrderResult,
+  ArriveOrderResult,
   CompleteOrderResult,
   DriverMyOrder,
   DriverOpenOrder,
@@ -42,6 +43,19 @@ export function startDriverOrder(id: string) {
   return api.post<StartOrderResult>(`/driver/orders/${id}/start`)
 }
 
-export function completeDriverOrder(id: string) {
-  return api.post<CompleteOrderResult>(`/driver/orders/${id}/complete`)
+export function arriveDriverOrder(
+  id: string,
+  latitude: number,
+  longitude: number,
+) {
+  return api.post<ArriveOrderResult>(`/driver/orders/${id}/arrive`, {
+    latitude,
+    longitude,
+  })
+}
+
+export function completeDriverOrder(id: string, finalFare: number) {
+  return api.post<CompleteOrderResult>(`/driver/orders/${id}/complete`, {
+    final_fare: finalFare,
+  })
 }

@@ -14,6 +14,8 @@ describe('Database schema constraints', () => {
     driverId: randomUUID(),
     orderAId: randomUUID(),
     orderBId: randomUUID(),
+    orderFareDefaultId: randomUUID(),
+    orderFarePersistId: randomUUID(),
   };
 
   beforeAll(async () => {
@@ -56,7 +58,12 @@ describe('Database schema constraints', () => {
     await cleanupTestUsers(
       prisma,
       [ids.adminId, ids.driverUserId],
-      [ids.orderAId, ids.orderBId],
+      [
+        ids.orderAId,
+        ids.orderBId,
+        ids.orderFareDefaultId,
+        ids.orderFarePersistId,
+      ],
     );
     await prisma.$disconnect();
   });
@@ -206,5 +213,67 @@ describe('Database schema constraints', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
+  it('defaults Phase 3 completion fare columns to null and keeps price', async () => {
+    await prisma.order.create({
+      data: {
+        id: ids.orderFareDefaultId,
+        orderNo: `ORD-FARE-${ids.orderFareDefaultId.slice(0, 8)}`,
+        customerName: '王先生',
+        pickupLocation: '左營高鐵站',
+        destination: '高雄小港機場',
+        price: new Prisma.Decimal('1200.00'),
+        status: 'OPEN',
+        dispatchMode: 'OPEN',
+        createdBy: ids.adminId,
+      },
+    });
+
+    const created = await prisma.order.findUniqueOrThrow({
+      where: { id: ids.orderFareDefaultId },
+    });
+
+    expect(created.arrivedAt).toBeNull();
+    expect(created.calculatedFare).toBeNull();
+    expect(created.finalFare).toBeNull();
+    expect(created.price?.toNumber()).toBe(1200);
+    expect(created.tripDistanceMeters).toBeNull();
+  });
+
+  it('persists arrived_at, calculated_fare, and final_fare without changing price', async () => {
+    const arrivedAt = new Date('2026-09-25T04:10:00.000Z');
+
+    await prisma.order.create({
+      data: {
+        id: ids.orderFarePersistId,
+        orderNo: `ORD-ARR-${ids.orderFarePersistId.slice(0, 8)}`,
+        customerName: '李小姐',
+        pickupLocation: '左營高鐵站',
+        destination: '高雄小港機場',
+        price: new Prisma.Decimal('1500.00'),
+        status: 'COMPLETED',
+        dispatchMode: 'OPEN',
+        driverId: ids.driverId,
+        createdBy: ids.adminId,
+        acceptedAt: new Date('2026-09-25T03:00:00.000Z'),
+        startedAt: new Date('2026-09-25T03:30:00.000Z'),
+        arrivedAt,
+        calculatedFare: new Prisma.Decimal('275.00'),
+        finalFare: new Prisma.Decimal('280.00'),
+        tripDistanceMeters: 8400,
+        completedAt: new Date('2026-09-25T04:20:00.000Z'),
+      },
+    });
+
+    const stored = await prisma.order.findUniqueOrThrow({
+      where: { id: ids.orderFarePersistId },
+    });
+
+    expect(stored.arrivedAt?.toISOString()).toBe(arrivedAt.toISOString());
+    expect(stored.calculatedFare?.toNumber()).toBe(275);
+    expect(stored.finalFare?.toNumber()).toBe(280);
+    expect(stored.price?.toNumber()).toBe(1500);
+    expect(stored.tripDistanceMeters).toBe(8400);
   });
 });

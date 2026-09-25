@@ -4,7 +4,6 @@ import { NButton, NEmpty, NResult, NSpin } from 'naive-ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  completeDriverOrder,
   listDriverOrders,
   startDriverOrder,
 } from '../api/driver-orders'
@@ -44,6 +43,14 @@ function tripMileageLabel(order: DriverMyOrder) {
     return `行駛里程 ${km}`
   }
   return null
+}
+
+/** COMPLETED history: final_fare only — never fall back to dispatch price. */
+function completedFareLabel(order: DriverMyOrder) {
+  if (order.status !== 'COMPLETED' || order.final_fare == null) {
+    return null
+  }
+  return `車資 ${formatPrice(order.final_fare)}`
 }
 
 function captureError(caught: unknown) {
@@ -114,30 +121,6 @@ async function startOrder(order: DriverMyOrder) {
     await startDriverOrder(order.id)
     successMessage.value = '行程已開始'
     driverStatus.setInProgressOrder(true)
-    await loadOrders()
-  } catch (caught) {
-    actionError.value = captureError(caught)
-    if (actionError.value.code === 'INVALID_ORDER_STATUS') {
-      await loadOrders()
-    }
-  } finally {
-    actingId.value = null
-  }
-}
-
-async function completeOrder(order: DriverMyOrder) {
-  if (acting.value || order.status !== 'IN_PROGRESS') {
-    return
-  }
-
-  actingId.value = order.id
-  actionError.value = null
-  successMessage.value = null
-
-  try {
-    await completeDriverOrder(order.id)
-    successMessage.value = '訂單已完成'
-    driverStatus.setInProgressOrder(false)
     await loadOrders()
   } catch (caught) {
     actionError.value = captureError(caught)
@@ -232,14 +215,27 @@ void loadOrders()
                   :disabled="acting && actingId !== order.id"
                   @confirm="startOrder(order)"
                 />
-                <SlideToConfirm
+                <div
                   v-else-if="order.status === 'IN_PROGRESS'"
-                  label="滑動完成訂單"
-                  loading-label="完成中..."
-                  :loading="actingId === order.id"
-                  :disabled="acting && actingId !== order.id"
-                  @confirm="completeOrder(order)"
-                />
+                  class="arrive-complete-actions"
+                >
+                  <NButton
+                    size="large"
+                    secondary
+                    block
+                    @click="openDetail(order.id)"
+                  >
+                    抵達
+                  </NButton>
+                  <NButton
+                    size="large"
+                    type="primary"
+                    block
+                    @click="openDetail(order.id)"
+                  >
+                    完成
+                  </NButton>
+                </div>
               </article>
             </li>
           </ul>
@@ -276,10 +272,10 @@ void loadOrders()
                   {{ tripMileageLabel(order) }}
                 </p>
                 <p
-                  v-if="order.status === 'COMPLETED' && order.price != null"
+                  v-if="completedFareLabel(order)"
                   class="trip-fare"
                 >
-                  車資 {{ formatPrice(order.price) }}
+                  {{ completedFareLabel(order) }}
                 </p>
                 <p class="order-no">{{ order.order_no }}</p>
               </button>
@@ -403,6 +399,17 @@ h2 {
     0 0 18px color-mix(in srgb, var(--status-color) 16%, transparent),
     var(--shadow-card, 0 10px 28px rgba(8, 12, 24, 0.28));
   border-color: color-mix(in srgb, var(--status-color) 36%, var(--color-border));
+}
+
+.arrive-complete-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+  margin-top: 4px;
+}
+
+.arrive-complete-actions :deep(.n-button) {
+  min-height: 44px;
 }
 
 .card-main {

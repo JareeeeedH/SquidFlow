@@ -464,10 +464,13 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
     assertNoSecrets(body);
     expect(Object.keys(body.data).sort()).toEqual(
       [
+        'arrived_at',
+        'calculated_fare',
         'created_at',
         'customer_name',
         'destination',
         'distance_meters',
+        'final_fare',
         'id',
         'note',
         'order_no',
@@ -476,6 +479,7 @@ describe('Driver Open Orders / Order Detail (e2e)', () => {
         'pickup_longitude',
         'price',
         'status',
+        'trip_distance_meters',
       ].sort(),
     );
     expect(JSON.stringify(body)).not.toContain('driver_id');

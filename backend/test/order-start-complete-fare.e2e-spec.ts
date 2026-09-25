@@ -49,8 +49,10 @@ type CompleteData = {
   id: string;
   status: string;
   completed_at: string;
+  arrived_at: string;
   trip_distance_meters: number;
-  price: number;
+  calculated_fare: number | null;
+  final_fare: number;
 };
 
 function asBody<T>(response: request.Response): T {
@@ -326,16 +328,16 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
   });
 
   it.each([
-    { meters: 0, price: 100 },
-    { meters: 1250, price: 100 },
-    { meters: 1251, price: 100 },
-    { meters: 1449, price: 100 },
-    { meters: 1450, price: 105 },
-    { meters: 1650, price: 110 },
-    { meters: 2050, price: 120 },
+    { meters: 0, fare: 100 },
+    { meters: 1250, fare: 100 },
+    { meters: 1251, fare: 100 },
+    { meters: 1449, fare: 100 },
+    { meters: 1450, fare: 105 },
+    { meters: 1650, fare: 110 },
+    { meters: 2050, fare: 120 },
   ])(
-    'Complete writes calculateTripFare($meters) as price $price',
-    async ({ meters, price }) => {
+    'Arrive then Complete keeps calculateTripFare($meters) as calculated_fare $fare',
+    async ({ meters, fare }) => {
       await deleteDriverOrders(users.fare.driverId);
       const orderId = randomUUID();
       await seedOrder({
@@ -345,33 +347,44 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
         driverId: users.fare.driverId,
         price: '9999.00',
         tripDistanceMeters: meters,
-        tripLastLatitude: pointA.latitude,
-        tripLastLongitude: pointA.longitude,
+        tripLastLatitude: null,
+        tripLastLongitude: null,
       });
 
-      expect(calculateTripFare(meters)).toBe(price);
+      expect(calculateTripFare(meters)).toBe(fare);
 
       const cookie = await loginAs(users.fare.username);
+      // Arrive with no previous point — locks current meters without adding segment.
+      await request(app.getHttpServer())
+        .post(`/api/v1/driver/orders/${orderId}/arrive`)
+        .set('Cookie', cookie)
+        .send(pointA)
+        .expect(200);
+
       const response = await request(app.getHttpServer())
         .post(`/api/v1/driver/orders/${orderId}/complete`)
         .set('Cookie', cookie)
+        .send({ final_fare: fare })
         .expect(200);
 
       const body = asBody<ApiSuccessBody<CompleteData>>(response);
       expect(body.data.trip_distance_meters).toBe(meters);
-      expect(body.data.price).toBe(price);
+      expect(body.data.calculated_fare).toBe(fare);
+      expect(body.data.final_fare).toBe(fare);
 
       const stored = await prisma.order.findUniqueOrThrow({
         where: { id: orderId },
       });
-      expect(stored.price?.toNumber()).toBe(price);
+      expect(stored.price?.toNumber()).toBe(9999);
+      expect(stored.calculatedFare?.toNumber()).toBe(fare);
+      expect(stored.finalFare?.toNumber()).toBe(fare);
       expect(stored.tripDistanceMeters).toBe(meters);
       expect(stored.tripLastLatitude).toBeNull();
       expect(stored.tripLastLongitude).toBeNull();
     },
   );
 
-  it('Complete treats null mileage as 0 and fare 100', async () => {
+  it('Complete after arrive treats locked 0 mileage as fare 100', async () => {
     await deleteDriverOrders(users.fare.driverId);
     const orderId = randomUUID();
     await seedOrder({
@@ -379,20 +392,28 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
       label: 'null-m',
       status: 'IN_PROGRESS',
       driverId: users.fare.driverId,
-      tripDistanceMeters: null,
+      tripDistanceMeters: 0,
       tripLastLatitude: null,
       tripLastLongitude: null,
     });
 
     const cookie = await loginAs(users.fare.username);
+    await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointA)
+      .expect(200);
+
     const response = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(200);
 
     expect(asBody<ApiSuccessBody<CompleteData>>(response).data).toMatchObject({
       trip_distance_meters: 0,
-      price: 100,
+      calculated_fare: 100,
+      final_fare: 100,
       status: 'COMPLETED',
     });
   });
@@ -406,20 +427,28 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
       status: 'IN_PROGRESS',
       driverId: users.fare.driverId,
       tripDistanceMeters: 1450,
-      tripLastLatitude: pointA.latitude,
-      tripLastLongitude: pointA.longitude,
+      tripLastLatitude: null,
+      tripLastLongitude: null,
     });
 
     const cookie = await loginAs(users.fare.username);
+    await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointA)
+      .expect(200);
+
     const first = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 105 })
       .expect(200);
     const firstBody = asBody<ApiSuccessBody<CompleteData>>(first);
 
     const second = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 999 })
       .expect(409);
     expect(asBody<ApiErrorBody>(second).error.code).toBe(
       'INVALID_ORDER_STATUS',
@@ -428,7 +457,9 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
     const stored = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
     });
-    expect(stored.price?.toNumber()).toBe(105);
+    expect(stored.price?.toNumber()).toBe(9999);
+    expect(stored.calculatedFare?.toNumber()).toBe(105);
+    expect(stored.finalFare?.toNumber()).toBe(105);
     expect(stored.completedAt?.toISOString()).toBe(firstBody.data.completed_at);
     expect(
       await prisma.orderEvent.count({
@@ -446,14 +477,20 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
       status: 'IN_PROGRESS',
       driverId: users.fare.driverId,
       tripDistanceMeters: 8400,
-      tripLastLatitude: pointA.latitude,
-      tripLastLongitude: pointA.longitude,
+      tripLastLatitude: null,
+      tripLastLongitude: null,
     });
 
     const cookie = await loginAs(users.fare.username);
     await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointA)
+      .expect(200);
+    await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: calculateTripFare(8400) })
       .expect(200);
 
     await request(app.getHttpServer())
@@ -466,11 +503,12 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
       where: { id: orderId },
     });
     expect(stored.tripDistanceMeters).toBe(8400);
-    expect(stored.price?.toNumber()).toBe(calculateTripFare(8400));
+    expect(stored.calculatedFare?.toNumber()).toBe(calculateTripFare(8400));
+    expect(stored.price?.toNumber()).toBe(9999);
     expect(stored.tripLastLatitude).toBeNull();
   });
 
-  it('Location-first race: Complete uses latest committed mileage', async () => {
+  it('Location-first race: Arrive+Complete uses latest committed mileage', async () => {
     await deleteDriverOrders(users.raceLoc.driverId);
     const orderId = randomUUID();
     await seedOrder({
@@ -503,14 +541,22 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
     );
     expect(afterLoc.tripDistanceMeters).toBe(expectedDistance);
 
+    await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointB)
+      .expect(200);
+
     const response = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: calculateTripFare(expectedDistance) })
       .expect(200);
 
     const body = asBody<ApiSuccessBody<CompleteData>>(response);
     expect(body.data.trip_distance_meters).toBe(expectedDistance);
-    expect(body.data.price).toBe(calculateTripFare(expectedDistance));
+    expect(body.data.calculated_fare).toBe(calculateTripFare(expectedDistance));
+    expect(body.data.final_fare).toBe(calculateTripFare(expectedDistance));
   });
 
   it('Complete-first race: later Location does not accumulate', async () => {
@@ -522,14 +568,20 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
       status: 'IN_PROGRESS',
       driverId: users.raceComp.driverId,
       tripDistanceMeters: 500,
-      tripLastLatitude: pointA.latitude,
-      tripLastLongitude: pointA.longitude,
+      tripLastLatitude: null,
+      tripLastLongitude: null,
     });
 
     const cookie = await loginAs(users.raceComp.username);
     await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointA)
+      .expect(200);
+    await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(200);
 
     await request(app.getHttpServer())
@@ -541,9 +593,9 @@ describe('Start / Complete Phase 3 fare integration P3-E (e2e)', () => {
     const stored = await prisma.order.findUniqueOrThrow({
       where: { id: orderId },
     });
-    expect(stored.status).toBe('COMPLETED');
     expect(stored.tripDistanceMeters).toBe(500);
-    expect(stored.price?.toNumber()).toBe(100);
-    expect(stored.tripLastLatitude).toBeNull();
+    expect(stored.calculatedFare?.toNumber()).toBe(100);
+    expect(stored.finalFare?.toNumber()).toBe(100);
+    expect(stored.price?.toNumber()).toBe(9999);
   });
 });

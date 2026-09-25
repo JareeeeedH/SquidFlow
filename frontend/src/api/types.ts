@@ -233,6 +233,9 @@ export type DriverOrderDetail = {
   status: OrderStatus
   distance_meters: number | null
   trip_distance_meters: number | null
+  arrived_at: string | null
+  calculated_fare: number | null
+  final_fare: number | null
   pickup_latitude: number | null
   pickup_longitude: number | null
 }
@@ -251,6 +254,7 @@ export type DriverMyOrder = {
   pickup_location: string
   destination: string | null
   price: number | null
+  final_fare: number | null
   status: OrderStatus
   distance_meters: number | null
   trip_distance_meters: number | null
@@ -262,12 +266,24 @@ export type StartOrderResult = {
   started_at: string
 }
 
+export type ArriveOrderResult = {
+  id: string
+  status: 'IN_PROGRESS'
+  arrived_at: string
+  trip_distance_meters: number
+  calculated_fare: number
+  final_fare: number | null
+  price?: number | null
+}
+
 export type CompleteOrderResult = {
   id: string
   status: 'COMPLETED'
   completed_at: string
   trip_distance_meters: number
-  price: number
+  calculated_fare: number
+  final_fare: number
+  price?: number | null
 }
 
 export type CancelOrderResult = {

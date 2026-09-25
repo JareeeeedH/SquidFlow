@@ -279,6 +279,7 @@ export class DriversService {
         FROM orders
         WHERE driver_id = ${driver.id}::uuid
           AND status = 'IN_PROGRESS'::"OrderStatus"
+          AND arrived_at IS NULL
         FOR UPDATE
       `;
 

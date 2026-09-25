@@ -242,8 +242,15 @@ describe('Dispatch end-to-end flow (e2e)', () => {
     ).toBe('IN_PROGRESS');
 
     await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', driverCookie)
+      .send({ latitude: 22.63, longitude: 120.305 })
+      .expect(200);
+
+    await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', driverCookie)
+      .send({ final_fare: 100 })
       .expect(200);
 
     const completed = await prisma.order.findUnique({ where: { id: orderId } });
@@ -260,6 +267,7 @@ describe('Dispatch end-to-end flow (e2e)', () => {
       { eventType: 'ORDER_PUBLISHED' },
       { eventType: 'ORDER_ACCEPTED' },
       { eventType: 'ORDER_STARTED' },
+      { eventType: 'ORDER_ARRIVED' },
       { eventType: 'ORDER_COMPLETED' },
     ]);
   });

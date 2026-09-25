@@ -485,8 +485,14 @@ describe('Driver Location Trip Tracking P3-4 (e2e)', () => {
 
     const cookie = await loginAs(users.completeRace.username);
     await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orderId}/arrive`)
+      .set('Cookie', cookie)
+      .send(pointA)
+      .expect(200);
+    await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orderId}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(200);
 
     await patchLocation(cookie, pointB);
@@ -496,10 +502,7 @@ describe('Driver Location Trip Tracking P3-4 (e2e)', () => {
     });
     expect(order.status).toBe('COMPLETED');
     expect(order.tripDistanceMeters).toBe(0);
-    expect(order.tripLastLatitude?.toNumber()).toBeCloseTo(pointA.latitude, 6);
-    expect(order.tripLastLongitude?.toNumber()).toBeCloseTo(
-      pointA.longitude,
-      6,
-    );
+    expect(order.arrivedAt).not.toBeNull();
+    expect(order.finalFare?.toNumber()).toBe(100);
   });
 });

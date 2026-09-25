@@ -1262,29 +1262,39 @@ ORDER_ALREADY_ACCEPTED
 
 ---
 
-### 13.4 Driver Start / Complete
+### 13.4 Driver Start / Arrive / Complete
 
 ```text
 ACCEPTED
     ↓
 POST /start
     ↓
-IN_PROGRESS
+IN_PROGRESS（arrived_at = null）
     ↓
-POST /complete
+GPS 累加里程
+    ↓
+POST /arrive（最新 lat/lng）
+    ↓
+鎖定 trip_distance_meters + calculated_fare + arrived_at
+    ↓
+仍為 IN_PROGRESS
+    ↓
+POST /complete（final_fare）
     ↓
 COMPLETED
 ```
 
-每次狀態轉換：
+每次顯著生命周期事件：
 
 ```text
 Validate
     ↓
 Update Order
     ↓
-Create OrderEvent
+Create OrderEvent（含 ORDER_ARRIVED）
 ```
+
+產品規則見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`。
 
 ---
 
@@ -1540,13 +1550,16 @@ Frontend（Vue）
 
 Phase 2 **不**包含：自動派車、AI Dispatch、進階派車、通訊整合、location history、道路距離、ETA、以 Google Routes API 做距離／ETA、App 內 turn-by-turn、任務里程計費（屬 Phase 3）。
 
-**Phase 3 — Trip Mileage & Fare**（產品規則見 `PHASE-3-SPEC.md`）：
+**Phase 3 — Trip Mileage & Fare**（產品規則見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：
 
-- 沿用 `PATCH /api/v1/driver/location`；`IN_PROGRESS` 期間 10 秒上報、Haversine 累加 `trip_distance_meters`
-- Complete 時鎖定里程並依費率寫入 `price`；Backend 為唯一權威
-- **不**保存 GPS History／Track；僅保留上一計費點 + 累計里程（Order：`trip_last_latitude`／`trip_last_longitude` + `trip_distance_meters`；完成後清除上一點）
-- **不**改變 Accept／搶單；**不**以 P2-03 直線距離計費
+- 沿用 `PATCH /api/v1/driver/location`；`IN_PROGRESS` 且尚未抵達期間 10 秒上報、Haversine 累加 `trip_distance_meters`
+- Arrive：Request 最新 GPS → 最後一段距離 → 鎖定里程 → `calculated_fare` + `arrived_at`；status 仍為 `IN_PROGRESS`
+- Complete：Request `final_fare`（必須已抵達）→ 儲存 → `COMPLETED`；**不**覆寫 `price`
+- `price` = 原始派車價格；`calculated_fare` = 系統價；`final_fare` = Driver 確認價
+- **不**保存 GPS History／Track；僅保留上一計費點 + 累計里程（Arrive 後清除上一點）
+- **不**新增 Order Status；**不**改變 Accept／搶單；**不**以 P2-03 直線距離計費
 - GPS 失敗不改 Order State、不補算缺失路段
+- Local／DEV：真實 browser GPS 自動回傳關閉；DEV GPS Simulator 可用
 
 **Phase 4 — Advanced Dispatch & Communication**（僅簡述，見 `PHASE-4-SPEC.md`）：
 

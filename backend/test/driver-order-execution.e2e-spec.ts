@@ -187,6 +187,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       'DRAFT' | 'OPEN' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
     driverId?: string;
   }) {
+    const isInProgress = input.status === 'IN_PROGRESS';
     await prisma.order.create({
       data: {
         id: input.id,
@@ -210,6 +211,19 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
           input.status === 'IN_PROGRESS' || input.status === 'COMPLETED'
             ? new Date('2026-09-15T07:10:00Z')
             : null,
+        arrivedAt: isInProgress
+          ? new Date('2026-09-15T07:50:00Z')
+          : input.status === 'COMPLETED'
+            ? new Date('2026-09-15T07:50:00Z')
+            : null,
+        calculatedFare:
+          isInProgress || input.status === 'COMPLETED'
+            ? new Prisma.Decimal(100)
+            : null,
+        finalFare:
+          input.status === 'COMPLETED' ? new Prisma.Decimal(100) : null,
+        tripDistanceMeters:
+          isInProgress || input.status === 'COMPLETED' ? 0 : null,
         completedAt:
           input.status === 'COMPLETED'
             ? new Date('2026-09-15T08:00:00Z')
@@ -389,6 +403,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       status: 'CANCELLED',
       created_at: body.data[0].created_at,
       distance_meters: null,
+      trip_distance_meters: null,
     });
     expect(typeof body.data[0].created_at).toBe('string');
     expect(JSON.stringify(body)).not.toMatch(/customer_name|driver_id|"note"/);
@@ -516,9 +531,19 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       asBody<ApiSuccessBody<{ status: string }>>(started).data.status,
     ).toBe('IN_PROGRESS');
 
+    const arrived = await request(app.getHttpServer())
+      .post(`/api/v1/driver/orders/${orders.offlineAccepted}/arrive`)
+      .set('Cookie', cookie)
+      .send({ latitude: 22.63, longitude: 120.305 })
+      .expect(200);
+    expect(
+      asBody<ApiSuccessBody<{ status: string }>>(arrived).data.status,
+    ).toBe('IN_PROGRESS');
+
     const completed = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.offlineAccepted}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(200);
     expect(
       asBody<
@@ -527,7 +552,8 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
           status: string;
           completed_at: string;
           trip_distance_meters: number;
-          price: number;
+          calculated_fare: number | null;
+          final_fare: number;
         }>
       >(completed).data,
     ).toEqual({
@@ -537,7 +563,11 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
         asBody<ApiSuccessBody<{ completed_at: string }>>(completed).data
           .completed_at,
       trip_distance_meters: 0,
-      price: 100,
+      calculated_fare: 100,
+      final_fare: 100,
+      arrived_at:
+        asBody<ApiSuccessBody<{ arrived_at: string }>>(completed).data
+          .arrived_at,
     });
 
     const stored = await prisma.order.findUnique({
@@ -546,17 +576,21 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     expect(stored?.status).toBe('COMPLETED');
     expect(stored?.completedAt).not.toBeNull();
     expect(stored?.tripDistanceMeters).toBe(0);
-    expect(stored?.price?.toNumber()).toBe(100);
+    expect(stored?.price?.toNumber()).toBe(1200);
+    expect(stored?.finalFare?.toNumber()).toBe(100);
+    expect(stored?.calculatedFare?.toNumber()).toBe(100);
     expect(stored?.tripLastLatitude).toBeNull();
     expect(stored?.tripLastLongitude).toBeNull();
     expect(
       await prisma.orderEvent.count({
         where: {
           orderId: orders.offlineAccepted,
-          eventType: { in: ['ORDER_STARTED', 'ORDER_COMPLETED'] },
+          eventType: {
+            in: ['ORDER_STARTED', 'ORDER_ARRIVED', 'ORDER_COMPLETED'],
+          },
         },
       }),
-    ).toBe(2);
+    ).toBe(3);
   });
 
   it('completes an IN_PROGRESS own order and writes ORDER_COMPLETED', async () => {
@@ -565,7 +599,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.completeProgress}/complete`)
       .set('Cookie', cookie)
-      .send({ completed_at: '2000-01-01T00:00:00.000Z' })
+      .send({ final_fare: 100, completed_at: '2000-01-01T00:00:00.000Z' })
       .expect(200);
     const after = Date.now();
 
@@ -575,7 +609,9 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
         status: string;
         completed_at: string;
         trip_distance_meters: number;
-        price: number;
+        calculated_fare: number | null;
+        final_fare: number;
+        arrived_at: string;
       }>
     >(response);
     expect(body.data).toEqual({
@@ -583,7 +619,9 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
       status: 'COMPLETED',
       completed_at: body.data.completed_at,
       trip_distance_meters: 0,
-      price: 100,
+      calculated_fare: 100,
+      final_fare: 100,
+      arrived_at: body.data.arrived_at,
     });
     const completedAt = new Date(body.data.completed_at).getTime();
     expect(completedAt).toBeGreaterThanOrEqual(before - 1000);
@@ -596,7 +634,9 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     expect(stored?.status).toBe('COMPLETED');
     expect(stored?.completedAt?.toISOString()).toBe(body.data.completed_at);
     expect(stored?.tripDistanceMeters).toBe(0);
-    expect(stored?.price?.toNumber()).toBe(100);
+    expect(stored?.price?.toNumber()).toBe(1200);
+    expect(stored?.finalFare?.toNumber()).toBe(100);
+    expect(stored?.calculatedFare?.toNumber()).toBe(100);
     expect(stored?.tripLastLatitude).toBeNull();
     expect(stored?.tripLastLongitude).toBeNull();
     expect(
@@ -623,6 +663,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     const completeCancelled = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.mineCancelled}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(409);
     expect(asBody<ApiErrorBody>(completeCancelled).error.code).toBe(
       'INVALID_ORDER_STATUS',
@@ -637,6 +678,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     const completeAccepted = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.otherAccepted}/complete`)
       .set('Cookie', await loginAs(users.other.username))
+      .send({ final_fare: 100 })
       .expect(409);
     expect(asBody<ApiErrorBody>(completeAccepted).error.code).toBe(
       'INVALID_ORDER_STATUS',
@@ -671,6 +713,7 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     const completeOther = await request(app.getHttpServer())
       .post(`/api/v1/driver/orders/${orders.otherAccepted}/complete`)
       .set('Cookie', cookie)
+      .send({ final_fare: 100 })
       .expect(404);
     expect(asBody<ApiErrorBody>(completeOther).error.code).toBe('NOT_FOUND');
 
@@ -787,10 +830,12 @@ describe('Driver My Orders / Start / Complete (e2e)', () => {
     const responses = await Promise.all([
       request(app.getHttpServer())
         .post(`/api/v1/driver/orders/${orders.raceCompleteProgress}/complete`)
-        .set('Cookie', cookie),
+        .set('Cookie', cookie)
+        .send({ final_fare: 100 }),
       request(app.getHttpServer())
         .post(`/api/v1/driver/orders/${orders.raceCompleteProgress}/complete`)
-        .set('Cookie', cookie),
+        .set('Cookie', cookie)
+        .send({ final_fare: 100 }),
     ]);
 
     const successes = responses.filter((response) => response.status === 200);

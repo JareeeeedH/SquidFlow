@@ -12,6 +12,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   acceptDriverOrder,
+  arriveDriverOrder,
   completeDriverOrder,
   getDriverOrder,
   startDriverOrder,
@@ -31,6 +32,7 @@ import {
   parseDurationMinutes,
   type GpsPoint,
 } from '../lib/dev-gps-sequence'
+import { estimateTripFare } from '../lib/trip-fare'
 import { useDriverStatusStore } from '../stores/driver-status'
 
 const isDev = import.meta.env.DEV
@@ -44,7 +46,14 @@ const driverLng = ref<number | null>(null)
 const loading = ref(false)
 const accepting = ref(false)
 const starting = ref(false)
+const arriving = ref(false)
 const completing = ref(false)
+const finalFareInput = ref('')
+const fareError = ref<string | null>(null)
+/** DEV GPS Simulator: last coords that successfully called updateDriverLocation. */
+const lastSuccessfulDevGps = ref<{ latitude: number; longitude: number } | null>(
+  null,
+)
 const error = ref<{ code: string; message: string } | null>(null)
 const actionError = ref<{ code: string; message: string } | null>(null)
 const successMessage = ref<string | null>(null)
@@ -161,6 +170,7 @@ async function loadOrder() {
       return
     }
     order.value = data
+    syncFinalFareInput(data)
     driverStatus.syncInProgressFromOrderStatus(data.status)
     try {
       const location = await getDriverLocation()
@@ -197,7 +207,16 @@ async function loadOrder() {
 }
 
 const acting = computed(
-  () => accepting.value || starting.value || completing.value,
+  () =>
+    accepting.value ||
+    starting.value ||
+    arriving.value ||
+    completing.value,
+)
+
+const hasArrived = computed(
+  () =>
+    order.value?.status === 'IN_PROGRESS' && order.value.arrived_at != null,
 )
 
 const backTarget = computed(() =>
@@ -230,7 +249,7 @@ const inProgressMileage = computed(() => {
   if (order.value?.status !== 'IN_PROGRESS' || !tripDistanceKm.value) {
     return null
   }
-  return `已行駛 ${tripDistanceKm.value}`
+  return tripDistanceKm.value
 })
 
 const completedMileage = computed(() => {
@@ -240,9 +259,28 @@ const completedMileage = computed(() => {
   return tripDistanceKm.value
 })
 
-const priceLabel = computed(() =>
-  order.value?.status === 'COMPLETED' ? '車資' : '價格',
-)
+const estimatedFare = computed(() => {
+  if (
+    order.value?.status !== 'IN_PROGRESS' ||
+    order.value.arrived_at != null ||
+    order.value.trip_distance_meters == null
+  ) {
+    return null
+  }
+  return estimateTripFare(order.value.trip_distance_meters)
+})
+
+const showDispatchPrice = computed(() => {
+  const status = order.value?.status
+  return status === 'OPEN' || status === 'ACCEPTED' || status === 'IN_PROGRESS'
+})
+
+const completedFinalFare = computed(() => {
+  if (order.value?.status !== 'COMPLETED') {
+    return null
+  }
+  return order.value.final_fare ?? order.value.price
+})
 
 const pickupPoint = computed(() => {
   const lat = order.value?.pickup_latitude
@@ -274,6 +312,74 @@ const canNavigate = computed(
   () =>
     order.value?.status === 'ACCEPTED' || order.value?.status === 'IN_PROGRESS',
 )
+
+function syncFinalFareInput(data: DriverOrderDetail) {
+  if (
+    data.status === 'IN_PROGRESS' &&
+    data.arrived_at != null &&
+    data.calculated_fare != null
+  ) {
+    finalFareInput.value = String(Math.trunc(data.calculated_fare))
+    fareError.value = null
+  }
+}
+
+function parseFinalFareInput(raw: string): number | null {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return null
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    return null
+  }
+  const value = Number(trimmed)
+  if (!Number.isInteger(value) || value < 0) {
+    return null
+  }
+  return value
+}
+
+function readBrowserGps(): Promise<{ latitude: number; longitude: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('GEOLOCATION_UNAVAILABLE'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+      },
+      () => {
+        reject(new Error('GEOLOCATION_FAILED'))
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15_000,
+      },
+    )
+  })
+}
+
+async function resolveArriveGps(): Promise<{
+  latitude: number
+  longitude: number
+} | null> {
+  if (isDev) {
+    if (lastSuccessfulDevGps.value) {
+      return lastSuccessfulDevGps.value
+    }
+    return null
+  }
+  try {
+    return await readBrowserGps()
+  } catch {
+    return null
+  }
+}
 
 function startNavigation() {
   if (!order.value || !canNavigate.value) {
@@ -340,20 +446,95 @@ async function startOrder() {
   }
 }
 
+async function arriveOrder() {
+  if (
+    !order.value ||
+    acting.value ||
+    order.value.status !== 'IN_PROGRESS' ||
+    order.value.arrived_at != null
+  ) {
+    return
+  }
+
+  arriving.value = true
+  actionError.value = null
+  successMessage.value = null
+  fareError.value = null
+
+  try {
+    const coords = await resolveArriveGps()
+    if (!coords) {
+      actionError.value = {
+        code: 'LOCATION_REQUIRED',
+        message: isDev
+          ? '請先透過 DEV GPS Simulator 成功送出座標'
+          : '無法取得目前位置，請確認定位權限後再試',
+      }
+      return
+    }
+
+    const result = await arriveDriverOrder(
+      order.value.id,
+      coords.latitude,
+      coords.longitude,
+    )
+
+    order.value = {
+      ...order.value,
+      status: result.status,
+      arrived_at: result.arrived_at,
+      trip_distance_meters: result.trip_distance_meters,
+      calculated_fare: result.calculated_fare,
+      final_fare: result.final_fare,
+      ...(result.price !== undefined ? { price: result.price } : {}),
+    }
+    finalFareInput.value = String(Math.trunc(result.calculated_fare))
+    driverLat.value = coords.latitude
+    driverLng.value = coords.longitude
+    successMessage.value = '已抵達'
+  } catch (caught) {
+    actionError.value = captureError(caught)
+    if (actionError.value.code === 'INVALID_ORDER_STATUS') {
+      await loadOrder()
+    }
+  } finally {
+    arriving.value = false
+  }
+}
+
 async function completeOrder() {
-  if (!order.value || acting.value || order.value.status !== 'IN_PROGRESS') {
+  if (
+    !order.value ||
+    acting.value ||
+    order.value.status !== 'IN_PROGRESS' ||
+    order.value.arrived_at == null
+  ) {
+    return
+  }
+
+  const finalFare = parseFinalFareInput(finalFareInput.value)
+  if (finalFare == null) {
+    fareError.value = '請輸入有效的整數價格（NT$ ≥ 0）'
     return
   }
 
   completing.value = true
   actionError.value = null
+  fareError.value = null
   successMessage.value = null
 
   try {
-    await completeDriverOrder(order.value.id)
+    const result = await completeDriverOrder(order.value.id, finalFare)
+    order.value = {
+      ...order.value,
+      status: result.status,
+      trip_distance_meters: result.trip_distance_meters,
+      calculated_fare: result.calculated_fare,
+      final_fare: result.final_fare,
+      ...(result.price !== undefined ? { price: result.price } : {}),
+    }
     successMessage.value = '訂單已完成'
     driverStatus.setInProgressOrder(false)
-    await loadOrder()
   } catch (caught) {
     actionError.value = captureError(caught)
     if (actionError.value.code === 'INVALID_ORDER_STATUS') {
@@ -433,6 +614,10 @@ async function sendDevGpsAt(index: number) {
       typeof result.latitude === 'number' ? result.latitude : point.latitude
     driverLng.value =
       typeof result.longitude === 'number' ? result.longitude : point.longitude
+    lastSuccessfulDevGps.value = {
+      latitude: driverLat.value,
+      longitude: driverLng.value,
+    }
     devGpsSentCount.value = index + 1
     devGpsNextIndex.value = index + 1
     if (devGpsNextIndex.value >= devGpsQueue.value.length) {
@@ -752,15 +937,44 @@ watch(
           </div>
           <div v-if="inProgressMileage" class="summary-row">
             <dt>已行駛</dt>
-            <dd>{{ tripDistanceKm }}</dd>
+            <dd>{{ inProgressMileage }}</dd>
           </div>
           <div v-if="completedMileage" class="summary-row">
-            <dt>行駛里程</dt>
+            <dt>已行駛</dt>
             <dd>{{ completedMileage }}</dd>
           </div>
-          <div class="summary-row">
-            <dt>{{ priceLabel }}</dt>
+          <div v-if="estimatedFare != null" class="summary-row">
+            <dt>預估價格</dt>
+            <dd class="price">{{ formatPrice(estimatedFare) }}</dd>
+          </div>
+          <div
+            v-if="hasArrived && order.status === 'IN_PROGRESS'"
+            class="summary-row fare-input-row"
+          >
+            <dt>價格</dt>
+            <dd>
+              <div class="fare-input-wrap">
+                <span class="fare-prefix">NT$</span>
+                <NInput
+                  v-model:value="finalFareInput"
+                  class="fare-input"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="0"
+                  :disabled="completing"
+                  data-testid="final-fare-input"
+                />
+              </div>
+              <p v-if="fareError" class="fare-error">{{ fareError }}</p>
+            </dd>
+          </div>
+          <div v-else-if="showDispatchPrice" class="summary-row">
+            <dt>價格</dt>
             <dd class="price">{{ formatPrice(order.price) }}</dd>
+          </div>
+          <div v-else-if="completedFinalFare != null" class="summary-row">
+            <dt>最終價格</dt>
+            <dd class="price">{{ formatPrice(completedFinalFare) }}</dd>
           </div>
         </dl>
 
@@ -797,14 +1011,31 @@ watch(
             :disabled="acting && !starting"
             @confirm="startOrder"
           />
-          <SlideToConfirm
+          <div
             v-else-if="order.status === 'IN_PROGRESS'"
-            label="滑動完成訂單"
-            loading-label="完成中..."
-            :loading="completing"
-            :disabled="acting && !completing"
-            @confirm="completeOrder"
-          />
+            class="arrive-complete-actions"
+          >
+            <NButton
+              size="large"
+              secondary
+              :loading="arriving"
+              :disabled="hasArrived || (acting && !arriving)"
+              data-testid="arrive-button"
+              @click="arriveOrder"
+            >
+              {{ hasArrived ? '已抵達' : '抵達' }}
+            </NButton>
+            <NButton
+              size="large"
+              type="primary"
+              :loading="completing"
+              :disabled="!hasArrived || (acting && !completing)"
+              data-testid="complete-button"
+              @click="completeOrder"
+            >
+              完成
+            </NButton>
+          </div>
         </div>
       </article>
     </NSpin>
@@ -1093,6 +1324,40 @@ watch(
   border-radius: 0 0 14px 14px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.arrive-complete-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+
+.arrive-complete-actions :deep(.n-button) {
+  min-height: 48px;
+}
+
+.fare-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.fare-prefix {
+  flex-shrink: 0;
+  font: var(--font-label);
+  color: #93c5fd;
+}
+
+.fare-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.fare-error {
+  margin: var(--space-4) 0 0;
+  font: var(--font-caption);
+  color: var(--color-danger);
 }
 
 .state {

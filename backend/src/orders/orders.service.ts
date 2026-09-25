@@ -13,6 +13,7 @@ import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { DistanceService } from '../distance/distance.service';
 import { WaveDispatchService } from '../dispatch/wave-dispatch.service';
 import { calculateTripFare } from '../fare/trip-fare';
+import { recordTripLocation } from '../fare/trip-tracking';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -39,6 +40,46 @@ import {
   OrderInput,
   OrderListQuery,
 } from './orders.validation';
+
+type ArriveCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+type LockedArriveOrder = {
+  id: string;
+  driver_id: string | null;
+  status: OrderStatus;
+  trip_distance_meters: number | null;
+  trip_last_latitude: Prisma.Decimal | string | number | null;
+  trip_last_longitude: Prisma.Decimal | string | number | null;
+  arrived_at: Date | null;
+  calculated_fare: Prisma.Decimal | string | number | null;
+  final_fare: Prisma.Decimal | string | number | null;
+};
+
+function toNullableNumber(
+  value: Prisma.Decimal | string | number | null | undefined,
+): number | null {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return value.toNumber();
+}
+
+function fareNumber(
+  value: Prisma.Decimal | string | number | null | undefined,
+): number | null {
+  const n = toNullableNumber(value);
+  return n == null ? null : n;
+}
 
 const assignedDriverInclude = {
   driver: {
@@ -209,6 +250,7 @@ export class OrdersService {
         pickupLocation: true,
         destination: true,
         price: true,
+        finalFare: true,
         status: true,
         tripDistanceMeters: true,
       },
@@ -288,6 +330,9 @@ export class OrdersService {
         status: true,
         driverId: true,
         tripDistanceMeters: true,
+        arrivedAt: true,
+        calculatedFare: true,
+        finalFare: true,
       },
     });
 
@@ -476,21 +521,23 @@ export class OrdersService {
     });
   }
 
-  async complete(id: string, user: AuthenticatedUser) {
+  async arrive(id: string, user: AuthenticatedUser, coords: ArriveCoordinates) {
     this.assertDriverAccountActive(user);
 
     return this.prisma.$transaction(async (tx) => {
       const driver = await this.findDriverInTxOrThrow(tx, user.id);
 
-      const lockedOrders = await tx.$queryRaw<
-        Array<{
-          id: string;
-          driver_id: string | null;
-          status: OrderStatus;
-          trip_distance_meters: number | null;
-        }>
-      >`
-        SELECT id, driver_id, status, trip_distance_meters
+      const lockedOrders = await tx.$queryRaw<LockedArriveOrder[]>`
+        SELECT
+          id,
+          driver_id,
+          status,
+          trip_distance_meters,
+          trip_last_latitude,
+          trip_last_longitude,
+          arrived_at,
+          calculated_fare,
+          final_fare
         FROM orders
         WHERE id = ${id}::uuid
         FOR UPDATE
@@ -504,8 +551,154 @@ export class OrdersService {
         throw AppErrors.invalidOrderStatus();
       }
 
-      const finalDistanceMeters = locked.trip_distance_meters ?? 0;
-      const fare = calculateTripFare(finalDistanceMeters);
+      // Idempotent: already arrived — return locked result, never re-settle.
+      if (locked.arrived_at != null) {
+        return {
+          id: locked.id,
+          status: OrderStatus.IN_PROGRESS,
+          arrived_at: locked.arrived_at.toISOString(),
+          trip_distance_meters: Math.round(locked.trip_distance_meters ?? 0),
+          calculated_fare: fareNumber(locked.calculated_fare),
+          final_fare: fareNumber(locked.final_fare),
+        };
+      }
+
+      await tx.driver.update({
+        where: { id: driver.id },
+        data: {
+          latitude: new Prisma.Decimal(coords.latitude),
+          longitude: new Prisma.Decimal(coords.longitude),
+          locationUpdatedAt: new Date(),
+        },
+      });
+
+      const next = recordTripLocation(
+        {
+          distanceMeters: locked.trip_distance_meters ?? 0,
+          lastLatitude: toNullableNumber(locked.trip_last_latitude),
+          lastLongitude: toNullableNumber(locked.trip_last_longitude),
+        },
+        {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        },
+      );
+
+      const finalDistanceMeters = Math.round(next.distanceMeters);
+      const calculatedFare = calculateTripFare(finalDistanceMeters);
+      const arrivedAt = new Date();
+
+      const updated = await tx.order.updateMany({
+        where: {
+          id,
+          status: OrderStatus.IN_PROGRESS,
+          driverId: driver.id,
+          arrivedAt: null,
+        },
+        data: {
+          tripDistanceMeters: finalDistanceMeters,
+          calculatedFare: new Prisma.Decimal(calculatedFare),
+          arrivedAt,
+          tripLastLatitude: null,
+          tripLastLongitude: null,
+        },
+      });
+
+      if (updated.count !== 1) {
+        // Concurrent arrive won the race — re-read and return idempotent result.
+        const raced = await tx.order.findUniqueOrThrow({
+          where: { id },
+          select: {
+            id: true,
+            status: true,
+            arrivedAt: true,
+            tripDistanceMeters: true,
+            calculatedFare: true,
+            finalFare: true,
+          },
+        });
+        if (
+          raced.arrivedAt == null ||
+          raced.status !== OrderStatus.IN_PROGRESS
+        ) {
+          throw AppErrors.invalidOrderStatus();
+        }
+        return {
+          id: raced.id,
+          status: OrderStatus.IN_PROGRESS,
+          arrived_at: raced.arrivedAt.toISOString(),
+          trip_distance_meters: raced.tripDistanceMeters ?? 0,
+          calculated_fare: fareNumber(raced.calculatedFare),
+          final_fare: fareNumber(raced.finalFare),
+        };
+      }
+
+      await tx.orderEvent.create({
+        data: {
+          orderId: id,
+          eventType: OrderEventType.ORDER_ARRIVED,
+          actorUserId: user.id,
+        },
+      });
+
+      return {
+        id: locked.id,
+        status: OrderStatus.IN_PROGRESS,
+        arrived_at: arrivedAt.toISOString(),
+        trip_distance_meters: finalDistanceMeters,
+        calculated_fare: calculatedFare,
+        final_fare: null,
+      };
+    });
+  }
+
+  async complete(
+    id: string,
+    user: AuthenticatedUser,
+    input: { finalFare: number },
+  ) {
+    this.assertDriverAccountActive(user);
+
+    return this.prisma.$transaction(async (tx) => {
+      const driver = await this.findDriverInTxOrThrow(tx, user.id);
+
+      const lockedOrders = await tx.$queryRaw<
+        Array<{
+          id: string;
+          driver_id: string | null;
+          status: OrderStatus;
+          trip_distance_meters: number | null;
+          arrived_at: Date | null;
+          calculated_fare: Prisma.Decimal | string | number | null;
+          final_fare: Prisma.Decimal | string | number | null;
+        }>
+      >`
+        SELECT
+          id,
+          driver_id,
+          status,
+          trip_distance_meters,
+          arrived_at,
+          calculated_fare,
+          final_fare
+        FROM orders
+        WHERE id = ${id}::uuid
+        FOR UPDATE
+      `;
+
+      const locked = lockedOrders[0];
+      if (!locked || locked.driver_id !== driver.id) {
+        throw AppErrors.notFound('找不到訂單');
+      }
+      if (locked.status !== OrderStatus.IN_PROGRESS) {
+        throw AppErrors.invalidOrderStatus();
+      }
+      if (locked.arrived_at == null || locked.calculated_fare == null) {
+        throw AppErrors.invalidOrderStatus();
+      }
+
+      const tripDistanceMeters = Math.round(locked.trip_distance_meters ?? 0);
+      const calculatedFare = fareNumber(locked.calculated_fare);
       const completedAt = new Date();
 
       const updated = await tx.order.updateMany({
@@ -513,14 +706,12 @@ export class OrdersService {
           id,
           status: OrderStatus.IN_PROGRESS,
           driverId: driver.id,
+          arrivedAt: { not: null },
         },
         data: {
           status: OrderStatus.COMPLETED,
           completedAt,
-          price: new Prisma.Decimal(fare),
-          tripDistanceMeters: finalDistanceMeters,
-          tripLastLatitude: null,
-          tripLastLongitude: null,
+          finalFare: new Prisma.Decimal(input.finalFare),
         },
       });
 
@@ -539,9 +730,11 @@ export class OrdersService {
       return {
         id: locked.id,
         status: OrderStatus.COMPLETED,
+        arrived_at: locked.arrived_at.toISOString(),
+        trip_distance_meters: tripDistanceMeters,
+        calculated_fare: calculatedFare,
+        final_fare: input.finalFare,
         completed_at: completedAt.toISOString(),
-        trip_distance_meters: finalDistanceMeters,
-        price: fare,
       };
     });
   }

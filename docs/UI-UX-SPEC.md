@@ -613,9 +613,10 @@ Driver 採簡化導覽。
 
 # 14. Driver Order Detail
 
-路線與地圖為核心；價格／直線距離次之；Primary action 置底且清楚。
+路線與地圖為核心；價格／直線距離／里程次之；Primary action 置底且清楚。
 
-OPEN／ACCEPTED／IN_PROGRESS 的主操作皆為 **滑動確認 Bar**（非點擊按鈕）。
+- `OPEN`／`ACCEPTED`：主操作維持 **滑動確認 Bar**（接單／開始行程）。
+- `IN_PROGRESS`：主操作改為 **[抵達]／[完成]** 雙 CTA（見 Phase 3 UI）；**不再**使用「滑動完成訂單」。
 
 ## Mobile layout
 
@@ -630,13 +631,34 @@ ORD-…                 [Status]
 
 [地圖]
 
-直線距離    1.2 km
-價格        NT$ 1,200
+直線距離    1.2 km     ← 僅 OPEN／ACCEPTED
+價格        NT$ 1,200  ← 原始派車 price
 
 客戶        …
 備註        …
 
-║ 滑動接單 → ║
+║ 滑動接單 → ║          ← OPEN
+║ 滑動開始行程 → ║      ← ACCEPTED
+```
+
+`IN_PROGRESS`（尚未抵達）：
+
+```text
+已行駛      3.8 km
+預估價格    NT$ 175
+價格        NT$ 1,200
+
+[抵達]              [完成]  ← 完成 disabled
+```
+
+`IN_PROGRESS`（已抵達）：
+
+```text
+已行駛      8.4 km
+系統價格    NT$ 275
+最終價格    [  280  ]     ← input，預填 calculated_fare，可改
+
+[完成]
 ```
 
 規則：
@@ -644,15 +666,19 @@ ORD-…                 [Status]
 - 頂部：返回／Order No／Status／日期時間
 - 緊湊路線（上車 → 下車）；降低 padding；長文字不得造成 horizontal overflow（寬度約束／換行；`null` 下車地顯示「—」）
 - 路線後**立即**顯示地圖（功能維持：Pickup／自己位置 marker、開始導航等既有規則）
-- 地圖下方：直線距離＋價格的 **Compact Summary**（左右 label／value；不各自大型 Card）；`distance_meters` 為 null 時不顯示距離列
-- 客戶／備註降為次要 Compact 資訊，置於距離／價格之後
+- 地圖下方 Compact Summary：
+  - `OPEN`／`ACCEPTED`：直線距離（若有）＋原始派車價格
+  - `IN_PROGRESS` 未抵達：已行駛＋預估價格（＋可選原始 `price`）；**不**顯示直線距離
+  - `IN_PROGRESS` 已抵達：已行駛（鎖定）＋ `calculated_fare`＋可編輯最終價格 input；**不**顯示直線距離
+  - `COMPLETED`：行駛里程＋車資（`final_fare`）
+- 客戶／備註降為次要 Compact 資訊
 - **不**重複顯示已在頂部呈現的 Order No／Status
-- 底部保留既有滑動確認（OPEN 接單／ACCEPTED 開始／IN_PROGRESS 完成）；未滑至末端不觸發；進行中 loading 鎖定；失敗後可再滑
-- 不改變 Order State、API、Map／Distance 業務邏輯
-
-- OPEN：滑動接單
-- ACCEPTED：滑動開始行程
-- IN_PROGRESS：滑動完成訂單
+- 底部：
+  - OPEN：滑動接單
+  - ACCEPTED：滑動開始行程
+  - IN_PROGRESS：抵達／完成按鈕；未抵達時完成 disabled；抵達後完成送出 `final_fare`
+- 操作進行中 loading 鎖定；失敗後可再試
+- 不改變 Accept／Start 的 Order State 規則；Arrive／Complete 契約見 `PHASE-3-SPEC.md`／`API-SPEC.md`
 
 ---
 
@@ -723,10 +749,10 @@ ORD-…
 ```text
 IN_PROGRESS
 
-║ 滑動完成訂單 → ║
+[抵達]  [完成]
 ```
 
-列表與訂單詳情的開始／完成皆為滑動確認 Bar（規則同 §14）。
+列表與訂單詳情：開始行程仍為滑動確認 Bar；抵達／完成為按鈕（規則同 §14／Phase 3 UI）。
 
 頂列為時間／Status／Price；Order No 在路線下方。路線換行／寬度約束規則同 §13。
 
@@ -943,12 +969,15 @@ Phase 4 — Advanced Dispatch & Communication（見 PHASE-4-SPEC.md）
 
 產品範圍 Phase 2 以 `PHASE-2-SPEC.md` 為準；Phase 3 以 `PHASE-3-SPEC.md` 為準；Phase 4 以 `PHASE-4-SPEC.md` 為準。
 
-**Phase 3 UI（產品規則已定義）：**
+**Phase 3 UI（產品規則已定義；見 `PHASE-3-SPEC.md`／`docs/adr/0001-arrive-and-final-fare.md`）：**
 
-- `IN_PROGRESS`：顯示已行駛里程（例如「已行駛 3.8 km」）；資料來自 Backend `trip_distance_meters`；**不**顯示到 Pickup 的直線距離（`distance_meters`）
-- `COMPLETED`：顯示行駛里程與車資（例如「行駛里程 8.4 km」「車資 NT$275」）；`price` 為 Complete 後系統計算結果
+- `IN_PROGRESS` 未抵達：顯示「已行駛 X km」＋「預估價格」；底部 **[抵達] [完成]**，完成 disabled；資料來自 `trip_distance_meters`；**不**顯示到 Pickup 的直線距離
+- `IN_PROGRESS` 已抵達：顯示鎖定里程＋ `calculated_fare`；價格 input 可改；完成送出 `final_fare`
+- `COMPLETED`：顯示行駛里程與車資（`final_fare`）；原始 `price`／`calculated_fare` 可作參考
 - **不**顯示 GPS 軌跡與計算細節
-- Frontend **不**自行計算車資／最終里程；Driver 於 `IN_PROGRESS` 以 10 秒間隔上報 location，完成後回到 30 秒
+- Frontend **不**自行寫入最終里程／`calculated_fare`／`arrived_at`；Driver 於 `IN_PROGRESS` 以 10 秒間隔上報 location，完成後回到 30 秒
+- Local／DEV：真實 browser GPS 自動回傳關閉；DEV GPS Simulator 可用
+- **不**新增 Order Status；已抵達以 `arrived_at != null` 表示
 
 Phase 4（進階派車／通訊）UI 細節於進入該階段時再定義。Phase 2 UI **不**呈現道路距離或 ETA。維持既有 Modern SaaS + Dispatch Console 視覺／操作方向（見 §1）；不另開一套地圖產品視覺語言。
 

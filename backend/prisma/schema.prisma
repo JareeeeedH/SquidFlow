@@ -47,6 +47,7 @@ enum OrderEventType {
   ORDER_PUBLISHED
   ORDER_ACCEPTED
   ORDER_STARTED
+  ORDER_ARRIVED
   ORDER_COMPLETED
   ORDER_CANCELLED
 }
@@ -106,6 +107,8 @@ model Order {
   tripDistanceMeters Int?           @map("trip_distance_meters")
   tripLastLatitude   Decimal?       @map("trip_last_latitude") @db.Decimal(10, 7)
   tripLastLongitude  Decimal?       @map("trip_last_longitude") @db.Decimal(10, 7)
+  calculatedFare     Decimal?       @map("calculated_fare") @db.Decimal(10, 2)
+  finalFare          Decimal?       @map("final_fare") @db.Decimal(10, 2)
   note               String?        @db.Text
   status             OrderStatus
   dispatchMode       DispatchMode   @map("dispatch_mode")
@@ -113,6 +116,7 @@ model Order {
   createdBy          String         @map("created_by") @db.Uuid
   acceptedAt         DateTime?      @map("accepted_at") @db.Timestamptz(6)
   startedAt          DateTime?      @map("started_at") @db.Timestamptz(6)
+  arrivedAt          DateTime?      @map("arrived_at") @db.Timestamptz(6)
   completedAt        DateTime?      @map("completed_at") @db.Timestamptz(6)
   cancelledAt        DateTime?      @map("cancelled_at") @db.Timestamptz(6)
   createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)

@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -18,8 +19,12 @@ import { AppErrors } from '../common/errors/app.error';
 import { RateLimited } from '../common/security/rate-limit.decorator';
 import { RateLimitGuard } from '../common/security/rate-limit.guard';
 import type { AuthenticatedUser } from '../common/types/authenticated-user';
+import { parseUpdateDriverLocationBody } from '../drivers/drivers.validation';
 import { OrdersService } from './orders.service';
-import { parseDriverMyOrdersQuery } from './orders.validation';
+import {
+  parseCompleteBody,
+  parseDriverMyOrdersQuery,
+} from './orders.validation';
 
 const parseOrderId = new ParseUUIDPipe({
   exceptionFactory: () => AppErrors.notFound('找不到訂單'),
@@ -83,13 +88,30 @@ export class DriverOrdersController {
     };
   }
 
+  @Post(':id/arrive')
+  @HttpCode(HttpStatus.OK)
+  async arrive(
+    @Param('id', parseOrderId) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
+  ) {
+    const coords = parseUpdateDriverLocationBody(body);
+    const data = await this.ordersService.arrive(id, user, coords);
+    return {
+      success: true,
+      data,
+    };
+  }
+
   @Post(':id/complete')
   @HttpCode(HttpStatus.OK)
   async complete(
     @Param('id', parseOrderId) id: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body() body: unknown,
   ) {
-    const data = await this.ordersService.complete(id, user);
+    const input = parseCompleteBody(body);
+    const data = await this.ordersService.complete(id, user, input);
     return {
       success: true,
       data,

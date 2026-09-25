@@ -270,6 +270,24 @@ describe('DriversService', () => {
     expect(firstGpsArg.data.tripLastLongitude).toBeInstanceOf(Prisma.Decimal);
   });
 
+  it('skips trip mileage when no unlocked IN_PROGRESS order is returned', async () => {
+    prisma.driver.findUnique.mockResolvedValue({ id: 'driver-1' });
+    prisma.driver.update.mockResolvedValue({
+      latitude: new Prisma.Decimal('22.63'),
+      longitude: new Prisma.Decimal('120.305'),
+      locationUpdatedAt: new Date(),
+    });
+    // Arrive locked the trip (arrived_at IS NULL filter yields empty).
+    prisma.$queryRaw.mockResolvedValue([]);
+
+    await service.updateOwnLocation(activeDriverUser(), {
+      latitude: 22.63,
+      longitude: 120.305,
+    });
+
+    expect(prisma.order.updateMany).not.toHaveBeenCalled();
+  });
+
   it('returns null location when the driver has never reported GPS', async () => {
     prisma.driver.findUnique.mockResolvedValue({
       latitude: null,

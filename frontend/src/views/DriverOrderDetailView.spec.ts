@@ -12,6 +12,7 @@ vi.mock('../api/driver-orders', () => ({
   getDriverOrder: vi.fn(),
   acceptDriverOrder: vi.fn(),
   startDriverOrder: vi.fn(),
+  arriveDriverOrder: vi.fn(),
   completeDriverOrder: vi.fn(),
 }))
 
@@ -27,6 +28,7 @@ vi.mock('../lib/driver-gps', () => ({
 
 import {
   acceptDriverOrder,
+  arriveDriverOrder,
   completeDriverOrder,
   getDriverOrder,
   startDriverOrder,
@@ -45,6 +47,9 @@ const openOrder: DriverOrderDetail = {
   status: 'OPEN',
   distance_meters: null,
   trip_distance_meters: null,
+  arrived_at: null,
+  calculated_fare: null,
+  final_fare: null,
   pickup_latitude: null,
   pickup_longitude: null,
 }
@@ -52,6 +57,29 @@ const openOrder: DriverOrderDetail = {
 const ownAccepted: DriverOrderDetail = {
   ...openOrder,
   status: 'ACCEPTED',
+}
+
+const inProgressDriving: DriverOrderDetail = {
+  ...ownAccepted,
+  status: 'IN_PROGRESS',
+  trip_distance_meters: 3800,
+  arrived_at: null,
+  calculated_fare: null,
+  final_fare: null,
+}
+
+const inProgressArrived: DriverOrderDetail = {
+  ...inProgressDriving,
+  trip_distance_meters: 8400,
+  arrived_at: '2026-09-15T08:10:00.000Z',
+  calculated_fare: 275,
+  final_fare: null,
+}
+
+const completedOrder: DriverOrderDetail = {
+  ...inProgressArrived,
+  status: 'COMPLETED',
+  final_fare: 280,
 }
 
 async function mountDetail(id = 'order-1') {
@@ -130,6 +158,32 @@ async function confirmSlide(wrapper: Awaited<ReturnType<typeof mountDetail>>['wr
   const slide = wrapper.getComponent(SlideToConfirm)
   slide.vm.complete()
   await flushPromises()
+}
+
+async function seedSuccessfulDevGps(
+  wrapper: Awaited<ReturnType<typeof mountDetail>>['wrapper'],
+  lat = 22.5775,
+  lng = 120.35,
+) {
+  vi.mocked(updateDriverLocation).mockResolvedValue({
+    latitude: lat,
+    longitude: lng,
+    location_updated_at: '2026-09-15T08:09:00.000Z',
+  })
+  await openDevGpsModal(wrapper)
+  const duration = durationInput()
+  expect(duration).toBeTruthy()
+  await setInputValue(duration!, '1')
+  await setInputValue(coordInputs()[0], `${lat}, ${lng}`)
+  await setInputValue(coordInputs()[1], '')
+  await setInputValue(coordInputs()[2], '')
+  await setInputValue(coordInputs()[3], '')
+  await setInputValue(coordInputs()[4], '')
+  vi.useFakeTimers()
+  await clickDevGpsButton('開始發送')
+  await vi.advanceTimersByTimeAsync(0)
+  await flushPromises()
+  vi.useRealTimers()
 }
 
 describe('DriverOrderDetailView', () => {
@@ -220,81 +274,206 @@ describe('DriverOrderDetailView', () => {
     expect(wrapper.text()).not.toContain('滑動完成訂單')
   })
 
-  it('starts then completes from order detail via slide confirm', async () => {
-    vi.mocked(startDriverOrder).mockResolvedValue({
+  it('IN_PROGRESS shows arrive/complete buttons with complete disabled', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain('抵達')
+    expect(wrapper.text()).toContain('完成')
+    expect(wrapper.text()).not.toContain('滑動完成訂單')
+    const arrive = wrapper.get('[data-testid="arrive-button"]')
+    const complete = wrapper.get('[data-testid="complete-button"]')
+    expect(arrive.attributes('disabled')).toBeUndefined()
+    expect(complete.attributes('disabled')).toBeDefined()
+  })
+
+  it('shows estimated fare while driving from trip distance', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    const { wrapper } = await mountDetail()
+
+    expect(wrapper.text()).toContain('已行駛')
+    expect(wrapper.text()).toContain('3.8 km')
+    expect(wrapper.text()).toContain('預估價格')
+    // 3800m → 100 + floor((3800-1250)/200)*5 = 100 + 12*5 = 160
+    expect(wrapper.text()).toContain('NT$ 160')
+  })
+
+  it('arrives using last successful DEV GPS and shows calculated_fare', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    vi.mocked(arriveDriverOrder).mockResolvedValue({
       id: 'order-1',
       status: 'IN_PROGRESS',
-      started_at: '2026-09-15T07:40:00.000Z',
+      arrived_at: '2026-09-15T08:10:00.000Z',
+      trip_distance_meters: 8400,
+      calculated_fare: 275,
+      final_fare: null,
     })
+
+    const { wrapper } = await mountDetail()
+    await seedSuccessfulDevGps(wrapper, 22.5775, 120.35)
+
+    await wrapper.get('[data-testid="arrive-button"]').trigger('click')
+    await flushPromises()
+
+    expect(arriveDriverOrder).toHaveBeenCalledWith('order-1', 22.5775, 120.35)
+    expect(wrapper.text()).toContain('已抵達')
+    expect(wrapper.text()).toContain('8.4 km')
+    expect(wrapper.get('[data-testid="arrive-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="complete-button"]').attributes('disabled')).toBeUndefined()
+
+    const fareInput = wrapper.get('[data-testid="final-fare-input"] input')
+      .element as HTMLInputElement
+    expect(fareInput.value).toBe('275')
+  })
+
+  it('allows editing final fare and completes with that value', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressArrived)
     vi.mocked(completeDriverOrder).mockResolvedValue({
       id: 'order-1',
       status: 'COMPLETED',
       completed_at: '2026-09-15T08:20:00.000Z',
       trip_distance_meters: 8400,
-      price: 275,
+      calculated_fare: 275,
+      final_fare: 280,
+    })
+
+    const { wrapper } = await mountDetail()
+    const fareInput = wrapper.get('[data-testid="final-fare-input"] input')
+    await fareInput.setValue('280')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="complete-button"]').trigger('click')
+    await flushPromises()
+
+    expect(completeDriverOrder).toHaveBeenCalledWith('order-1', 280)
+    expect(wrapper.text()).toContain('訂單已完成')
+    expect(wrapper.text()).toContain('最終價格')
+    expect(wrapper.text()).toContain('NT$ 280')
+    expect(wrapper.find('[data-testid="arrive-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="complete-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="final-fare-input"]').exists()).toBe(false)
+  })
+
+  it('does not submit when final fare is invalid and keeps the input', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressArrived)
+    const { wrapper } = await mountDetail()
+
+    const fareInput = wrapper.get('[data-testid="final-fare-input"] input')
+    await fareInput.setValue('12.5')
+    await flushPromises()
+    await wrapper.get('[data-testid="complete-button"]').trigger('click')
+    await flushPromises()
+
+    expect(completeDriverOrder).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('請輸入有效的整數價格')
+    expect((fareInput.element as HTMLInputElement).value).toBe('12.5')
+  })
+
+  it('keeps driving UI when Arrive API fails', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    vi.mocked(arriveDriverOrder).mockRejectedValue(
+      new ApiClientError('INTERNAL_ERROR', '抵達失敗', 500),
+    )
+
+    const { wrapper } = await mountDetail()
+    await seedSuccessfulDevGps(wrapper)
+
+    await wrapper.get('[data-testid="arrive-button"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('抵達失敗')
+    expect(wrapper.get('[data-testid="arrive-button"]').text()).toContain('抵達')
+    expect(wrapper.get('[data-testid="complete-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="final-fare-input"]').exists()).toBe(false)
+  })
+
+  it('keeps user final fare input when Complete API fails', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressArrived)
+    vi.mocked(completeDriverOrder).mockRejectedValue(
+      new ApiClientError('INTERNAL_ERROR', '完成失敗', 500),
+    )
+
+    const { wrapper } = await mountDetail()
+    const fareInput = wrapper.get('[data-testid="final-fare-input"] input')
+    await fareInput.setValue('299')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="complete-button"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('完成失敗')
+    expect((fareInput.element as HTMLInputElement).value).toBe('299')
+    expect(wrapper.get('[data-testid="complete-button"]').exists()).toBe(true)
+  })
+
+  it('restores driving / arrived / completed UI from backend on load', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    const driving = await mountDetail()
+    expect(driving.wrapper.get('[data-testid="arrive-button"]').text()).toContain('抵達')
+    expect(driving.wrapper.get('[data-testid="complete-button"]').attributes('disabled')).toBeDefined()
+    expect(driving.wrapper.find('[data-testid="final-fare-input"]').exists()).toBe(false)
+    driving.wrapper.unmount()
+
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressArrived)
+    const arrived = await mountDetail()
+    expect(arrived.wrapper.get('[data-testid="arrive-button"]').text()).toContain('已抵達')
+    expect(arrived.wrapper.get('[data-testid="complete-button"]').attributes('disabled')).toBeUndefined()
+    const arrivedInput = arrived.wrapper.get('[data-testid="final-fare-input"] input')
+      .element as HTMLInputElement
+    expect(arrivedInput.value).toBe('275')
+    arrived.wrapper.unmount()
+
+    vi.mocked(getDriverOrder).mockResolvedValue(completedOrder)
+    const completed = await mountDetail()
+    expect(completed.wrapper.text()).toContain('已行駛')
+    expect(completed.wrapper.text()).toContain('8.4 km')
+    expect(completed.wrapper.text()).toContain('最終價格')
+    expect(completed.wrapper.text()).toContain('NT$ 280')
+    expect(completed.wrapper.find('[data-testid="arrive-button"]').exists()).toBe(false)
+    expect(completed.wrapper.find('[data-testid="final-fare-input"]').exists()).toBe(false)
+  })
+
+  it('starts from accepted then shows arrive/complete UI', async () => {
+    vi.mocked(startDriverOrder).mockResolvedValue({
+      id: 'order-1',
+      status: 'IN_PROGRESS',
+      started_at: '2026-09-15T07:40:00.000Z',
     })
     vi.mocked(getDriverOrder)
       .mockResolvedValueOnce(ownAccepted)
-      .mockResolvedValueOnce({
-        ...ownAccepted,
-        status: 'IN_PROGRESS',
-        trip_distance_meters: 3800,
-      })
-      .mockResolvedValueOnce({
-        ...ownAccepted,
-        status: 'COMPLETED',
-        trip_distance_meters: 8400,
-        price: 275,
-      })
+      .mockResolvedValueOnce(inProgressDriving)
 
     const { wrapper } = await mountDetail()
     await confirmSlide(wrapper)
 
     expect(startDriverOrder).toHaveBeenCalledWith('order-1')
     expect(wrapper.text()).toContain('行程已開始')
-    expect(wrapper.text()).toContain('滑動完成訂單')
+    expect(wrapper.text()).toContain('抵達')
     expect(wrapper.text()).toContain('已行駛')
     expect(wrapper.text()).toContain('3.8 km')
-
-    await confirmSlide(wrapper)
-
-    expect(completeDriverOrder).toHaveBeenCalledWith('order-1')
-    expect(wrapper.text()).toContain('訂單已完成')
-    expect(wrapper.text()).toContain('已完成')
-    expect(wrapper.text()).toContain('行駛里程')
-    expect(wrapper.text()).toContain('8.4 km')
-    expect(wrapper.text()).toContain('車資')
-    expect(wrapper.text()).toContain('NT$ 275')
-    expect(wrapper.text()).not.toContain('滑動開始行程')
     expect(wrapper.text()).not.toContain('滑動完成訂單')
   })
 
   it('shows in-progress and completed trip fields from backend only', async () => {
     vi.mocked(getDriverOrder).mockResolvedValue({
-      ...ownAccepted,
-      status: 'IN_PROGRESS',
-      trip_distance_meters: 3800,
+      ...inProgressDriving,
       distance_meters: 10500,
     })
     const inProgress = await mountDetail()
     expect(inProgress.wrapper.text()).toContain('已行駛')
     expect(inProgress.wrapper.text()).toContain('3.8 km')
-    expect(inProgress.wrapper.text()).not.toContain('行駛里程')
     expect(inProgress.wrapper.text()).not.toContain('直線距離')
+    inProgress.wrapper.unmount()
 
     vi.mocked(getDriverOrder).mockResolvedValue({
-      ...ownAccepted,
-      status: 'COMPLETED',
-      trip_distance_meters: 8400,
+      ...completedOrder,
       distance_meters: 10500,
-      price: 275,
     })
     const completed = await mountDetail()
-    expect(completed.wrapper.text()).toContain('行駛里程')
+    expect(completed.wrapper.text()).toContain('已行駛')
     expect(completed.wrapper.text()).toContain('8.4 km')
-    expect(completed.wrapper.text()).toContain('車資')
-    expect(completed.wrapper.text()).toContain('NT$ 275')
-    expect(completed.wrapper.text()).not.toContain('已行駛')
+    expect(completed.wrapper.text()).toContain('最終價格')
+    expect(completed.wrapper.text()).toContain('NT$ 280')
     expect(completed.wrapper.text()).not.toContain('直線距離')
   })
 
@@ -307,6 +486,7 @@ describe('DriverOrderDetailView', () => {
     expect(open.wrapper.text()).toContain('直線距離')
     expect(open.wrapper.text()).toContain('1.2 公里')
     expect(open.wrapper.text()).not.toContain('已行駛')
+    open.wrapper.unmount()
 
     vi.mocked(getDriverOrder).mockResolvedValue({
       ...ownAccepted,
@@ -320,10 +500,9 @@ describe('DriverOrderDetailView', () => {
 
   it('hides straight-line distance on IN_PROGRESS even when API returns distance_meters', async () => {
     vi.mocked(getDriverOrder).mockResolvedValue({
-      ...ownAccepted,
-      status: 'IN_PROGRESS',
-      distance_meters: 10500,
+      ...inProgressDriving,
       trip_distance_meters: 9900,
+      distance_meters: 10500,
     })
     const { wrapper } = await mountDetail()
     expect(wrapper.text()).toContain('已行駛')
@@ -374,227 +553,238 @@ describe('DriverOrderDetailView', () => {
     expect(coordInputs()).toHaveLength(6)
   })
 
-  it('rejects invalid coordinates and duration before start', async () => {
+  it('validates duration and requires at least one coordinate before start', async () => {
     const { wrapper } = await mountDetail()
     await openDevGpsModal(wrapper)
 
-    await setInputValue(coordInputs()[0], '91, 120.3')
+    await setInputValue(durationInput()!, '0')
     await clickDevGpsButton('開始發送')
-    expect(updateDriverLocation).not.toHaveBeenCalled()
-    expect(bodyText()).toContain('座標 1')
-
-    await setInputValue(coordInputs()[0], '22.6, 120.3')
-    const duration = durationInput()
-    expect(duration).toBeTruthy()
-    await setInputValue(duration!, '0')
-    await clickDevGpsButton('開始發送')
-    expect(updateDriverLocation).not.toHaveBeenCalled()
     expect(bodyText()).toContain('發送時間必須為正數')
+    expect(updateDriverLocation).not.toHaveBeenCalled()
+
+    await setInputValue(durationInput()!, '5')
+    for (const input of coordInputs()) {
+      await setInputValue(input, '')
+    }
+    await clickDevGpsButton('開始發送')
+    expect(bodyText()).toContain('至少需要 1 個有效座標')
+    expect(updateDriverLocation).not.toHaveBeenCalled()
   })
 
-  it('sends the first point immediately and continues by interval', async () => {
-    vi.useFakeTimers()
+  it('sends coordinates sequentially over the configured duration', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
     vi.mocked(updateDriverLocation).mockImplementation(async (lat, lng) => ({
       latitude: lat,
       longitude: lng,
-      location_updated_at: '2026-09-25T03:00:00.000Z',
+      location_updated_at: '2026-09-15T08:00:00.000Z',
     }))
 
     const { wrapper } = await mountDetail()
     await openDevGpsModal(wrapper)
-
+    await setInputValue(durationInput()!, '1')
     await setInputValue(coordInputs()[0], '22.1, 120.1')
     await setInputValue(coordInputs()[1], '22.2, 120.2')
     await setInputValue(coordInputs()[2], '22.3, 120.3')
-    await setInputValue(durationInput()!, '3')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
+    await vi.advanceTimersByTimeAsync(0)
+    await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(1)
     expect(updateDriverLocation).toHaveBeenNthCalledWith(1, 22.1, 120.1)
-    expect(bodyText()).toContain('發送中：1 / 3')
 
-    // 3 points / 3 minutes => 60s interval
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(30_000)
     await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(2)
     expect(updateDriverLocation).toHaveBeenNthCalledWith(2, 22.2, 120.2)
 
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(30_000)
     await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(3)
     expect(updateDriverLocation).toHaveBeenNthCalledWith(3, 22.3, 120.3)
     expect(bodyText()).toContain('發送完成')
-    expect(bodyText()).toContain('3 / 3')
     expect(bodyText()).toContain('DEV GPS 測試')
-
-    vi.useRealTimers()
   })
 
-  it('pause clears the timer and resume continues from the next point', async () => {
-    vi.useFakeTimers()
+  it('can pause and resume sequential sending', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
     vi.mocked(updateDriverLocation).mockImplementation(async (lat, lng) => ({
       latitude: lat,
       longitude: lng,
-      location_updated_at: '2026-09-25T03:00:00.000Z',
+      location_updated_at: '2026-09-15T08:00:00.000Z',
     }))
 
     const { wrapper } = await mountDetail()
     await openDevGpsModal(wrapper)
+    await setInputValue(durationInput()!, '1')
     await setInputValue(coordInputs()[0], '22.1, 120.1')
     await setInputValue(coordInputs()[1], '22.2, 120.2')
-    await setInputValue(coordInputs()[2], '22.3, 120.3')
-    await setInputValue(durationInput()!, '3')
+    await setInputValue(coordInputs()[2], '')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
+    await vi.advanceTimersByTimeAsync(0)
+    await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(1)
 
     await clickDevGpsButton('暫停')
-    expect(bodyText()).toContain('已暫停')
-
-    await vi.advanceTimersByTimeAsync(120_000)
+    await vi.advanceTimersByTimeAsync(30_000)
     await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(1)
 
     await clickDevGpsButton('繼續')
+    await vi.advanceTimersByTimeAsync(30_000)
     await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(2)
     expect(updateDriverLocation).toHaveBeenNthCalledWith(2, 22.2, 120.2)
-
-    vi.useRealTimers()
   })
 
-  it('stop clears the timer and does not continue sending', async () => {
-    vi.useFakeTimers()
+  it('can stop sending and keep the modal open', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
     vi.mocked(updateDriverLocation).mockImplementation(async (lat, lng) => ({
       latitude: lat,
       longitude: lng,
-      location_updated_at: '2026-09-25T03:00:00.000Z',
+      location_updated_at: '2026-09-15T08:00:00.000Z',
     }))
 
     const { wrapper } = await mountDetail()
     await openDevGpsModal(wrapper)
+    await setInputValue(durationInput()!, '1')
     await setInputValue(coordInputs()[0], '22.1, 120.1')
     await setInputValue(coordInputs()[1], '22.2, 120.2')
-    await setInputValue(durationInput()!, '2')
+    await setInputValue(coordInputs()[2], '')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
-    await clickDevGpsButton('停止')
-    expect(bodyText()).toContain('已停止')
-
-    await vi.advanceTimersByTimeAsync(120_000)
+    await vi.advanceTimersByTimeAsync(0)
     await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(1)
 
-    vi.useRealTimers()
+    await clickDevGpsButton('停止')
+    expect(bodyText()).toContain('已停止')
+    expect(bodyText()).toContain('DEV GPS 測試')
   })
 
-  it('API failure stops further sends and shows the error', async () => {
-    vi.useFakeTimers()
+  it('marks failed send and does not advance the success cursor', async () => {
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
     vi.mocked(updateDriverLocation)
       .mockResolvedValueOnce({
         latitude: 22.1,
         longitude: 120.1,
-        location_updated_at: '2026-09-25T03:00:00.000Z',
+        location_updated_at: '2026-09-15T08:00:00.000Z',
       })
       .mockRejectedValueOnce(
-        new ApiClientError('VALIDATION_ERROR', '座標無效', 400),
+        new ApiClientError('INTERNAL_ERROR', '定位更新失敗', 500),
       )
 
     const { wrapper } = await mountDetail()
     await openDevGpsModal(wrapper)
+    await setInputValue(durationInput()!, '1')
     await setInputValue(coordInputs()[0], '22.1, 120.1')
     await setInputValue(coordInputs()[1], '22.2, 120.2')
-    await setInputValue(durationInput()!, '2')
+    await setInputValue(coordInputs()[2], '')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(0)
     await flushPromises()
+    expect(updateDriverLocation).toHaveBeenCalledTimes(1)
 
+    await vi.advanceTimersByTimeAsync(30_000)
+    await flushPromises()
     expect(updateDriverLocation).toHaveBeenCalledTimes(2)
     expect(bodyText()).toContain('發送失敗')
-    expect(bodyText()).toContain('VALIDATION_ERROR')
-    expect(bodyText()).toContain('座標無效')
+    expect(bodyText()).toContain('INTERNAL_ERROR')
 
-    await vi.advanceTimersByTimeAsync(120_000)
+    // Failed coords must not become arrive GPS: only first success is usable.
+    vi.mocked(arriveDriverOrder).mockResolvedValue({
+      id: 'order-1',
+      status: 'IN_PROGRESS',
+      arrived_at: '2026-09-15T08:10:00.000Z',
+      trip_distance_meters: 8400,
+      calculated_fare: 275,
+      final_fare: null,
+    })
+    await wrapper.get('[data-testid="arrive-button"]').trigger('click')
     await flushPromises()
-    expect(updateDriverLocation).toHaveBeenCalledTimes(2)
-
-    vi.useRealTimers()
+    expect(arriveDriverOrder).toHaveBeenCalledWith('order-1', 22.1, 120.1)
   })
 
   it('updates OrderMap selfLocation after successful DEV GPS send', async () => {
-    vi.useFakeTimers()
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
     vi.mocked(updateDriverLocation).mockImplementation(async (lat, lng) => ({
       latitude: lat,
       longitude: lng,
-      location_updated_at: '2026-09-25T03:00:00.000Z',
+      location_updated_at: '2026-09-15T08:00:00.000Z',
     }))
 
     const { wrapper } = await mountDetail()
-    expect(wrapper.findComponent(OrderMap).props('selfLocation')).toBeNull()
-
     await openDevGpsModal(wrapper)
-    await setInputValue(coordInputs()[0], '22.1, 120.1')
-    await setInputValue(coordInputs()[1], '22.2, 120.2')
-    await setInputValue(durationInput()!, '2')
+    await setInputValue(durationInput()!, '1')
+    await setInputValue(coordInputs()[0], '22.5, 120.5')
+    await setInputValue(coordInputs()[1], '')
+    await setInputValue(coordInputs()[2], '')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
+    await vi.advanceTimersByTimeAsync(0)
     await flushPromises()
 
-    expect(wrapper.findComponent(OrderMap).props('selfLocation')).toEqual({
-      lat: 22.1,
-      lng: 120.1,
+    const map = wrapper.getComponent(OrderMap)
+    expect(map.props('selfLocation')).toEqual({
+      lat: 22.5,
+      lng: 120.5,
       label: '我的位置',
     })
-
-    await vi.advanceTimersByTimeAsync(60_000)
-    await flushPromises()
-
-    expect(wrapper.findComponent(OrderMap).props('selfLocation')).toEqual({
-      lat: 22.2,
-      lng: 120.2,
-      label: '我的位置',
-    })
-
-    vi.useRealTimers()
   })
 
   it('keeps previous OrderMap selfLocation when DEV GPS API fails', async () => {
-    vi.useFakeTimers()
-    vi.mocked(updateDriverLocation)
-      .mockResolvedValueOnce({
-        latitude: 22.1,
-        longitude: 120.1,
-        location_updated_at: '2026-09-25T03:00:00.000Z',
-      })
-      .mockRejectedValueOnce(
-        new ApiClientError('VALIDATION_ERROR', '座標無效', 400),
-      )
+    vi.mocked(getDriverOrder).mockResolvedValue(inProgressDriving)
+    vi.mocked(getDriverLocation).mockResolvedValue({
+      latitude: 22.0,
+      longitude: 120.0,
+      location_updated_at: '2026-09-15T07:00:00.000Z',
+    })
+    vi.mocked(updateDriverLocation).mockRejectedValue(
+      new ApiClientError('INTERNAL_ERROR', '定位更新失敗', 500),
+    )
 
     const { wrapper } = await mountDetail()
+    const mapBefore = wrapper.getComponent(OrderMap)
+    expect(mapBefore.props('selfLocation')).toEqual({
+      lat: 22.0,
+      lng: 120.0,
+      label: '我的位置',
+    })
+
     await openDevGpsModal(wrapper)
-    await setInputValue(coordInputs()[0], '22.1, 120.1')
-    await setInputValue(coordInputs()[1], '22.2, 120.2')
-    await setInputValue(durationInput()!, '2')
+    await setInputValue(durationInput()!, '1')
+    await setInputValue(coordInputs()[0], '22.9, 120.9')
+    await setInputValue(coordInputs()[1], '')
+    await setInputValue(coordInputs()[2], '')
+    await setInputValue(coordInputs()[3], '')
+    await setInputValue(coordInputs()[4], '')
 
+    vi.useFakeTimers()
     await clickDevGpsButton('開始發送')
-    await flushPromises()
-    expect(wrapper.findComponent(OrderMap).props('selfLocation')).toEqual({
-      lat: 22.1,
-      lng: 120.1,
-      label: '我的位置',
-    })
-
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(0)
     await flushPromises()
 
-    expect(bodyText()).toContain('VALIDATION_ERROR')
-    expect(wrapper.findComponent(OrderMap).props('selfLocation')).toEqual({
-      lat: 22.1,
-      lng: 120.1,
+    const mapAfter = wrapper.getComponent(OrderMap)
+    expect(mapAfter.props('selfLocation')).toEqual({
+      lat: 22.0,
+      lng: 120.0,
       label: '我的位置',
     })
-
-    vi.useRealTimers()
   })
 })

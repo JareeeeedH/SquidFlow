@@ -48,5 +48,6 @@ docs/
 ├── API-SPEC.md
 ├── UI-UX-SPEC.md
 ├── SYSTEM-ARCHITECTURE-SPEC.md
-└── SECURITY-SPEC.md
+├── SECURITY-SPEC.md
+└── adr/                  # Architecture Decision Records
 ```

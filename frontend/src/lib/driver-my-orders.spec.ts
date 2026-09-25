@@ -9,6 +9,7 @@ const accepted: DriverMyOrder = {
   destination: '小港機場',
   created_at: '2026-09-15T07:30:00.000Z',
   price: 1200,
+  final_fare: null,
   status: 'ACCEPTED',
   distance_meters: null,
   trip_distance_meters: null,
