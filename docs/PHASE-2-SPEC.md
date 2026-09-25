@@ -182,7 +182,7 @@ Distance is shown **only** when both coordinate sets are available. If either si
 - Driver may see their own straight-line distance to Pickup for related Orders in statuses:
   - `OPEN`
   - `ACCEPTED`
-  - `IN_PROGRESS`
+- On Driver Order Detail, `IN_PROGRESS` does **not** show straight-line distance to Pickup; show trip mileage（已行駛）instead（Phase 3）.
 - Admin may see straight-line distance between Online Drivers and Pickup in dispatch / Dashboard / Order context.
 - Drivers **cannot** see other Drivers’ distances.
 
@@ -307,7 +307,7 @@ Also resolved (earlier):
 - In-app Map SDK → **Google Maps JavaScript API**
 - Pickup lat/lng → **not stored in DB**; runtime reuse per Order for Distance / Map; no per-Driver Google calls for the same Order Pickup
 - Editing `pickup_location` → must re-geocode; stale coordinates must not be reused
-- Driver Order Detail → Map + straight-line distance + Start Navigation (navigation after accept)
+- Driver Order Detail → Map + straight-line distance（`OPEN`／`ACCEPTED`）+ Start Navigation (navigation after accept); `IN_PROGRESS` shows trip mileage instead of straight-line distance
 - Admin Order / Dispatch context → Online Drivers + Pickup map
 - Navigation → Google Maps external handoff; no in-app routing / ETA / turn-by-turn
 - Keys → Backend Geocoding server key never in Frontend; Maps JavaScript API uses a separate Frontend-restricted key
@@ -329,7 +329,7 @@ Same Order Pickup must not be Google-geocoded once per Driver
 pickup_location edit → invalidate prior coords; re-geocode; never reuse stale coords
 Missing either coordinate set → do not show distance
 Distance is computed, not stored as an independent long-lived field
-Driver distance for related OPEN / ACCEPTED / IN_PROGRESS Orders only; no other Drivers’ distances
+Driver distance for related OPEN / ACCEPTED Orders on Driver Order Detail; IN_PROGRESS shows trip mileage（已行駛）, not Pickup straight-line distance; no other Drivers’ distances
 Admin distance in dispatch / Dashboard / Order context for Online Drivers ↔ Pickup
 Display units → integer meters when < 1 km; 1-decimal km when >= 1 km; labeled 直線距離
 Geocode retry → max 2 attempts; 200ms once on provider error; no retry on ZERO_RESULTS/INVALID/DISABLED

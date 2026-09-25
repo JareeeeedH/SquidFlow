@@ -275,6 +275,8 @@ Frontend **不**負責 concurrency control。
 已行駛 3.8 km
 ```
 
+**不**顯示到 Pickup 的直線距離（P2-03 `distance_meters`；見 `UI-UX-SPEC`）。
+
 `COMPLETED`：
 
 ```text

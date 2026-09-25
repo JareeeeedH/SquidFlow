@@ -8,8 +8,12 @@ type GoogleMapsNamespace = {
       setCenter: (c: { lat: number; lng: number }) => void
       setZoom: (z: number) => void
       getZoom: () => number | undefined
+      panTo: (c: { lat: number; lng: number }) => void
     }
-    Marker: new (opts: Record<string, unknown>) => { setMap: (m: unknown) => void }
+    Marker: new (opts: Record<string, unknown>) => {
+      setMap: (m: unknown) => void
+      setPosition: (c: { lat: number; lng: number }) => void
+    }
     LatLngBounds: new () => {
       extend: (c: { lat: number; lng: number }) => void
       isEmpty: () => boolean

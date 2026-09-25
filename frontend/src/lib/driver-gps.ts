@@ -138,6 +138,21 @@ function browserGetCurrentPosition(): Promise<GpsCoordinates> {
 
 let activeTracker: DriverGpsTracker | null = null
 
+/** Test-only override: `null` uses `import.meta.env.DEV`. */
+let browserGpsAutoReportOverrideForTests: boolean | null = null
+
+/**
+ * Real browser GPS auto-report is disabled in Vite DEV so Local can rely on
+ * the DEV GPS Simulator without fighting navigator.geolocation.
+ * Production keeps the existing ONLINE 30s / IN_PROGRESS 10s tracker.
+ */
+export function isBrowserGpsAutoReportEnabled(): boolean {
+  if (browserGpsAutoReportOverrideForTests !== null) {
+    return browserGpsAutoReportOverrideForTests
+  }
+  return import.meta.env.DEV !== true
+}
+
 function getActiveTracker(): DriverGpsTracker {
   if (!activeTracker) {
     activeTracker = createDriverGpsTracker({
@@ -156,10 +171,24 @@ export function setActiveDriverGpsTrackerForTests(
   activeTracker = tracker
 }
 
+/** Test helper: force real GPS on/off regardless of `import.meta.env.DEV`. */
+export function setBrowserGpsAutoReportEnabledForTests(
+  enabled: boolean | null,
+) {
+  browserGpsAutoReportOverrideForTests = enabled
+}
+
 export function syncDriverGps(options: {
   onlineStatus: OnlineStatus | null
   inProgress: boolean
 }) {
+  // DEV / Local: do not create or run the real browser GPS tracker.
+  // DEV GPS Simulator still calls updateDriverLocation() directly.
+  if (!isBrowserGpsAutoReportEnabled()) {
+    stopDriverGps()
+    return
+  }
+
   const tracker = getActiveTracker()
   if (options.onlineStatus === 'ONLINE') {
     tracker.setIntervalMs(resolveDriverGpsIntervalMs(options.inProgress))

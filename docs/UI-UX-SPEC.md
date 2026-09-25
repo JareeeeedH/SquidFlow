@@ -945,7 +945,7 @@ Phase 4 — Advanced Dispatch & Communication（見 PHASE-4-SPEC.md）
 
 **Phase 3 UI（產品規則已定義）：**
 
-- `IN_PROGRESS`：顯示已行駛里程（例如「已行駛 3.8 km」）；資料來自 Backend `trip_distance_meters`
+- `IN_PROGRESS`：顯示已行駛里程（例如「已行駛 3.8 km」）；資料來自 Backend `trip_distance_meters`；**不**顯示到 Pickup 的直線距離（`distance_meters`）
 - `COMPLETED`：顯示行駛里程與車資（例如「行駛里程 8.4 km」「車資 NT$275」）；`price` 為 Complete 後系統計算結果
 - **不**顯示 GPS 軌跡與計算細節
 - Frontend **不**自行計算車資／最終里程；Driver 於 `IN_PROGRESS` 以 10 秒間隔上報 location，完成後回到 30 秒
@@ -961,14 +961,16 @@ P2-03 Straight-line Distance UI（已對齊產品＋API contract）：
 - 有值時必須標示 **「直線距離」**
 - 單位：`< 1 km`（即 `< 1000` meters）→ 以 **meters** 顯示；`>= 1 km` → 以 **kilometers** 顯示
 - 顯示捨入／小數精度（已確認）：`< 1 km` → **整數公尺**；`>= 1 km` → **小數一位公里**；標示 **「直線距離」**（見 `PHASE-2-SPEC.md` §6.5／§11）
-- Driver：僅在相關 `OPEN`／`ACCEPTED`／`IN_PROGRESS` Order 情境顯示自己的直線距離；**不**顯示其他 Driver 的距離
+- **Driver Order Detail**：僅在 `OPEN`／`ACCEPTED` 顯示自己到 Pickup 的直線距離；`IN_PROGRESS`／`COMPLETED` **不**顯示直線距離（改顯示 Phase 3 里程）；**不**顯示其他 Driver 的距離
+- 其他 Driver 頁面（例如可搶單列表）若使用 `distance_meters`，維持既有行為
 - Admin：在 Dispatch／Dashboard／Order 情境，可顯示 ONLINE Drivers ↔ 該 Order Pickup 的直線距離（資料來自 `GET /api/v1/orders/:id/online-driver-distances`）
 - Distance 僅為參考資訊；UI **不得**因距離改變搶單按鈕可用性或 Order State 操作規則（仍以 Phase 1 Backend 規則為準）
+- Backend／API 仍可在 `IN_PROGRESS` 回傳 `distance_meters`；Detail 頁選擇不顯示，計算邏輯不變
 
 P2-04 Map & Navigation UI（已對齊）：
 
 - Map SDK：Frontend 使用 **Google Maps JavaScript API**（browser-restricted key；**不得**使用 Geocoding server key）
-- **Driver Order Detail**：顯示 Map（自己的最新位置 + Pickup）+ 直線距離（P2-03）+ **開始導航**
+- **Driver Order Detail**：顯示 Map（自己的最新位置 + Pickup）+ 直線距離（P2-03，僅 `OPEN`／`ACCEPTED`）+ **開始導航**；`IN_PROGRESS` 顯示已行駛里程而非直線距離
   - Pickup marker：僅當 `pickup_latitude`／`pickup_longitude` 皆有值
   - Driver marker：僅當有可用自己的最新位置（P2-01）
   - 「開始導航」：Driver **接單後**可用；handoff 至 Google Maps（外部）；缺座標時可降級用文字 `pickup_location`；失敗不影響 Order／Online 狀態
