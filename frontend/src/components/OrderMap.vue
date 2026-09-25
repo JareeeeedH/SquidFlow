@@ -106,7 +106,11 @@ function applyViewport(
   }
 
   if (points.length === 1) {
-    map.setCenter(points[0])
+    const only = points[0]
+    if (!only) {
+      return
+    }
+    map.setCenter(only)
     map.setZoom(SINGLE_POINT_ZOOM)
     return
   }
